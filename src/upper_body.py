@@ -17,6 +17,7 @@ def quaternion_multiply(quaternion1, quaternion0):
 rospy.init_node("bulletroboy")
 
 p.connect(p.GUI)
+p.setRealTimeSimulation(1)
 p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW,0)
 p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW,0)
 p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
@@ -28,36 +29,46 @@ p.setAdditionalSearchPath(pybullet_data.getDataPath())
 plane = p.loadURDF("plane.urdf")
 p.loadURDF("samurai.urdf", 0,2,0)
 p.loadURDF("teddy_vhacd.urdf", 0,-1,2)
-p.loadMJCF("mjcf/humanoid_fixed.xml")
+p.loadMJCF("mjcf/half_cheetah.xml")
+# p.loadURDF("half_cheetah.urdf")
 # p.loadURDF("humanoid/humanoid.urdf", 0,-2,0)
-roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf',basePosition=(0,1,0.5), useFixedBase=1)
+# roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf',basePosition=(0.75,0,0.2), baseOrientation=(0,0,-0.7071,0.7071),useFixedBase=1)
+roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf',basePosition=(0.0,0.4,0.2), useFixedBase=1)
 joints = []
 for i in range(p.getNumJoints(roboy)):
     joints.append(p.getJointInfo(roboy, i)[1].decode("utf-8"))
     p.setJointMotorControl2(roboy, i, p.POSITION_CONTROL, targetPosition=0, force=500)
 
 def joint_target_cb(msg):
+    active = []
     for i in range(len(msg.name)):
         j = msg.name[i]
         try:
             idx = joints.index(j)
-            p.setJointMotorControl2(roboy,
-                                    idx,
-                                    p.POSITION_CONTROL,
-                                    targetPosition=msg.position[i],
-                                    force=100)
+            active.append(idx)
+            # p.setJointMotorControl2(roboy,
+            #                         idx,
+            #                         p.POSITION_CONTROL,
+            #                         targetPosition=msg.position[i],
+            #                         force=1000)
         except:
             rospy.logwarn("Joint %s was not found in pybullet model"%j)
+    p.setJointMotorControlArray(roboy,
+                                active,
+                                p.POSITION_CONTROL,
+                                targetPositions=msg.position)
+                                # positionGains=kps,
+                                # velocityGains=kds)
 
 
-
+# joint_target_sub = rospy.Subscriber("/cardsflow_joint_states", JointState, joint_target_cb)
 joint_target_sub = rospy.Subscriber("/cardsflow_joint_states", JointState, joint_target_cb)
 
-height = 640
+height = 720
 width = 640
 aspect = width/height
 
-fov, nearplane, farplane = 60, 0.01, 100
+fov, nearplane, farplane = 100, 0.01, 100
 projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, nearplane, farplane)
 
 init_up_vector = (0, 0, 1)
@@ -75,7 +86,7 @@ def camera(link_id):
     up_vector = rot_matrix.dot(init_up_vector)
 
     view_matrix = p.computeViewMatrix(com_p, com_p + 0.1 * camera_vector, up_vector)
-    w, h, img, depth, mask = p.getCameraImage(width, height, view_matrix, projection_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+    w, h, img, depth, mask = p.getCameraImage(width, height, view_matrix, projection_matrix, shadow=0, renderer=p.ER_BULLET_HARDWARE_OPENGL,flags=p.ER_NO_SEGMENTATION_MASK)
     # p.addUserDebugLine(lineFromXYZ=com_p, lineToXYZ=camera_vector, lifeTime=0)
     return w,h,img
 
@@ -107,4 +118,4 @@ while (not rospy.is_shutdown()):
     cv2.imshow('window', vis)
     cv2.waitKey(1)
     # rate.sleep()
-    p.stepSimulation()
+    # p.stepSimulation()

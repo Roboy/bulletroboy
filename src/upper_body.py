@@ -5,6 +5,8 @@ import numpy as np
 import cv2
 import rospy
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import PoseStamped
+
 
 def quaternion_multiply(quaternion1, quaternion0):
     w0, x0, y0, z0 = quaternion0
@@ -26,18 +28,48 @@ p.resetSimulation()
 p.setGravity(0,0,-9.81)
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
+# p.setAdditionalSearchPath("/home/roboy/workspace/avatar_ws/src/icub-gazebo/icub/l_hand")
 plane = p.loadURDF("plane.urdf")
-p.loadURDF("samurai.urdf", 0,2,0)
-p.loadURDF("teddy_vhacd.urdf", 0,-1,2)
-p.loadMJCF("mjcf/half_cheetah.xml")
+# p.loadURDF("samurai.urdf", 0,2,0)
+# p.loadURDF("teddy_vhacd.urdf", 0,-1,2)
+# p.loadMJCF("mjcf/half_cheetah.xml")
+# hand = p.loadSDF("/home/roboy/workspace/avatar_ws/src/icub-gazebo/icub/l_hand/l_hand.sdf")
+# hand = p.loadURDF("/home/roboy/workspace/avatar_ws/src/simox_ros/sr_grasp_description/urdf/shadowhand.urdf",basePosition=(0.2,0,0.15), baseOrientation=(-1.57, 0,0,1.57))
+path = "/home/roboy/workspace/avatar_ws/src/sr_common/sr_description/robots/model.urdf"
+# left_hand = p.loadURDF(path)
+# p.resetBasePositionAndOrientation(1, posObj=(0,0,0.1), ornObj=(0,0.7,0,0.7))
+# hand_joint_names = ["FFJ4", "FFJ3", "FFJ2", "FFJ1"]
+# hand_joints = []
+#
+# for i in range(p.getNumJoints(hand)):
+#     hand_joints.append(p.getJointInfo(hand, i)[1].decode("utf-8"))
+#     p.setJointMotorControl2(hand, i, p.POSITION_CONTROL, targetPosition=0, force=100)
+
 # p.loadURDF("half_cheetah.urdf")
 # p.loadURDF("humanoid/humanoid.urdf", 0,-2,0)
 # roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf',basePosition=(0.75,0,0.2), baseOrientation=(0,0,-0.7071,0.7071),useFixedBase=1)
-roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf',basePosition=(0.0,0.4,0.2), useFixedBase=1)
+roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf', basePosition=(0.0,1.4,0.3), useFixedBase=1)
 joints = []
 for i in range(p.getNumJoints(roboy)):
     joints.append(p.getJointInfo(roboy, i)[1].decode("utf-8"))
     p.setJointMotorControl2(roboy, i, p.POSITION_CONTROL, targetPosition=0, force=500)
+
+def hand_joints_cb(msg):
+    active = []
+    for i in range(len(msg.name)):
+        j = msg.name[i]
+        try:
+            idx = joints.index(j)
+            active.append(idx)
+        except:
+            rospy.logwarn("Joint %s was not found in pybullet model"%j)
+    try:
+        p.setJointMotorControlArray(roboy,
+                                active,
+                                p.POSITION_CONTROL,
+                                targetPositions=msg.position)
+    except:
+        rospy.logwarn_throttle(1, "oops, could not set joint motor control cmd")
 
 def joint_target_cb(msg):
     active = []
@@ -60,9 +92,44 @@ def joint_target_cb(msg):
                                 # positionGains=kps,
                                 # velocityGains=kds)
 
+def fingertip_cb(msg):
+    vis = p.createVisualShape(p.GEOM_SPHERE, radius = 0.02)
+    col = p.createCollisionShape(p.GEOM_SPHERE, radius = 0.02)
+    mass = 0.01
+
+    link_Masses = [1]
+    linkCollisionShapeIndices = [col]
+    linkVisualShapeIndices = [vis]
+    linkPositions = [[msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]]
+    linkOrientations = [[0, 0, 0, 1]]
+    linkInertialFramePositions = [[0, 0, 0]]
+    linkInertialFrameOrientations = [[0, 0, 0, 1]]
+    indices = [0]
+    jointTypes = [p.JOINT_FIXED]
+    axis = [[0, 0, 1]]
+    basePosition = p.getLinkState(roboy, 20)[0]
+    baseOrientation = [0, 0, 0, 1]
+    p.createMultiBody(mass,
+                      col,
+                      vis,
+                      basePosition,
+                      baseOrientation,
+                      linkMasses=link_Masses,
+                      linkCollisionShapeIndices=linkCollisionShapeIndices,
+                      linkVisualShapeIndices=linkVisualShapeIndices,
+                      linkPositions=linkPositions,
+                      linkOrientations=linkOrientations,
+                      linkInertialFramePositions=linkInertialFramePositions,
+                      linkInertialFrameOrientations=linkInertialFrameOrientations,
+                      linkParentIndices=indices,
+                      linkJointTypes=jointTypes,
+                      linkJointAxis=axis)
 
 # joint_target_sub = rospy.Subscriber("/cardsflow_joint_states", JointState, joint_target_cb)
 joint_target_sub = rospy.Subscriber("/cardsflow_joint_states", JointState, joint_target_cb)
+# joint_target_sub = rospy.Subscriber("/joint_targets", JointState, joint_target_cb)
+hand_joints_sub = rospy.Subscriber("/senseglove/joint_states", JointState, hand_joints_cb)
+# fingertip_sub = rospy.Subscriber("/senseglove/fingertip", PoseStamped, fingertip_cb)
 
 height = 720
 width = 640
@@ -93,11 +160,11 @@ def camera(link_id):
 def to_cv2(w,h,img,right):
     rgba_pic = np.array(img, np.uint8).reshape((h, w, 4))
     if right:
-        rgba_pic = np.roll(rgba_pic, 300)
+        # rgba_pic = np.roll(rgba_pic, 300)
         pic = cv2.cvtColor(rgba_pic, cv2.COLOR_RGBA2BGR)
         # pic = pic[0:height,300:width]
     else:
-        rgba_pic = np.roll(rgba_pic, -300)
+        # rgba_pic = np.roll(rgba_pic, -300)
         pic = cv2.cvtColor(rgba_pic, cv2.COLOR_RGBA2BGR)
         # pic = pic[0:height,0:width-300]
 
@@ -114,8 +181,8 @@ while (not rospy.is_shutdown()):
     right = camera(12)
     left_pic = to_cv2(left[0],left[1],left[2],0)
     right_pic = to_cv2(right[0],right[1],right[2],1)
-    vis = np.concatenate((right_pic, left_pic), axis=1)
-    cv2.imshow('window', vis)
-    cv2.waitKey(1)
+    vis = np.concatenate((left_pic, right_pic), axis=1)
+    # cv2.imshow('window', vis)
+    # cv2.waitKey(1)
     # rate.sleep()
     # p.stepSimulation()

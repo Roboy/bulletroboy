@@ -6,6 +6,8 @@ import cv2
 import rospy
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import CompressedImage
+from cv_bridge import CvBridge, CvBridgeError
 
 
 def quaternion_multiply(quaternion1, quaternion0):
@@ -17,6 +19,10 @@ def quaternion_multiply(quaternion1, quaternion0):
                      x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0], dtype=np.float64)
 
 rospy.init_node("bulletroboy")
+caml_pub = rospy.Publisher('roboy/sensors/caml/compressed', CompressedImage)
+camr_pub = rospy.Publisher('roboy/sensors/camr/compressed', CompressedImage)
+bridge = CvBridge()
+publish_pics = True
 
 p.connect(p.GUI)
 p.setRealTimeSimulation(1)
@@ -34,10 +40,11 @@ plane = p.loadURDF("plane.urdf")
 # p.loadURDF("teddy_vhacd.urdf", 0,-1,2)
 # p.loadMJCF("mjcf/half_cheetah.xml")
 # hand = p.loadSDF("/home/roboy/workspace/avatar_ws/src/icub-gazebo/icub/l_hand/l_hand.sdf")
+chessboard = p.loadSDF("/home/roboy/workspace/roboy3/src/robots/chessboard/chessboard.sdf", p.URDF_USE_MATERIAL_COLORS_FROM_MTL)
 # hand = p.loadURDF("/home/roboy/workspace/avatar_ws/src/simox_ros/sr_grasp_description/urdf/shadowhand.urdf",basePosition=(0.2,0,0.15), baseOrientation=(-1.57, 0,0,1.57))
 path = "/home/roboy/workspace/avatar_ws/src/sr_common/sr_description/robots/model.urdf"
 # left_hand = p.loadURDF(path)
-# p.resetBasePositionAndOrientation(1, posObj=(0,0,0.1), ornObj=(0,0.7,0,0.7))
+p.resetBasePositionAndOrientation(chessboard[0], posObj=(0,0,0.7),  ornObj=(0,0,0,1))
 # hand_joint_names = ["FFJ4", "FFJ3", "FFJ2", "FFJ1"]
 # hand_joints = []
 #
@@ -48,7 +55,11 @@ path = "/home/roboy/workspace/avatar_ws/src/sr_common/sr_description/robots/mode
 # p.loadURDF("half_cheetah.urdf")
 # p.loadURDF("humanoid/humanoid.urdf", 0,-2,0)
 # roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf',basePosition=(0.75,0,0.2), baseOrientation=(0,0,-0.7071,0.7071),useFixedBase=1)
-roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf', basePosition=(0.0,1.4,0.3), useFixedBase=1)
+roboy = p.loadURDF('/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf', basePosition=(0.0,0.7,0.4), useFixedBase=1)
+table = p.loadURDF('/home/roboy/.local/lib/python3.6/site-packages/pybullet_data/table/table.urdf')
+p.loadURDF('/home/roboy/.local/lib/python3.6/site-packages/pybullet_data/jenga/jenga.urdf', basePosition=(0.0,0.4,1))
+p.loadURDF('/home/roboy/.local/lib/python3.6/site-packages/pybullet_data/domino/domino.urdf',basePosition=(0.2,0.4,1))
+p.loadURDF('/home/roboy/.local/lib/python3.6/site-packages/pybullet_data/lego/lego.urdf',basePosition=(0.0,0.3,1))
 joints = []
 for i in range(p.getNumJoints(roboy)):
     joints.append(p.getJointInfo(roboy, i)[1].decode("utf-8"))
@@ -177,12 +188,15 @@ cv2.namedWindow("window", cv2.WND_PROP_FULLSCREEN)
 # cv2.setWindowProperty("window",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 
 while (not rospy.is_shutdown()):
-    left = camera(11)
-    right = camera(12)
+    left = camera(40)
+    right = camera(41)
     left_pic = to_cv2(left[0],left[1],left[2],0)
     right_pic = to_cv2(right[0],right[1],right[2],1)
+    if (publish_pics):
+        caml_pub.publish(bridge.cv2_to_compressed_imgmsg(left_pic))
+        camr_pub.publish(bridge.cv2_to_compressed_imgmsg(right_pic))
     vis = np.concatenate((left_pic, right_pic), axis=1)
-    # cv2.imshow('window', vis)
-    # cv2.waitKey(1)
+    cv2.imshow('window', vis)
+    cv2.waitKey(1)
     # rate.sleep()
     # p.stepSimulation()

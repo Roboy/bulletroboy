@@ -1,6 +1,7 @@
 # Roboy in pybullet
 
-## Setup
+## Setup 
+*Tested on Ubuntu 18.04 and Windows 10*
 - install [pybullet](https://github.com/bulletphysics/bullet3/blob/master/README.md#pybullet)
 - install [ROS2 Eloquent Elusor](https://index.ros.org/doc/ros2/Installation/Eloquent/)
 - get Roboy3 models and this repo:

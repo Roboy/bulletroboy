@@ -10,7 +10,9 @@ git clone  https://github.com/Roboy/bulletroboy.git
 ```
 
 ## Example
-Run the simulation example, where Roboy draws a predefined circle using inverse kinematics and joint states are published with ROS2.
+Run the simulation example, where 
+- Roboy draws a predefined circle using inverse kinematics 
+- the joint states are published with ROS2.
 ```
 cd bulletroboy/src
 python ros2_roboy.py  --model-path /path/to/roboy3_models/upper_body/bullet.urdf

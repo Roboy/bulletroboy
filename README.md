@@ -17,6 +17,7 @@ Run the simulation example, where
 - the joint states are published with ROS2.
 ```
 cd bulletroboy/src
+# use python or python3 depending on your system setup
 python ros2_roboy.py  --model-path /path/to/roboy3_models/upper_body/bullet.urdf
 # i.e. python ros2_roboy.py  --model-path ../../roboy3_models/upper_body/bullet.urdf
 

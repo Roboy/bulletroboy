@@ -24,3 +24,10 @@ python ros2_roboy.py  --model-path /path/to/roboy3_models/upper_body/bullet.urdf
 # in a new terminal, to see current joint states
 ros2 topic echo /roboy/simulation/joint_state
 ```
+
+Run the cage simulation of a human figure with attached tendons.
+```bash
+cd bulletroboy/src
+# use python or python3 depending on your system setup
+python exoforce.py
+```

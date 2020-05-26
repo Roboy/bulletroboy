@@ -1,3 +1,9 @@
+#######################################################################################
+###############                                                         ###############
+###############    BASIC SETUP, LOADING THE BODY & CLASS DEFINITIONS    ###############
+###############                                                         ###############
+#######################################################################################
+
 import argparse
 import os
 
@@ -13,147 +19,98 @@ p.connect(p.GUI)
 p.resetSimulation()
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 plane = p.loadURDF("plane.urdf")
-
 human = p.loadURDF(os.path.dirname(os.path.realpath(__file__))+"/../models/human.urdf", [0, 0, 1], useFixedBase=1)
 
-hand_link = 25
-# position, orientation = p.getBasePositionAndOrientation(human)
-# orientation
+
+class humanFigure():
+	def __init__(self, body_id):
+		self.body_id = body_id
+
+	def find_link_number(self, link_name):
+		numJoints = p.getNumJoints(self.body_id)
+		link = None
+		for i in range(numJoints):
+			info = p.getJointInfo(self.body_id,i)
+			if info[12] == link_name:
+				link = i;
+		return link
 
 
-# NUMBER OF JOINTS = 43 (However most of them are visualized at the base... strange)
-joints = p.getNumJoints(human)
-print("The number of Joints is: ", joints)
+class Tendon():
+	def __init__(self, body_id, link, end_displacement, i):
+		self.body_id = body_id
+		self.link = link
+		self.i = i
+		self.end_displacement = end_displacement
+		self.forceId = p.addUserDebugParameter(str("tendon " + str(self.i)), 0,200,0)
+		self.start_location = p.getLinkState(self.body_id, self.link)[0]
+		self.end_location = [self.start_location[0]+self.end_displacement[0],
+				     self.start_location[1]+self.end_displacement[1],
+				     self.start_location[2]+self.end_displacement[2]]
+		self.tendon = p.addUserDebugLine(self.start_location,
+		                      		 self.end_location,
+                                      		 lineColorRGB=[0,0,255],
+                                      		 lineWidth=2)
 
-for i in range(joints):
-	info = p.getJointInfo(human, i)
-	print(info)
-info = p.getJointInfo(human, hand_link)
-print(info)
+	def decompose_force(self):
+		motor_force = p.readUserDebugParameter(self.forceId)
+		force_vector = [a_i - b_i for a_i, b_i in zip(self.end_location,self.start_location)]
+		self.force_components = [motor_force * x/norm(force_vector) for x in force_vector]
 
-# NUMBER OF CONSTRAINTS = 0 (Unless I uncomments createConstraint function)
-cons = p.getNumConstraints()
-print("The number of Constraints is: ", cons)
+	def apply_force(self):
+		p.applyExternalForce(objectUniqueId=self.body_id,
+			     	     linkIndex = self.link,
+			     	     forceObj = self.force_components,
+			     	     posObj=self.start_location,
+			     	     flags=p.WORLD_FRAME)
 
-for i in range(cons):
-	info = p.getConstraintInfo(i)
-	print(info)
-
-# GET LINK STATES, JOINT STATES
-linkstate = p.getLinkState(human, hand_link)
-print("The link state or link hand_link is: ", linkstate)
-print("\n")
-
-jointinfo = p.getJointInfo(human, hand_link)
-print("The joint info or link hand_link is: ", jointinfo)
-
-# NUMBER OF BODIES = 2 (0 = plane, 1 = human)
-bodies = p.getNumBodies()
-print("The number of bodies is: ", bodies)
-"""for i in range(bodies):
-	info = p.getBodyInfo(i)
-	body_id = p.getBodyUniqueId(i)
-	print("Info: ",info)
-	print("This body's Id is: ", body_id)"""
+	def update(self):
+		self.start_location = p.getLinkState(self.body_id, self.link)[0]
+		p.addUserDebugLine(self.start_location,self.end_location,lineColorRGB=[0,0,255],
+				   lineWidth=2, replaceItemUniqueId=self.tendon)
+		self.decompose_force()
+		self.apply_force()
+		
+#######################################################################################
+###############                                                         ###############
+###############               LINK, WORLD AND TENDON SETUP              ###############
+###############                                                         ###############
+#######################################################################################
 
 
-# COMMON SETUP
+# LINK DEFINITIONS
+hf = humanFigure(human)
+
+lefthand_link = hf.find_link_number(b'human/left_wrist')
+righthand_link = hf.find_link_number(b'human/right_wrist')
+
+# COMMON WORLD SETUP
 p.setGravity(0, 0, -9.81)
-# p.setTimeStep(-0.0001)
-p.setRealTimeSimulation(0) # XXX
-color = [1, 0, 0]
+p.setRealTimeSimulation(0)     # Don't change. Else p.applyExternalForce() won't work.
 
-# IMPORTANT JOINT INDICES:
+# TENDONS:
+tendon_list = []
 
-"""
-00: Waist
-01: Base - between the feet (on the floor)
-04: Upper Chest
-07: Neck
-08: Head
-12: Right Shoulder
-13: Right Elbow
-16: Right Wrist
-21: Left Shoulder
-22: Left Elbow
-hand_link: Left Wrist
-30: Right Leg (Point where it joins the waist)
-31: Right Knee
-33: Right Foot
-38: Left Leh (Point where it joins the waist)
-39: Left Knee
-41: Left Foot
-"""
+tendon_list.append(Tendon(human, lefthand_link, [0.5, 0.5, 1.0], 1))
+tendon_list.append(Tendon(human, lefthand_link, [0.5, 0.5, -1.0], 2))
+tendon_list.append(Tendon(human, righthand_link, [0.5, -0.5, 1.0], 3))
+tendon_list.append(Tendon(human, righthand_link, [0.5, -0.5, -1.0], 4))
 
 
+######################################################################################
+###########                                                              #############
+###########      ACTUAL SIMULATION (UPDATING DEBUGLINES AND FORCES)      #############
+###########                                                              #############
+######################################################################################
 
+try:
+	while True:
+		for i in range(len(tendon_list)):
+			tendon_list[i].update()
 
-#################################################################################
-#########                                                         ###############
-#########     ALONA: THE QUESTIONS ARE ABOUT THE CODE BELOW :)    ###############
-#########                                                         ###############
-#################################################################################
+		p.stepSimulation()
 
-
-
-# THIS DEBUGLINE IS ATTACHED TO THE WRIST BUT POINTS ARE DEFINED IN LINK FRAME
-hand_pos = p.getLinkState(human, hand_link)[0]
-tendon = p.addUserDebugLine(lineToXYZ=hand_pos,				# starting point = wrist link frame origin
-		   lineFromXYZ=[1,1,1],			# ending point : how to set it to world frame?
-                   lineColorRGB= [1,0,0],
-                   lineWidth=3)
-
-
-# THE USERDEBUGLINE BELOW HAS BOTH STARTING AND ENDING POINTS FIXED IN THE WORLD FRAME
-"""
-p.addUserDebugLine(lineFromXYZ=[0,0.8,1.35],
-		   lineToXYZ=[0,0.8,2],
-                   lineColorRGB= [1,0,0],
-                   lineWidth=3)"""
-
-# IF I UNCOMMENT THE CONSTRAINT (CREATE IT), THEN THE FIGURE LOSES CONTROL
-"""
-p.createConstraint(human,		# ParentBodyUniqueId
-		   22,			# ParentLinkIndex
-		   hand_link,			# childBodyUniqueId
-		   hand_link,			# childLinkIndex
-		   4,			# Join Type: JOINT_GEAR
-		   [0,0,1],		# Joint Axis
-		   [0,0,0],		# ParentFramePosition
-		   [0,0,0])		# childFramePosition"""
-
-# THIS IS THE BIGGEST ISSUE, THE FIGURE DOES NOT REACT TO THE FUNCTION APPLYEXTERNALFORCE
-
-# p.applyExternalForce(objectUniqueId=1,
-# 		     linkIndex = hand_link,
-# 		     forceObj = [100,100,100],
-# 		     posObj=[0,0,0],
-# 		     flags=2)		# 2 Flags: WORLD_FRAME and LINK_FRAME
-
-# THE CODE LINE BELOW RECEIVES THE SAME REACTION AS THE CREATECONSTRAINT FUNCTION:
-# p.setJointMotorControlArray(human, (21,22,hand_link), p.POSITION_CONTROL)
-hand_pos = p.getLinkState(human, hand_link)[0]
-tendon_origin = [hand_pos[0]+0.5, hand_pos[1]+0.5, 3.0]
-# motor_force = 50
-forceId = p.addUserDebugParameter("motor_force", 0,200,0)
-
-for _ in range(100000000):
-	# import pdb; pdb.set_trace()
-	hand_pos = p.getLinkState(human, hand_link)[0]
-	motor_force = p.readUserDebugParameter(forceId)
-
-	p.addUserDebugLine(lineToXYZ=hand_pos,		# XXX
-			   			lineFromXYZ=tendon_origin,		# XXX
-	                    lineColorRGB= [0,0,255],
-	                    lineWidth=2,
-					    replaceItemUniqueId=tendon) # XXX
-
-	force_vector = [a_i - b_i for a_i, b_i in zip(tendon_origin,hand_pos)]
-	force_components = [motor_force * x/norm(force_vector) for x in force_vector]
-	p.applyExternalForce(objectUniqueId=human, # XXX
-			     linkIndex = hand_link,
-			     forceObj = force_components, # XXX
-			     posObj=hand_pos,			# XXX
-			     flags=p.WORLD_FRAME )		# XXX
-
-	p.stepSimulation()
+except KeyboardInterrupt:
+	pass
+	
+	

@@ -107,10 +107,12 @@ p.setGravity(0, 0, -9.81)
 p.setRealTimeSimulation(0)     # Don't change. Else p.applyExternalForce() won't work.
 
 # TENDONS:
-t1 = Tendon(human, lefthand_link, [0.5, 0.5, 1.0], 1)
-t2 = Tendon(human, lefthand_link, [0.5, 0.5, -1.0], 2)
-t3 = Tendon(human, righthand_link, [0.5, -0.5, 1.0], 3)
-t4 = Tendon(human, righthand_link, [0.5, -0.5, -1.0], 4)
+tendon_list = []
+
+tendon_list.append(Tendon(human, lefthand_link, [0.5, 0.5, 1.0], 1))
+tendon_list.append(Tendon(human, lefthand_link, [0.5, 0.5, -1.0], 2))
+tendon_list.append(Tendon(human, righthand_link, [0.5, -0.5, 1.0], 3))
+tendon_list.append(Tendon(human, righthand_link, [0.5, -0.5, -1.0], 4))
 
 
 ######################################################################################
@@ -121,10 +123,8 @@ t4 = Tendon(human, righthand_link, [0.5, -0.5, -1.0], 4)
 
 try:
 	while True:
-		t1.update()
-		t2.update()
-		t3.update()
-		t4.update()
+		for i in range(len(tendon_list)):
+			tendon_list[i].update()
 
 		p.stepSimulation()
 

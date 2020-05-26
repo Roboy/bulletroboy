@@ -84,24 +84,6 @@ hf = humanFigure(human)
 lefthand_link = hf.find_link_number(b'human/left_wrist')
 righthand_link = hf.find_link_number(b'human/right_wrist')
 
-upperchest_link = hf.find_link_number(b'human/shoulder_center')
-waist_link = hf.find_link_number(b'human/spine_0')
-base_link = hf.find_link_number(b'human/spine_1')
-neck_link = hf.find_link_number(b'human/neck')
-head_link = hf.find_link_number(b'human/head')
-
-rightshoulder_link = hf.find_link_number(b'human/right_shoulder')
-leftshoulder_link = hf.find_link_number(b'human/left_shoulder')
-rightelbow_link = hf.find_link_number( b'human/right_elbow')
-leftelbow_link = hf.find_link_number( b'human/left_elbow')
-
-righthip_link = hf.find_link_number(b'human/right_hip')
-lefthip_link = hf.find_link_number(b'human/left_hip')
-rightknee_link = hf.find_link_number(b'human/right_knee')
-leftknee_link = hf.find_link_number(b'human/left_knee')
-rightankle_link = hf.find_link_number(b'human/right_ankle')
-leftankle_link = hf.find_link_number(b'human/left_ankle')
-
 # COMMON WORLD SETUP
 p.setGravity(0, 0, -9.81)
 p.setRealTimeSimulation(0)     # Don't change. Else p.applyExternalForce() won't work.

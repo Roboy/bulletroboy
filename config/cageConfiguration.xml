@@ -5,51 +5,41 @@
 		<radius>1</radius>
 	</cageStructure>
 	<muscleUnits>
-		<muscleUnit name="motor0">
-			<height>2</height>
-			<angle>70</angle>
-			<parameters max_force="50"/>
+		<muscleUnit id="0">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 1.0 2.0</viaPoint>
+				<viaPoint id="1" link="human/left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
 		</muscleUnit>
-		<muscleUnit name="motor1">
-			<height>0</height>
-			<angle>70</angle>
-			<parameters max_force="50"/>
+		<muscleUnit id="1">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 1.0 0.0</viaPoint>
+				<viaPoint id="1" link="human/left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
 		</muscleUnit>
-		<muscleUnit name="motor2">
-			<height>2</height>
-			<angle>270</angle>
-			<parameters max_force="50"/>
+		<muscleUnit id="2">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 -1.0 2.0</viaPoint>
+				<viaPoint id="1" link="human/right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
 		</muscleUnit>
-		<muscleUnit name="motor3">
-			<height>0</height>
-			<angle>270</angle>
-			<parameters max_force="50"/>
+		<muscleUnit id="3">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 -1.0 0.0</viaPoint>
+				<viaPoint id="1" link="human/right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
 		</muscleUnit>
 	</muscleUnits>
-	<tendons>
-		<tendon name="tendon0">
-			<muscle name="motor0"/>
-			<link name="human/left_wrist">
-				<viaPoint>0.0 0.0 0.0</viaPoint>
-			</link>
-		</tendon>
-		<tendon name="tendon1">
-			<muscle name="motor1"/>
-			<link name="human/left_wrist">
-				<viaPoint>0.0 0.0 0.0</viaPoint>
-			</link>
-		</tendon>
-		<tendon name="tendon2">
-			<muscle name="motor2"/>
-			<link name="human/right_wrist">
-				<viaPoint>0.0 0.0 0.0</viaPoint>
-			</link>
-		</tendon>
-		<tendon name="tendon3">
-			<muscle name="motor3"/>
-			<link name="human/right_wrist">
-				<viaPoint>0.0 0.0 0.0</viaPoint>
-			</link>
-		</tendon>
-	</tendons>
 </cageConfiguration>

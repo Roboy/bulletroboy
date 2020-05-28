@@ -6,8 +6,13 @@ from numpy.linalg import norm
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
+
 class CageConfiguration():
     def __init__(self, filepath=None):
+        """
+		This class handles the initial cage configuration.
+		It can read and write from an XML file.
+		"""
         self.filepath = filepath
         self.cage_structure = {}
         self.muscle_units = []
@@ -102,6 +107,9 @@ class CageConfiguration():
 
 class Operator():
 	def __init__(self, body_id):
+		"""
+		This class handles the operator body and its links in the simulation.
+		"""
 		self.body_id = body_id
 		self.links = self.get_links()
 
@@ -132,6 +140,9 @@ class Operator():
 
 class Tendon():
 	def __init__(self, id, motor, via_points, operator):
+		"""
+		This class handles each tendon attached to the operator.
+		"""
 		self.id = id
 		self.name = "Tendon " + str(self.id)
 		self.debug_color = [0,0,255]
@@ -188,7 +199,9 @@ class Tendon():
 
 class Cage():
 	def __init__(self, height, radius, motors):
-
+		"""
+		This class handles the cage and the motors attached to it.
+		"""
 		self.origin = np.array([0, 0, 0])
 		self.height = height
 		self.radius = radius
@@ -206,6 +219,9 @@ class Cage():
 
 class Motor():
 	def __init__(self, id, via_point):
+		"""
+		This class handles a motor attached to the cage.
+		"""
 		assert via_point['link'] == 'cage'
 
 		self.id = id
@@ -228,16 +244,24 @@ class Motor():
 
 class MuscleUnit():
 	def __init__(self, id, via_points, parameters, operator):
+		"""
+		This class handles a muscle unit including its tendon and motor.
+		"""
 		self.id = id
 		self.via_points = via_points
 		self.parameters = parameters
 		self.motor = Motor(self.id, via_points[0])
 		self.tendon = Tendon(self.id, self.motor, via_points[1:], operator)
 
+	def update(self, force):
+		self.tendon.update(force)
+
 
 class ExoForce():
 	def __init__(self, cage_conf, operator):
-
+		"""
+		Main ExoForce class. It handles the muscle units and the cage itself.
+		"""
 		self.operator = operator
 
 		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'], self.operator)
@@ -248,8 +272,8 @@ class ExoForce():
 
 		self.cage.rotate_cage(new_angle)
 
-		for tendon, force in zip(self.get_tendons(), motor_forces):
-			tendon.update(force)
+		for muscle, force in zip(self.muscle_units, motor_forces):
+			muscle.update(force)
 
 	def get_cage(self):
 		return self.cage

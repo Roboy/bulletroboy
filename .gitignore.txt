@@ -1,5 +1,0 @@
-src/__pycache__
-src/pycache
-*pycache
-*__pycache__
-

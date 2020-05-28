@@ -1,0 +1,38 @@
+<?xml version="1.0" ?>
+<cageConfiguration>
+	<cageStructure>
+		<height>200</height>
+		<radius>60</radius>
+	</cageStructure>
+	<muscleUnits>
+		<muscleUnit name="motor0">
+			<height>102</height>
+			<angle>20</angle>
+		</muscleUnit>
+		<muscleUnit name="motor1">
+			<height>102</height>
+			<angle>80</angle>
+		</muscleUnit>
+		<muscleUnit name="motor2">
+			<height>60</height>
+			<angle>170</angle>
+		</muscleUnit>
+	</muscleUnits>
+	<tendons>
+		<tendon name="tendon0">
+			<link name="torso">
+				<viaPoint type="FIXPOINT">0.022800526949292018 0.06769698963370596 0.11198182124326217</viaPoint>
+			</link>
+		</tendon>
+		<tendon name="tendon1">
+			<link name="upperarm_left">
+				<viaPoint type="FIXPOINT">0.022800526949292018 0.06769698963370596 0.11198182124326217</viaPoint>
+			</link>
+		</tendon>
+		<tendon name="tendon2">
+			<link name="upperarm_right">
+				<viaPoint type="FIXPOINT">0.022800526949292018 0.06769698963370596 0.11198182124326217</viaPoint>
+			</link>
+		</tendon>
+	</tendons>
+</cageConfiguration>

@@ -1,109 +1,220 @@
-import os
-
 import pybullet as p
-import pybullet_data
 import math
 import numpy as np
 from numpy.linalg import norm
-from sympy import Plane
-from xml_handler import CageConfiguration
 
-#######################################################
-###############                         ###############
-###############    CLASS DEFINITIONS    ###############
-###############                         ###############
-#######################################################
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+
+class CageConfiguration():
+    def __init__(self, filepath=None):
+        self.filepath = filepath
+        self.cage_structure = {}
+        self.muscle_units = []
+
+        if self.filepath:
+            self.load(filepath)
+
+    def load(self, filepath):
+        # parsing XML file
+        tree = ET.parse(filepath)
+        root = tree.getroot()
+
+        # getting main items
+        cage_xml = root.find('cageStructure')
+        muscles_xml = root.find('muscleUnits')
+
+        # parsing cage structure
+        self.cage_structure['height'] = int(cage_xml.find('height').text)
+        self.cage_structure['radius'] = int(cage_xml.find('radius').text)
+
+        # parsing muscle units
+        for muscle in muscles_xml:
+            muscle_dict = {}
+            muscle_dict['id'] = muscle.get('id')
+            muscle_dict['viaPoints'] = []
+            for via_point_xml in muscle.find('viaPoints'):
+                via_point = {}
+                via_point['id'] = via_point_xml.get('id')
+                via_point['link'] = via_point_xml.get('link')
+                via_point['point'] = np.array(list(map(float, via_point_xml.text.split(" "))))
+                muscle_dict['viaPoints'].append(via_point)
+            muscle_dict['parameters'] = {}
+            for parameter in muscle.find('parameters'):
+                muscle_dict['parameters'][parameter.tag] = parameter.text
+            self.muscle_units.append(muscle_dict)
+
+    def save(self, filepath=None):
+        if filepath is None: filepath = self.filepath
+
+        # main item
+        cageConfiguration = ET.Element('cageConfiguration')
+
+        # cageStructure
+        cage_xml = ET.SubElement(cageConfiguration, 'cageStructure')
+        cage_height = ET.SubElement(cage_xml, 'height')
+        cage_radius = ET.SubElement(cage_xml, 'radius')
+        cage_height.text = str(self.cage_structure['height'])
+        cage_radius.text = str(self.cage_structure['radius'])
+
+        # muscle Units
+        muscles_xml = ET.SubElement(cageConfiguration, 'muscleUnits')
+        for muscle in self.muscle_units:
+            muscle_xml = ET.SubElement(muscles_xml, 'muscleUnit')
+            muscle_xml.set('id', muscle['id'])
+            muscle_via_points = ET.SubElement(muscle_xml, 'viaPoints')
+            for via_point in muscle['viaPoints']:
+                via_point_xml = ET.SubElement(muscle_via_points, 'viaPoint')
+                via_point_xml.set('id', via_point['id'])
+                via_point_xml.set('link', via_point['link'])
+                via_point_xml.text = str(via_point['point'].tolist()).strip('[]').replace(',', '')
+            muscle_parameters = ET.SubElement(muscle_xml, 'parameters')
+            for k, v in muscle['parameters'].items():
+                subelement = ET.SubElement(muscle_parameters, k)
+                subelement.text = v
+
+        # write to file
+        mydata = ET.tostring(cageConfiguration).decode()
+        reparsed = minidom.parseString(mydata)
+        mydata = reparsed.toprettyxml(indent="\t")
+        myfile = open(filepath, "w")
+        myfile.write(mydata)
+        myfile.close()
+
+    def __str__(self):
+        msg = f"\nCAGE CONFIGURATION: ({self.filepath})\n"
+        msg += "-------------------\n"
+        msg += "Cage Structure:\n"
+        msg += f"\theight: {self.cage_structure['height']}\n"
+        msg += f"\tradius: {self.cage_structure['radius']}\n"
+        msg += "Muscle Units:\n"
+        for muscle in self.muscle_units:
+            msg += "\t-----------------\n"
+            msg += f"\tid: {muscle['id']}\n"
+            msg += "\tvia points:\n"
+            for via_point in muscle['viaPoints']:
+                msg += f"\t\t{via_point['id']} link: {via_point['link']:<20}\tpoint: {via_point['point']}\n"
+            msg += "\tparameters:\n"
+            for k, v in muscle['parameters'].items():
+                msg += f"\t\t{k}: {v}\n"
+        return msg
 
 
-class HumanFigure():
+class Operator():
 	def __init__(self, body_id):
 		self.body_id = body_id
+		self.links = self.get_links()
 
-	def find_link_number(self, link_name):
-		numJoints = p.getNumJoints(self.body_id)
-		link = None
-		for i in range(numJoints):
-			info = p.getJointInfo(self.body_id,i)
-			if info[12] == str.encode(link_name):
-				link = i
-		return link
+	def get_links(self):
+		links = []
+		for i in range(p.getNumJoints(self.body_id)):
+			link = {}
+			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+			link['id'] = i
+			links.append(link)
+		return links
+
+	def get_link_center(self, link_name):
+		center = None
+		index = self.get_link_index(link_name)
+		if index:
+			center = np.asarray(p.getLinkState(self.body_id, self.links[index]['id'])[0])
+		return center
+
+	def get_link_index(self, link_name):
+		index = None
+		for i, link in enumerate(self.links):
+			if link['name'] == link_name:
+				index = i
+				break
+		return index
 
 
 class Tendon():
-	def __init__(self, name, muscle, human, link_name, via_point):
-		self.name = name
-		self.muscle = muscle
-		self.human_id = human.body_id
-		self.link = human.find_link_number(link_name)
-		self.via_point = np.array(via_point)
+	def __init__(self, id, motor, via_points, operator):
+		self.id = id
+		self.name = "Tendon " + str(self.id)
+		self.debug_color = [0,0,255]
+		self.motor = motor
+
+		self.via_points = via_points
+		self.operator = operator
+
 		self.forceId = None
-		self.start_location = np.asarray(p.getLinkState(self.human_id, self.link)[0]) + self.via_point
-		self.end_location = self.muscle.pos
-		self.tendon = p.addUserDebugLine(self.start_location, self.end_location, lineColorRGB=[0,0,255], lineWidth=2)
-		self.text = p.addUserDebugText(self.name, self.end_location, textColorRGB=[0,0,255], textSize=0.8)
+
+		self.start_location = self.motor.pos
+		self.end_location = self.via_points[-1]['point']
+		self.segments = []
+
+		self.init_tendon()
+
+	def init_tendon(self):
+		start = self.start_location
+		for via_point in self.via_points:
+			point = self.get_point(via_point)
+			segment = p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2)
+			self.segments.append(segment)
+			start = point
+
+		self.debug_text = p.addUserDebugText(self.name, self.start_location, textColorRGB=self.debug_color, textSize=0.8)
+
+	def get_point(self, via_point):
+		return self.operator.get_link_center(via_point['link']) + via_point['point']
 
 	def apply_force(self, force):
-		force_direction = np.asarray(self.end_location) - np.asarray(self.start_location)
-		force_direction = force_direction / norm(force_direction)
+		# TODO: apply forces to all via points, currently the force is applied to the last via point
 
-		p.applyExternalForce(objectUniqueId=self.human_id,
-			     	     linkIndex = self.link,
+		force_direction = np.asarray(self.start_location) - np.asarray(self.end_location)
+		force_direction /= norm(force_direction)
+
+		p.applyExternalForce(objectUniqueId=self.operator.body_id,
+			     	     linkIndex = self.operator.get_link_index(self.via_points[-1]['link']),
 			     	     forceObj = force * force_direction,
 			     	     posObj=self.start_location,
 			     	     flags=p.WORLD_FRAME)
 
+	def update_lines(self):
+		start = self.start_location
+		for segment, via_point in zip(self.segments, self.via_points):
+			point = self.get_point(via_point)
+			p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2, replaceItemUniqueId=segment)
+			self.end_location = point
+
 	def update(self, force):
-		self.start_location = np.asarray(p.getLinkState(self.human_id, self.link)[0]) + self.via_point
-
-		p.addUserDebugLine(self.start_location,self.end_location,lineColorRGB=[0,0,255], lineWidth=2, replaceItemUniqueId=self.tendon)
-		p.addUserDebugText(self.name, self.end_location, textColorRGB=[0,0,255], textSize=0.8, replaceItemUniqueId=self.text)
-
+		self.update_lines()
+		p.addUserDebugText(self.name, self.start_location, self.debug_color, textSize=0.8, replaceItemUniqueId=self.debug_text)
 		self.apply_force(force)
 
 
 class Cage():
-	def __init__(self, height, radius, muscle_units):
+	def __init__(self, height, radius, motors):
 
-		self.origin = [0, 0, 0]
+		self.origin = np.array([0, 0, 0])
 		self.height = height
 		self.radius = radius
 		self.angle = 0
 
-		self.muscle_units = [ Muscle(muscle['name'], muscle['height'], muscle['angle'], self.radius, muscle['parameters']) for muscle in muscle_units ]
+		self.motors = motors
 
 	def rotate_cage(self, new_angle):
 
-		for muscle in self.muscle_units:
-			muscle.rotate(self.angle - new_angle, self.origin)
+		for motor in self.motors:
+			motor.rotate(self.angle - new_angle, self.origin)
 
 		self.angle = new_angle
 
 
-class Muscle():
-	def __init__(self, name, height, angle, radius, parameters):
-		
-		self.name = name
-		self.height = height
-		self.angle = angle
-		self.radius = radius
-		self.parameters = parameters
+class Motor():
+	def __init__(self, id, via_point):
+		assert via_point['link'] == 'cage'
 
-		self.pos = self.get_pos()
+		self.id = id
+		self.pos = via_point['point']
 
-	def get_pos(self):
-
-		x = self.radius * math.cos(math.radians(self.angle))
-		y = self.radius * math.sin(math.radians(self.angle))
-		z = self.height
-
-		return [x, y, z]
-
-	def rotate(self, delta, origin):
-
-		self.angle += delta
+	def rotate(self, delta, pivot):
 
 		x, y = self.pos[:2]
-		offset_x, offset_y = origin[:2]
+		offset_x, offset_y = pivot[:2]
 		adjusted_x = (x - offset_x)
 		adjusted_y = (y - offset_y)
 		cos_rad = math.cos(math.radians(delta))
@@ -115,88 +226,39 @@ class Muscle():
 		self.pos[1] = qy
 
 
+class MuscleUnit():
+	def __init__(self, id, via_points, parameters, operator):
+		self.id = id
+		self.via_points = via_points
+		self.parameters = parameters
+		self.motor = Motor(self.id, via_points[0])
+		self.tendon = Tendon(self.id, self.motor, via_points[1:], operator)
+
+
 class ExoForce():
-	def __init__(self, cage_conf, human):
+	def __init__(self, cage_conf, operator):
 
-		self.human = human
-		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], cage_conf.muscleUnits)
-		self.tendons = [ Tendon(tendon['name'], self.get_muscle(tendon['muscle']), self.human, tendon['link'], tendon['viaPoint'])
-							for tendon in cage_conf.tendons ]
+		self.operator = operator
 
-	def step(self, new_angle, motor_forces):
+		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'], self.operator)
+								for muscle in cage_conf.muscle_units ]
+		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
+
+	def update(self, new_angle, motor_forces):
 
 		self.cage.rotate_cage(new_angle)
 
-		for tendon, force in zip(self.tendons, motor_forces):
+		for tendon, force in zip(self.get_tendons(), motor_forces):
 			tendon.update(force)
 
 	def get_cage(self):
 		return self.cage
 
-	def get_tendons(self):
-		return self.tendons
-
 	def get_muscle_units(self):
-		return self.cage.muscle_units
-
-	def get_tendon(self, tendon_name):
-		for tendon in self.tendons:
-			if tendon.name == tendon_name:
-				return tendon
-		return None
-
-	def get_muscle(self, muscle_name):
-		for muscle in self.cage.muscle_units:
-			if muscle.name == muscle_name:
-				return muscle
-		return None
-
-
-#######################################################################################
-###############                                                         ###############
-###############                     SIMULATION SETUP                    ###############
-###############                                                         ###############
-#######################################################################################
-
-p.connect(p.GUI)
-p.resetSimulation()
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-plane = p.loadURDF("plane.urdf")
-human = p.loadURDF(os.path.dirname(os.path.realpath(__file__))+"/../models/human.urdf", [0, 0, 1], useFixedBase=1)
-
-# COMMON WORLD SETUP
-p.setGravity(0, 0, -9.81)
-p.setRealTimeSimulation(0)     # Don't change. Else p.applyExternalForce() won't work.
-
-# EXOFORCE SETUP
-initial_cage_conf = CageConfiguration("../config/cageConfiguration.xml")
-human_figure = HumanFigure(human)
-
-exoforce = ExoForce(initial_cage_conf, human_figure)
-
-for tendon in exoforce.tendons:
-	tendon.forceId = p.addUserDebugParameter("Force in " + tendon.name, 0, 200, 0)
-
-cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
-
-######################################################################################
-###########                                                              #############
-###########                          RUN SIMULATION                      #############
-###########                                                              #############
-######################################################################################
-
-try:
-	while True:
-		cage_angle = p.readUserDebugParameter(cage_angle_id)
-
-		motor_forces = []
-		for tendon in exoforce.tendons:
-			motor_forces.append(p.readUserDebugParameter(tendon.forceId))
-		
-		exoforce.step(cage_angle, motor_forces)
-
-		p.stepSimulation()
-
-except KeyboardInterrupt:
-	pass
+		return self.muscle_units
 	
+	def get_motors(self):
+		return [ muscle.motor for muscle in self.muscle_units ]
+
+	def get_tendons(self):
+		return [ muscle.tendon for muscle in self.muscle_units ]

@@ -29,5 +29,5 @@ Run the cage simulation of a human figure with attached tendons.
 ```bash
 cd bulletroboy/src
 # use python or python3 depending on your system setup
-python exoforce.py
+python cage_simulation.py
 ```

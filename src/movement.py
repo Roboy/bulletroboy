@@ -1,17 +1,20 @@
 import os
+import time
+import math
 import pybullet as p
 import pybullet_data
 
-from exoforce import CageConfiguration, Operator, ExoForce
+from exoforce import CageConfiguration, Operator, ExoForce, Movements
 
-if __name__ == '__main__':
+			
+if __name__ == '__main__':	
     file_path = os.path.dirname(os.path.realpath(__file__))
 
     # SIMULATION SETUP
     p.connect(p.GUI)
     p.resetSimulation()
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
-    p.setGravity(0, 0, -9.81)
+    # p.setGravity(0, 0, -9.81)
     p.setRealTimeSimulation(0)     # Don't change. Else p.applyExternalForce() won't work.
 
     # LOADING SIM BODIES
@@ -24,6 +27,24 @@ if __name__ == '__main__':
 
     exoforce = ExoForce(initial_cage_conf, operator)
 
+    # TESTING CHANGE IN INITIAL SETTING POSE: (TODO: delete before merge)
+    test_link = operator.get_link_index('human/left_shoulder_1')
+    
+    print('The link for left_elbow is: 	', test_link)
+    print('\n')
+
+    link_state = p.getLinkState(human_model, test_link)
+    print('The link_state for left_shoulder is: 	', link_state)
+    print('\n')
+
+    joint_state = p.getJointState(human_model, test_link)
+    print('The joint_state for left_shoulder is: 	', joint_state)
+    print('\n')
+
+    joint_state = p.getJointState(human_model, test_link)
+    print('The reset_joint_state for left_shoulder is: 	', joint_state)
+    print('\n')
+
     # DEBUG PARAMETERS
     for tendon in exoforce.get_tendons():
         tendon.forceId = p.addUserDebugParameter("Force in " + tendon.name, 0, 200, 0)
@@ -34,6 +55,10 @@ if __name__ == '__main__':
     try:
         while True:
             cage_angle = p.readUserDebugParameter(cage_angle_id)
+
+            t = time.time()
+            mv = Movements(human_model)
+            # mv.simple_move('side_swing', t)
 
             motor_forces = []
             for tendon in exoforce.get_tendons():

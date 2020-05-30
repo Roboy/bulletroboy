@@ -1,4 +1,5 @@
 import pybullet as p
+import time
 import math
 import numpy as np
 from numpy.linalg import norm
@@ -286,3 +287,94 @@ class ExoForce():
 
 	def get_tendons(self):
 		return [ muscle.tendon for muscle in self.muscle_units ]
+
+
+class Movements():
+	def __init__(self, body_id):
+		"""
+		This class defines 2 movements: Re-definable inverse kinematic ones & harcoded simple ones. 
+		"""
+		self.body_id = body_id
+		self.links = self.get_links()		# delete this later
+
+	def get_EF(self, link_name):
+                freeJoints = []
+                numJoints = p.getNumJoints(self.body_id)
+
+                for i in range(numJoints):
+                    info = p.getJointInfo(self.body_id,i)
+                    if info[2] == p.JOINT_REVOLUTE:
+                        freeJoints.append(i)
+                    if info[12] == link_name:
+                            endEffectorId = i
+
+                return endEffectorId, freeJoints
+
+	def get_links(self):				#TODO: delete this later.
+		links = []
+		for i in range(p.getNumJoints(self.body_id)):
+			link = {}
+			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+			link['id'] = i
+			links.append(link)
+		return links
+
+	def get_link_index(self, link_name):		#TODO: delete this later.
+		index = None
+		for i, link in enumerate(self.links):
+			if link['name'] == link_name:
+				index = i
+				break
+		return index	
+
+
+	def one_end_efector(self, link_name, pos, maxIter):		# Uses inverse kinematics.
+		endEffectorId, freeJoints = get_EF(link_name)
+		while(iter < maxIter):
+		    jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
+		    for i in range(len(freeJoints)):
+          		p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+
+
+	def two_end_effectors(self, link_names, postions, maxIter):	# Not yet implemented.
+		return 0
+
+
+	def simple_move(self, case, t):			# Hardcoded simple movements.
+		spine_link = self.get_link_index('human/spine_2')
+		spine_side_link = self.get_link_index('human/spine_0')
+		left_shoulder_1 = self.get_link_index('human/left_shoulder_1')
+		right_shoulder_1 = self.get_link_index('human/right_shoulder_1')
+		left_shoulder_0 = self.get_link_index('human/left_shoulder_0')
+		right_shoulder_0 = self.get_link_index('human/right_shoulder_0')
+
+		if case == 'spine_swing':		# May be useful for "chest kick" into simulation (?)
+                    p.resetJointState(self.body_id, spine_link, math.sin(t))
+
+		elif case == 'forearm_roll':		# May be useful when checking tendon collisions (fix)
+                    p.resetJointState(self.body_id, left_shoulder_1, -1.75*math.pi/4)
+                    p.resetJointState(self.body_id, right_shoulder_1, 1.75*math.pi/4)
+
+                    left_elbow = self.get_link_index('human/left_elbow')
+                    right_elbow = self.get_link_index('human/right_elbow')
+
+                    p.resetJointState(self.body_id, left_elbow, -abs(math.sin(t)*2*math.pi/4))
+                    # p.resetJointState(self.body_id, right_elbow, abs(math.cos(t+math.pi/2)*2*math.pi/4))
+                    p.resetJointState(self.body_id, left_shoulder_0, (math.cos(t)*2*math.pi/4))
+                    # p.resetJointState(self.body_id, right_shoulder_0, (math.cos(t)*2*math.pi/4))
+
+		elif case == 'arm_roll': 	# May be useful to test roboys shoulder limitations in cage?
+                    p.resetJointState(self.body_id, left_shoulder_1, math.sin(t))
+                    p.resetJointState(self.body_id, left_shoulder_0, math.sin(t+math.pi/2))
+                    p.resetJointState(self.body_id, right_shoulder_1, -math.sin(t))
+                    p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
+
+		elif case == 'side_swing':	# To test connection between figure and cage orientation.
+		    p.resetJointState(self.body_id, spine_side_link, math.sin(t))
+		    # TODO: Connect chest orientation to cage rotation!
+		    
+
+		else:
+		    print('ERROR: No definition set for case = ', case)
+
+

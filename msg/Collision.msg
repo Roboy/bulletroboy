@@ -1,0 +1,13 @@
+int64 bodyuniqueida
+int64 bodyuniqueidb
+int64 linkindexa
+int64 linkindexb
+geometry_msgs/Vector3 positionona
+geometry_msgs/Vector3 positiononb
+geometry_msgs/Vector3 contactnormalonb
+float64 contactdistance
+float64 normalforce
+float64 lateralfriction1
+geometry_msgs/Vector3 lateralfrictiondir1
+float64 lateralfriction2
+geometry_msgs/Vector3 lateralfrictiondir2

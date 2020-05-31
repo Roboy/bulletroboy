@@ -1,0 +1,16 @@
+[1.960s] -- The C compiler identification is GNU 7.5.0
+[3.670s] -- The CXX compiler identification is GNU 7.5.0
+[3.783s] -- Check for working C compiler: /usr/bin/cc
+[3.986s] -- Check for working C compiler: /usr/bin/cc -- works
+[3.987s] -- Detecting C compiler ABI info
+[4.060s] -- Detecting C compiler ABI info - done
+[4.071s] -- Detecting C compile features
+[4.348s] -- Detecting C compile features - done
+[4.352s] -- Check for working CXX compiler: /usr/bin/c++
+[4.436s] -- Check for working CXX compiler: /usr/bin/c++ -- works
+[4.437s] -- Detecting CXX compiler ABI info
+[4.522s] -- Detecting CXX compiler ABI info - done
+[4.531s] -- Detecting CXX compile features
+[4.935s] -- Detecting CXX compile features - done
+[5.026s] -- Configuring incomplete, errors occurred!
+[5.026s] See also "/home/marisa/Desktop/bulletroboy/build/bulletroboy/CMakeFiles/CMakeOutput.log".

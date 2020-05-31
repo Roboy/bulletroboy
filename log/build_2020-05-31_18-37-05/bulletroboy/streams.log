@@ -1,0 +1,35 @@
+[0.047s] Invoking command in '/home/marisa/Desktop/bulletroboy/build/bulletroboy': /usr/bin/cmake /home/marisa/Desktop/bulletroboy -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/home/marisa/Desktop/bulletroboy/install/bulletroboy
+[1.960s] -- The C compiler identification is GNU 7.5.0
+[3.670s] -- The CXX compiler identification is GNU 7.5.0
+[3.783s] -- Check for working C compiler: /usr/bin/cc
+[3.986s] -- Check for working C compiler: /usr/bin/cc -- works
+[3.987s] -- Detecting C compiler ABI info
+[4.060s] -- Detecting C compiler ABI info - done
+[4.071s] -- Detecting C compile features
+[4.348s] -- Detecting C compile features - done
+[4.352s] -- Check for working CXX compiler: /usr/bin/c++
+[4.436s] -- Check for working CXX compiler: /usr/bin/c++ -- works
+[4.437s] -- Detecting CXX compiler ABI info
+[4.522s] -- Detecting CXX compiler ABI info - done
+[4.531s] -- Detecting CXX compile features
+[4.935s] -- Detecting CXX compile features - done
+[5.025s] CMake Error at CMakeLists.txt:10 (find_package):
+[5.025s]   By not providing "Findcatkin.cmake" in CMAKE_MODULE_PATH this project has
+[5.025s]   asked CMake to find a package configuration file provided by "catkin", but
+[5.025s]   CMake did not find one.
+[5.025s] 
+[5.025s]   Could not find a package configuration file provided by "catkin" with any
+[5.026s]   of the following names:
+[5.026s] 
+[5.026s]     catkinConfig.cmake
+[5.026s]     catkin-config.cmake
+[5.026s] 
+[5.026s]   Add the installation prefix of "catkin" to CMAKE_PREFIX_PATH or set
+[5.026s]   "catkin_DIR" to a directory containing one of the above files.  If "catkin"
+[5.026s]   provides a separate development package or SDK, be sure it has been
+[5.026s]   installed.
+[5.026s] 
+[5.026s] 
+[5.026s] -- Configuring incomplete, errors occurred!
+[5.026s] See also "/home/marisa/Desktop/bulletroboy/build/bulletroboy/CMakeFiles/CMakeOutput.log".
+[5.028s] Invoked command in '/home/marisa/Desktop/bulletroboy/build/bulletroboy' returned '1': /usr/bin/cmake /home/marisa/Desktop/bulletroboy -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/home/marisa/Desktop/bulletroboy/install/bulletroboy

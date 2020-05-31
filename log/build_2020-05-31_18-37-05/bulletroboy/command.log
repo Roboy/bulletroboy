@@ -1,0 +1,2 @@
+[0.047s] Invoking command in '/home/marisa/Desktop/bulletroboy/build/bulletroboy': /usr/bin/cmake /home/marisa/Desktop/bulletroboy -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/home/marisa/Desktop/bulletroboy/install/bulletroboy
+[5.028s] Invoked command in '/home/marisa/Desktop/bulletroboy/build/bulletroboy' returned '1': /usr/bin/cmake /home/marisa/Desktop/bulletroboy -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/home/marisa/Desktop/bulletroboy/install/bulletroboy

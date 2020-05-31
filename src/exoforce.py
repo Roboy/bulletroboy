@@ -328,12 +328,21 @@ class Movements():
 		return index	
 
 
-	def one_end_efector(self, link_name, pos, maxIter):		# Uses inverse kinematics.
-		endEffectorId, freeJoints = get_EF(link_name)
-		while(iter < maxIter):
+	def one_end_effector(self, link_name, pos, maxIter, chest_constraint):	# Inverse kinematics
+		endEffectorId, freeJoints = self.get_EF(link_name)
+		if chest_constraint == True:
+		   p.createConstraint(self.body_id, self.get_link_index('human/spine_1'), -1,
+				      self.get_link_index('human/spine_2'), p.JOINT_FIXED,
+				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
+
+		   p.createConstraint(self.body_id, self.get_link_index('human/neck'), -1, 					      self.get_link_index('human/spine_2'), p.JOINT_FIXED,
+				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
+		iter = 0
+		while(iter <= maxIter):
 		    jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
 		    for i in range(len(freeJoints)):
           		p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+		    iter = iter + 1
 
 
 	def two_end_effectors(self, link_names, postions, maxIter):	# Not yet implemented.

@@ -29,6 +29,8 @@ if __name__ == '__main__':
 
     # TESTING CHANGE IN INITIAL SETTING POSE: (TODO: delete before merge)
     test_link = operator.get_link_index('human/left_shoulder_1')
+    for i in range(p.getNumJoints(human_model)):
+       print(p.getJointInfo(human_model, i))
     
     print('The link for left_elbow is: 	', test_link)
     print('\n')
@@ -58,7 +60,11 @@ if __name__ == '__main__':
 
             t = time.time()
             mv = Movements(human_model)
-            # mv.simple_move('side_swing', t)
+            # mv.simple_move('arm_roll', t)
+            link = b'human/left_hand'	# b'human/left_elbow', b'human/left_wrist'...
+            pos = [0.7, 0.2 * math.cos(t), 0.2 * math.sin(t) + 1.2]
+            maxIter = 100 
+            mv.one_end_effector(link, pos, maxIter, chest_constraint = True)
 
             motor_forces = []
             for tendon in exoforce.get_tendons():

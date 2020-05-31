@@ -10,6 +10,7 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from bulletroboy.msg import Collision
 
 def is_valid_file(parser, arg):
     if not os.path.exists(arg):
@@ -46,6 +47,38 @@ class JointPublisher(Node):
             msg.name.append(self.joint_names[i])
         self.publisher.publish(msg)
 
+class CollisionPublisher(Node):
+    def __init__(self, bulletBodyId):
+        super().__init__("bullet_collision_publisher")
+        self.body_id = bulletBodyId
+        self.publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
+
+    def send(self, collision):
+        msg = Collision()
+        msg.bodyuniqueida = collision[1]
+        msg.bodyuniqueidb = collision[2]
+        msg.linkindexa = collision[3]
+        msg.linkindexb = collision[4]
+        msg.positionona.x = collision[5][0]
+        msg.positionona.y = collision[5][1]
+        msg.positionona.z = collision[5][2]
+        msg.positiononb.x = collision[6][0]
+        msg.positiononb.y = collision[6][1]
+        msg.positiononb.z = collision[6][2]
+        msg.contactnormalonb.x = collision[7][0]
+        msg.contactnormalonb.y = collision[7][1]
+        msg.contactnormalonb.z = collision[7][2]
+        msg.contactdistance = collision[8]
+        msg.normalforce = collision[9]
+        msg.lateralfriction1 = collision[10]
+        msg.lateralfrictiondir1.x = collision[11][0]
+        msg.lateralfrictiondir1.y = collision[11][1]
+        msg.lateralfrictiondir1.z = collision[11][2]
+        msg.lateralfriction2 = collision[12]
+        msg.lateralfrictiondir2.x = collision[13][0]
+        msg.lateralfrictiondir2.y = collision[13][1]
+        msg.lateralfrictiondir2.z = collision[13][2]
+        self.publisher.publish(msg)
 
 class BulletRoboy():
     def __init__(self, body_id):
@@ -100,6 +133,7 @@ class BulletRoboy():
 def main():
     p.connect(p.GUI)
     body = p.loadURDF(args.filename, useFixedBase=1)
+    cube = p.loadURDF("cube.urdf",[-0.5, -0.80282, 0.2], useFixedBase=1)  
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
@@ -107,6 +141,7 @@ def main():
 
     rclpy.init()
     publisher_node = JointPublisher(body)
+    collision_publisher_node = CollisionPublisher(body)
     spin_thread = Thread(target=rclpy.spin, args=(publisher_node,))
     spin_thread.start()
 
@@ -117,6 +152,14 @@ def main():
             threshold = 0.001
             maxIter = 100
             bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
+
+            contactPts = p.getContactPoints(body)
+            print("num contact points = ", len(contactPts))
+
+            for  point in contactPts:
+                print("Collision at ", point[2])
+                collision_publisher_node.send(point)
+
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:
             publisher_node.destroy_node()

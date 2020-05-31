@@ -292,10 +292,13 @@ class ExoForce():
 class Movements():
 	def __init__(self, body_id):
 		"""
-		This class defines 2 movements: Re-definable inverse kinematic ones & harcoded simple ones. 
+		This class defines 2 types of movements:
+		-  Re-definable inverse kinematic ones (one_end_effector(), multiple_end_effectors())
+		-  Harcoded simple ones (simple_move() --> 4 predefined movements)
 		"""
 		self.body_id = body_id
-		self.links = self.get_links()		# delete this later
+		self.op = Operator(self.body_id)
+
 
 	def get_EF(self, link_name):
                 freeJoints = []
@@ -310,33 +313,20 @@ class Movements():
 
                 return endEffectorId, freeJoints
 
-	def get_links(self):				#TODO: delete this later.
-		links = []
-		for i in range(p.getNumJoints(self.body_id)):
-			link = {}
-			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
-			link['id'] = i
-			links.append(link)
-		return links
 
-	def get_link_index(self, link_name):		#TODO: delete this later.
-		index = None
-		for i, link in enumerate(self.links):
-			if link['name'] == link_name:
-				index = i
-				break
-		return index	
+	def apply_chest_and_neck_constraints(self):
+		p.createConstraint(self.body_id, self.op.get_link_index('human/spine_1'), -1,
+				      self.op.get_link_index('human/spine_2'), p.JOINT_FIXED,
+				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
+
+		p.createConstraint(self.body_id, self.op.get_link_index('human/neck'), -1, 					      self.op.get_link_index('human/spine_2'), p.JOINT_FIXED,
+				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
 
 
-	def one_end_effector(self, link_name, pos, maxIter, chest_constraint):	# Inverse kinematics
+	def one_end_effector(self, link_name, pos, maxIter, chest_constraint):
 		endEffectorId, freeJoints = self.get_EF(link_name)
 		if chest_constraint == True:
-		   p.createConstraint(self.body_id, self.get_link_index('human/spine_1'), -1,
-				      self.get_link_index('human/spine_2'), p.JOINT_FIXED,
-				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
-
-		   p.createConstraint(self.body_id, self.get_link_index('human/neck'), -1, 					      self.get_link_index('human/spine_2'), p.JOINT_FIXED,
-				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
+		    self.apply_chest_and_neck_constraints()
 		iter = 0
 		while(iter <= maxIter):
 		    jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
@@ -345,40 +335,53 @@ class Movements():
 		    iter = iter + 1
 
 
-	def two_end_effectors(self, link_names, postions, maxIter):	# Not yet implemented.
-		return 0
+	def multiple_end_effectors(self, link_names, positions, maxIter, chest_constraint):
+		# This function can lead to problems if the wrong positions are chosen. Hence:
+		# TODO: Implement code that makes sure that the function only reacts to adequate position inputs.
+		endEffectorIds = []
+		for i in range(len(link_names)):
+		    endEffectorId_i, freeJoints = self.get_EF(link_names[i])
+		    endEffectorIds.append(endEffectorId_i)
+		if chest_constraint == True:
+		    self.apply_chest_and_neck_constraints()
+		iter = 0
+		while(iter <= maxIter):
+		    jointPoses = p.calculateInverseKinematics2(self.body_id, endEffectorIds, positions)
+		    for j in range(len(freeJoints)):
+		         p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+		    iter = iter + 1
 
 
-	def simple_move(self, case, t):			# Hardcoded simple movements.
-		spine_link = self.get_link_index('human/spine_2')
-		spine_side_link = self.get_link_index('human/spine_0')
-		left_shoulder_1 = self.get_link_index('human/left_shoulder_1')
-		right_shoulder_1 = self.get_link_index('human/right_shoulder_1')
-		left_shoulder_0 = self.get_link_index('human/left_shoulder_0')
-		right_shoulder_0 = self.get_link_index('human/right_shoulder_0')
+	def simple_move(self, case, t):
+		spine_link = self.op.get_link_index('human/spine_2')
+		spine_side_link = self.op.get_link_index('human/spine_0')
+		left_shoulder_1 = self.op.get_link_index('human/left_shoulder_1')
+		right_shoulder_1 = self.op.get_link_index('human/right_shoulder_1')
+		left_shoulder_0 = self.op.get_link_index('human/left_shoulder_0')
+		right_shoulder_0 = self.op.get_link_index('human/right_shoulder_0')
 
-		if case == 'spine_swing':		# May be useful for "chest kick" into simulation (?)
+		if case == 'spine_swing':
                     p.resetJointState(self.body_id, spine_link, math.sin(t))
 
-		elif case == 'forearm_roll':		# May be useful when checking tendon collisions (fix)
+		elif case == 'forearm_roll':
                     p.resetJointState(self.body_id, left_shoulder_1, -1.75*math.pi/4)
                     p.resetJointState(self.body_id, right_shoulder_1, 1.75*math.pi/4)
 
-                    left_elbow = self.get_link_index('human/left_elbow')
-                    right_elbow = self.get_link_index('human/right_elbow')
+                    left_elbow = self.op.get_link_index('human/left_elbow')
+                    right_elbow = self.op.get_link_index('human/right_elbow')
 
                     p.resetJointState(self.body_id, left_elbow, -abs(math.sin(t)*2*math.pi/4))
                     # p.resetJointState(self.body_id, right_elbow, abs(math.cos(t+math.pi/2)*2*math.pi/4))
                     p.resetJointState(self.body_id, left_shoulder_0, (math.cos(t)*2*math.pi/4))
                     # p.resetJointState(self.body_id, right_shoulder_0, (math.cos(t)*2*math.pi/4))
 
-		elif case == 'arm_roll': 	# May be useful to test roboys shoulder limitations in cage?
+		elif case == 'arm_roll':
                     p.resetJointState(self.body_id, left_shoulder_1, math.sin(t))
                     p.resetJointState(self.body_id, left_shoulder_0, math.sin(t+math.pi/2))
                     p.resetJointState(self.body_id, right_shoulder_1, -math.sin(t))
                     p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
 
-		elif case == 'side_swing':	# To test connection between figure and cage orientation.
+		elif case == 'side_swing':
 		    p.resetJointState(self.body_id, spine_side_link, math.sin(t))
 		    # TODO: Connect chest orientation to cage rotation!
 		    

@@ -56,20 +56,32 @@ if __name__ == '__main__':
     # RUN SIM
     try:
         while True:
-            cage_angle = p.readUserDebugParameter(cage_angle_id)
-
             t = time.time()
             mv = Movements(human_model)
-            # mv.simple_move('arm_roll', t)
-            link = b'human/left_hand'	# b'human/left_elbow', b'human/left_wrist'...
+
+	    # Define link (one string or a list of 2 strings)
+            """link = []
+            link.append(b'human/left_hand')
+            link.append(b'human/right_hand')"""
+            link = b'human/left_hand'
+
+            # Define position (a vec3 or a list of two vec3s):
+            """pos = []
+            pos.append([0.2 * math.cos(t), 0.7, 0.2 * math.sin(t) + 1.2])
+            pos.append([0.2 * math.cos(t),-0.7, 0.2 * math.sin(t) + 1.2])"""
             pos = [0.7, 0.2 * math.cos(t), 0.2 * math.sin(t) + 1.2]
-            maxIter = 100 
+
+            maxIter = 100
+
+            # Call movement function:
+            """mv.multiple_end_effectors(link, pos, maxIter, chest_constraint = True)"""
             mv.one_end_effector(link, pos, maxIter, chest_constraint = True)
 
             motor_forces = []
             for tendon in exoforce.get_tendons():
                 motor_forces.append(p.readUserDebugParameter(tendon.forceId))
-            
+
+            cage_angle = p.readUserDebugParameter(cage_angle_id)
             exoforce.update(cage_angle, motor_forces)
 
             p.stepSimulation()

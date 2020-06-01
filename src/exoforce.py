@@ -352,13 +352,16 @@ class Movements():
 		    iter = iter + 1
 
 
-	def simple_move(self, case, t):
+	def simple_move(self, case):
+		t = time.time()
 		spine_link = self.op.get_link_index('human/spine_2')
 		spine_side_link = self.op.get_link_index('human/spine_0')
 		left_shoulder_1 = self.op.get_link_index('human/left_shoulder_1')
 		right_shoulder_1 = self.op.get_link_index('human/right_shoulder_1')
 		left_shoulder_0 = self.op.get_link_index('human/left_shoulder_0')
 		right_shoulder_0 = self.op.get_link_index('human/right_shoulder_0')
+		left_elbow_link = self.op.get_link_index('human/left_elbow')
+		right_elbow_link = self.op.get_link_index('human/right_elbow')
 
 		if case == 'spine_swing':
                     p.resetJointState(self.body_id, spine_link, math.sin(t))
@@ -366,14 +369,10 @@ class Movements():
 		elif case == 'forearm_roll':
                     p.resetJointState(self.body_id, left_shoulder_1, -1.75*math.pi/4)
                     p.resetJointState(self.body_id, right_shoulder_1, 1.75*math.pi/4)
-
-                    left_elbow = self.op.get_link_index('human/left_elbow')
-                    right_elbow = self.op.get_link_index('human/right_elbow')
-
-                    p.resetJointState(self.body_id, left_elbow, -abs(math.sin(t)*2*math.pi/4))
-                    # p.resetJointState(self.body_id, right_elbow, abs(math.cos(t+math.pi/2)*2*math.pi/4))
-                    p.resetJointState(self.body_id, left_shoulder_0, (math.cos(t)*2*math.pi/4))
-                    # p.resetJointState(self.body_id, right_shoulder_0, (math.cos(t)*2*math.pi/4))
+                    p.resetJointState(self.body_id, left_elbow_link, (((math.sin(3*t)+1)/8) + (11/8))*math.pi)
+                    p.resetJointState(self.body_id, left_shoulder_0, ((-(math.cos(3*t)+1)/8) + (1/8))*math.pi)
+                    p.resetJointState(self.body_id, right_elbow_link, -(((math.sin(3*t+math.pi)+1)/8) + (11/8))*math.pi)
+                    p.resetJointState(self.body_id, right_shoulder_0, ((-(math.cos(3*t+math.pi)+1)/8) + (1/8))*math.pi)
 
 		elif case == 'arm_roll':
                     p.resetJointState(self.body_id, left_shoulder_1, math.sin(t))

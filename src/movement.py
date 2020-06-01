@@ -75,7 +75,8 @@ if __name__ == '__main__':
 
             # Call movement function:
             """mv.multiple_end_effectors(link, pos, maxIter, chest_constraint = True)"""
-            mv.one_end_effector(link, pos, maxIter, chest_constraint = True)
+            # mv.one_end_effector(link, pos, maxIter, chest_constraint = True)
+            mv.simple_move('side_swing')
 
             motor_forces = []
             for tendon in exoforce.get_tendons():

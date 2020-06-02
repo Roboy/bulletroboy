@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+<cageConfiguration>
+	<cageStructure>
+		<height>2</height>
+		<radius>1</radius>
+	</cageStructure>
+	<muscleUnits>
+		<muscleUnit id="0">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 1.0 2.0</viaPoint>
+				<viaPoint id="1" link="human/left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="1">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 1.0 0.0</viaPoint>
+				<viaPoint id="1" link="human/left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="2">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 -1.0 2.0</viaPoint>
+				<viaPoint id="1" link="human/right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="3">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.0 -1.0 0.0</viaPoint>
+				<viaPoint id="1" link="human/right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>50</max_force>
+			</parameters>
+		</muscleUnit>
+	</muscleUnits>
+</cageConfiguration>

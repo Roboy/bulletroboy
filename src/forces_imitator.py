@@ -4,22 +4,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from sensor_msgs.msg import ContactPoints
 
-class ForcesIimitatorPublisher(Node):
-
-    def __init__(self, initialMsg):
-        super().__init__("forces_imitator_publisher")
-        self.msg = initialMsg
-        self.publisher = self.create_publisher(ContactPoints, '/roboy/kinematic/forces_imitator', 1)
-        timer_period = 0.1 # seconds
-        self.time = self.create_timer(timer_period, self.timer_callback)
-
-    def timer_callback(self):
-        self.publisher.publish(msg)
-
-class ForcesImitator():
+class ForcesImitator(Node):
     def __init(self, initialJointState):
         self.jointState = initialJointState
-        self.publisher = ForcesImitatorPublisher(ContactPoints())
         self.contactPoints = ContactPoints()
 
         self.result = ContactPoints()
@@ -41,19 +28,6 @@ class ForcesImitator():
             '/roboy/simulation/robot_collision_feedback',
             self.listener_robot_callback,
             1)
-
-        rclpy.spin(self.jointSubscription)
-        rclpy.spin(self.environmentSubscription)
-        rclpy.spin(self.robotCollisionSubscription)
-
-        # Destroy the node explicitly
-        # (optional - otherwise it will be done automatically
-        # when the garbage collector destroys the node object)
-        self.jointSubscription.destroy_node()
-        self.environmentSubscription.destroy_node()
-        self.robotCollisionSubscription.destory_node()
-
-        rclpy.shutdown()
 
         self.publisher = self.create_publisher(ContactPoints, '/roboy/kinematic/forces_imitator', 1)
         timer_period = 0.1 # seconds
@@ -78,13 +52,18 @@ class ForcesImitator():
         self.update()
         self.get_logger().info('I heard: "%s"' % msg.data)
 
-    def update():
+    def update(self):
+         self.get_logger().info('I heard:')
     
 
 def main(args=None):
     rclpy.init(args=args)
 
     forcesImitator = ForcesImitator(JointState())
+    rclpy.spin(forcesImitator)
+    forcesImitator.destroy_node()
+    rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

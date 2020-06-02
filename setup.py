@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'test_package_python'
+package_name = 'bulletroboy'
 
 setup(
     name=package_name,
@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            bulletroboy=bulletroboy.ros2_roboy:main,
+            'bulletroboy = bulletroboy.ros2_roboy:main',
         ],
     },
 )

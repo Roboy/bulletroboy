@@ -1,6 +1,7 @@
 import os
 import time
 import math
+import numpy as np
 import pybullet as p
 import pybullet_data
 
@@ -27,31 +28,14 @@ if __name__ == '__main__':
 
     exoforce = ExoForce(initial_cage_conf, operator)
 
-    # TESTING CHANGE IN INITIAL SETTING POSE: (TODO: delete before merge)
-    test_link = operator.get_link_index('human/left_shoulder_1')
-    for i in range(p.getNumJoints(human_model)):
-       print(p.getJointInfo(human_model, i))
-    
-    print('The link for left_elbow is: 	', test_link)
-    print('\n')
-
-    link_state = p.getLinkState(human_model, test_link)
-    print('The link_state for left_shoulder is: 	', link_state)
-    print('\n')
-
-    joint_state = p.getJointState(human_model, test_link)
-    print('The joint_state for left_shoulder is: 	', joint_state)
-    print('\n')
-
-    joint_state = p.getJointState(human_model, test_link)
-    print('The reset_joint_state for left_shoulder is: 	', joint_state)
-    print('\n')
-
     # DEBUG PARAMETERS
     for tendon in exoforce.get_tendons():
         tendon.forceId = p.addUserDebugParameter("Force in " + tendon.name, 0, 200, 0)
 
-    cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
+    automatic_cage_rotation = True
+
+    if automatic_cage_rotation == False:
+        cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
     # RUN SIM
     try:
@@ -59,13 +43,13 @@ if __name__ == '__main__':
             t = time.time()
             mv = Movements(human_model)
 
-	    # Define link (one string or a list of 2 strings)
+	    # Define link (one string or a list of strings)
             """link = []
             link.append(b'human/left_hand')
             link.append(b'human/right_hand')"""
             link = b'human/left_hand'
 
-            # Define position (a vec3 or a list of two vec3s):
+            # Define position (a vec3 or a list of vec3s):
             """pos = []
             pos.append([0.2 * math.cos(t), 0.7, 0.2 * math.sin(t) + 1.2])
             pos.append([0.2 * math.cos(t),-0.7, 0.2 * math.sin(t) + 1.2])"""
@@ -82,8 +66,11 @@ if __name__ == '__main__':
             for tendon in exoforce.get_tendons():
                 motor_forces.append(p.readUserDebugParameter(tendon.forceId))
 
-            cage_angle = p.readUserDebugParameter(cage_angle_id)
-            exoforce.update(cage_angle, motor_forces)
+            if automatic_cage_rotation == False:
+            	cage_angle = p.readUserDebugParameter(cage_angle_id)
+            else:
+                cage_angle = 0
+            exoforce.update(cage_angle, motor_forces, automatic_cage_rotation)
 
             p.stepSimulation()
 

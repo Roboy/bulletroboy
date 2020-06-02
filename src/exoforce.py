@@ -269,7 +269,13 @@ class ExoForce():
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
-	def update(self, new_angle, motor_forces):
+	def update(self, new_angle, motor_forces, automatic_cage_rotation):
+
+		if automatic_cage_rotation == True:
+			chest_id = self.operator.get_link_index('human/spine')
+			chest_state = p.getLinkState(self.operator.body_id, chest_id)
+			chest_cart_orientation = chest_state[1][2]
+			new_angle = np.arcsin(chest_cart_orientation)*180/math.pi
 
 		self.cage.rotate_cage(new_angle)
 
@@ -355,7 +361,7 @@ class Movements():
 	def simple_move(self, case):
 		t = time.time()
 		spine_link = self.op.get_link_index('human/spine_2')
-		spine_side_link = self.op.get_link_index('human/spine_0')
+		spine_side_link = self.op.get_link_index('human/spine')
 		left_shoulder_1 = self.op.get_link_index('human/left_shoulder_1')
 		right_shoulder_1 = self.op.get_link_index('human/right_shoulder_1')
 		left_shoulder_0 = self.op.get_link_index('human/left_shoulder_0')
@@ -381,7 +387,9 @@ class Movements():
                     p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
 
 		elif case == 'side_swing':
-		    p.resetJointState(self.body_id, spine_side_link, math.sin(t))
+                    spine_state = p.getLinkState(self.body_id, spine_side_link)
+                    print('spine_state is:  ', spine_state, '\n')
+                    p.resetJointState(self.body_id, spine_side_link, math.sin(t))
 		    # TODO: Connect chest orientation to cage rotation!
 		    
 

@@ -13,14 +13,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='nada',
+    maintainer='roboy',
     maintainer_email='roboy@todo.todo',
     description='The bulletroboy package',
     license='TODO',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'bulletroboy = bulletroboy.ros2_roboy:main',
+            'ros2_roboy = bulletroboy.ros2_roboy:main',
         ],
     },
 )

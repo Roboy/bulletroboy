@@ -1,7 +1,9 @@
 import pybullet as p
+import time
 import math
 import numpy as np
 from numpy.linalg import norm
+from termcolor import colored
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -268,7 +270,13 @@ class ExoForce():
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
-	def update(self, new_angle, motor_forces):
+	def update(self, new_angle, motor_forces, automatic_cage_rotation):
+
+		if automatic_cage_rotation == True:
+			chest_id = self.operator.get_link_index('human/spine')
+			chest_state = p.getLinkState(self.operator.body_id, chest_id)
+			chest_cart_orientation = chest_state[1][2]
+			new_angle = np.arcsin(chest_cart_orientation)*180/math.pi
 
 		self.cage.rotate_cage(new_angle)
 
@@ -286,3 +294,122 @@ class ExoForce():
 
 	def get_tendons(self):
 		return [ muscle.tendon for muscle in self.muscle_units ]
+
+
+class Movements():
+	def __init__(self, body_id):
+		"""
+		This class defines 2 types of movements:
+		-  Re-definable inverse kinematic ones (one_end_effector(), multiple_end_effectors())
+		-  Harcoded simple ones (simple_move() --> 4 predefined movements)
+		"""
+		self.body_id = body_id
+		self.op = Operator(self.body_id)
+
+
+	def get_EF(self, link_name):
+                freeJoints = []
+                numJoints = p.getNumJoints(self.body_id)
+
+                for i in range(numJoints):
+                    info = p.getJointInfo(self.body_id,i)
+                    if info[2] == p.JOINT_REVOLUTE:
+                        freeJoints.append(i)
+                    if info[12] == link_name:
+                            endEffectorId = i
+
+                return endEffectorId, freeJoints
+
+
+	def apply_chest_and_neck_constraints(self):
+		p.createConstraint(self.body_id, self.op.get_link_index('human/spine_1'), -1,
+				      self.op.get_link_index('human/spine_2'), p.JOINT_FIXED,
+				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
+
+		p.createConstraint(self.body_id, self.op.get_link_index('human/neck'), -1, 					      self.op.get_link_index('human/spine_2'), p.JOINT_FIXED,
+				      [0, 0, 0], [0, 0, 0], [0, 0, 1])
+
+
+	def one_end_effector(self, link_name, pos, maxIter, chest_constraint):
+		error = False
+		endEffectorId, freeJoints = self.get_EF(link_name)
+		if chest_constraint == True:
+		    self.apply_chest_and_neck_constraints()
+		iter = 0
+		try:
+		    while(iter <= maxIter):
+		        jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
+		        for i in range(len(freeJoints)):
+          		    p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+		        iter = iter + 1
+		except SystemError:
+		    print(colored('\nSystemError:', 'red'))
+		    print(colored('COULD NOT UPDATE JOINT STATES: check if end effector position is realistic!!!\n\n', 'red'))
+		    error = True
+
+		return error
+
+
+	def two_end_effectors(self, positions, maxIter, chest_constraint):
+		error = False
+		_, freeJoints = self.get_EF(b'human/left_hand')
+		endEffectorIds = [self.op.get_link_index('human/left_hand'),
+                                  self.op.get_link_index('human/right_hand')]
+		
+		if chest_constraint == True:
+		    self.apply_chest_and_neck_constraints()
+		iter = 0
+
+		try:
+		    while(iter <= maxIter):
+		        jointPoses = p.calculateInverseKinematics2(self.body_id, endEffectorIds, positions)
+		        for i in range(len(freeJoints)):
+		            p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+		        iter = iter + 1
+		except SystemError:
+		    print(colored('\nSystemError:', 'red'))
+		    print(colored('THE COMBINATION OF POSITIONS USED AS INPUT IN two_end_effectors() IS NOT ACCEPTABLE!!!\n\n', 'red'))
+		    error = True
+
+
+		return error
+
+
+	def simple_move(self, case):
+		error = False
+		t = time.time()
+		spine_link = self.op.get_link_index('human/spine_2')
+		spine_side_link = self.op.get_link_index('human/spine')
+		left_shoulder_1 = self.op.get_link_index('human/left_shoulder_1')
+		right_shoulder_1 = self.op.get_link_index('human/right_shoulder_1')
+		left_shoulder_0 = self.op.get_link_index('human/left_shoulder_0')
+		right_shoulder_0 = self.op.get_link_index('human/right_shoulder_0')
+		left_elbow_link = self.op.get_link_index('human/left_elbow')
+		right_elbow_link = self.op.get_link_index('human/right_elbow')
+
+		if case == 'spine_swing':
+                    p.resetJointState(self.body_id, spine_link, math.sin(t))
+
+		elif case == 'forearm_roll':
+                    p.resetJointState(self.body_id, left_shoulder_1, -1.75*math.pi/4)
+                    p.resetJointState(self.body_id, right_shoulder_1, 1.75*math.pi/4)
+                    p.resetJointState(self.body_id, left_elbow_link, (((math.sin(3*t)+1)/8) + (11/8))*math.pi)
+                    p.resetJointState(self.body_id, left_shoulder_0, ((-(math.cos(3*t)+1)/8) + (1/8))*math.pi)
+                    p.resetJointState(self.body_id, right_elbow_link, -(((math.sin(3*t+math.pi)+1)/8) + (11/8))*math.pi)
+                    p.resetJointState(self.body_id, right_shoulder_0, ((-(math.cos(3*t+math.pi)+1)/8) + (1/8))*math.pi)
+
+		elif case == 'arm_roll':
+                    p.resetJointState(self.body_id, left_shoulder_1, math.sin(t))
+                    p.resetJointState(self.body_id, left_shoulder_0, math.sin(t+math.pi/2))
+                    p.resetJointState(self.body_id, right_shoulder_1, -math.sin(t))
+                    p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
+
+		elif case == 'side_swing':
+                    p.resetJointState(self.body_id, spine_side_link, math.sin(t))
+
+		else:
+		    print(colored('ERROR: No definition set for case = ', 'red'), case)
+		    error = True
+		return error
+
+

@@ -12,10 +12,12 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 
 def is_valid_file(parser, arg):
-    if not os.path.exists(arg):
-        parser.error("The file %s does not exist!" % arg)
+    file_path = os.path.dirname(os.path.realpath(__file__))
+    file_path += "/" + arg
+    if not os.path.exists(file_path):
+        parser.error("The file %s does not exist!" % file_path)
     else:
-        return arg #return open(arg, 'r')  # return an open file handle
+        return file_path #return open(arg, 'r')  # return an open file handle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model-path", dest="filename", required=True,  metavar="FILE", help="path to the model URDF description", type=lambda x: is_valid_file(parser, x) )

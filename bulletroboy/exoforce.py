@@ -36,7 +36,7 @@ class CageConfiguration():
         # parsing muscle units
         for muscle in muscles_xml:
             muscle_dict = {}
-            muscle_dict['id'] = muscle.get('id')
+            muscle_dict['id'] = int(muscle.get('id'))
             muscle_dict['viaPoints'] = []
             for via_point_xml in muscle.find('viaPoints'):
                 via_point = {}
@@ -66,7 +66,7 @@ class CageConfiguration():
         muscles_xml = ET.SubElement(cageConfiguration, 'muscleUnits')
         for muscle in self.muscle_units:
             muscle_xml = ET.SubElement(muscles_xml, 'muscleUnit')
-            muscle_xml.set('id', muscle['id'])
+            muscle_xml.set('id', str(muscle['id']))
             muscle_via_points = ET.SubElement(muscle_xml, 'viaPoints')
             for via_point in muscle['viaPoints']:
                 via_point_xml = ET.SubElement(muscle_via_points, 'viaPoint')
@@ -157,9 +157,9 @@ class Tendon():
 		self.end_location = self.via_points[-1]['point']
 		self.segments = []
 
-		self.init_tendon()
+		self.init_lines()
 
-	def init_tendon(self):
+	def init_lines(self):
 		start = self.start_location
 		for via_point in self.via_points:
 			point = self.get_point(via_point)
@@ -174,7 +174,6 @@ class Tendon():
 
 	def apply_force(self, force):
 		# TODO: apply forces to all via points, currently the force is applied to the last via point
-
 		force_direction = np.asarray(self.start_location) - np.asarray(self.end_location)
 		force_direction /= norm(force_direction)
 
@@ -190,11 +189,7 @@ class Tendon():
 			point = self.get_point(via_point)
 			p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2, replaceItemUniqueId=segment)
 			self.end_location = point
-
-	def update(self, force):
-		self.update_lines()
 		p.addUserDebugText(self.name, self.start_location, self.debug_color, textSize=0.8, replaceItemUniqueId=self.debug_text)
-		self.apply_force(force)
 
 
 class Cage():
@@ -254,7 +249,7 @@ class MuscleUnit():
 		self.tendon = Tendon(self.id, self.motor, via_points[1:], operator)
 
 	def update(self, force):
-		self.tendon.update(force)
+		self.tendon.apply_force(force)
 
 
 class ExoForce():
@@ -274,6 +269,20 @@ class ExoForce():
 
 		for muscle, force in zip(self.muscle_units, motor_forces):
 			muscle.update(force)
+
+	def rotate_cage(self, angle):
+		self.cage.rotate_cage(angle)
+
+	def tendon_update(self, id, force):
+		self.get_muscle_unit(id).update(force)
+
+	def get_muscle_unit(self, id):
+		unit = None
+		for muscle in self.muscle_units:
+			if muscle.id == id:
+				unit = muscle
+				break
+		return unit
 
 	def get_cage(self):
 		return self.cage

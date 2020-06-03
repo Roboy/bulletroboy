@@ -10,7 +10,7 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
-from bulletroboy.msg import Collision
+from roboy_simulation_msgs.msg import Collision
 
 def is_valid_file(parser, arg):
     if not os.path.exists(arg):
@@ -55,19 +55,18 @@ class CollisionPublisher(Node):
 
     def send(self, collision):
         msg = Collision()
-        msg.bodyuniqueida = collision[1]
-        msg.bodyuniqueidb = collision[2]
-        msg.linkindexa = collision[3]
-        msg.linkindexb = collision[4]
-        msg.positionona.x = collision[5][0]
-        msg.positionona.y = collision[5][1]
-        msg.positionona.z = collision[5][2]
-        msg.positiononb.x = collision[6][0]
-        msg.positiononb.y = collision[6][1]
-        msg.positiononb.z = collision[6][2]
-        msg.contactnormalonb.x = collision[7][0]
-        msg.contactnormalonb.y = collision[7][1]
-        msg.contactnormalonb.z = collision[7][2]
+        msg.externalbody = collision[2]
+        msg.linkroboy = collision[3]
+        msg.linkexternalbody = collision[4]
+        msg.positiononroboy.x = collision[5][0]
+        msg.positiononroboy.y = collision[5][1]
+        msg.positiononroboy.z = collision[5][2]
+        msg.positiononexternalbody.x = collision[6][0]
+        msg.positiononexternalbody.y = collision[6][1]
+        msg.positiononexternalbody.z = collision[6][2]
+        msg.contactnormalonexternalbody.x = collision[7][0]
+        msg.contactnormalonexternalbody.y = collision[7][1]
+        msg.contactnormalonexternalbody.z = collision[7][2]
         msg.contactdistance = collision[8]
         msg.normalforce = collision[9]
         msg.lateralfriction1 = collision[10]
@@ -133,7 +132,7 @@ class BulletRoboy():
 def main():
     p.connect(p.GUI)
     body = p.loadURDF(args.filename, useFixedBase=1)
-    cube = p.loadURDF("cube.urdf",[-0.5, -0.80282, 0.2], useFixedBase=1)  
+    cube = p.loadURDF("../models/cube.urdf",[-0.5, -0.80282, 0.2], useFixedBase=1)  
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
@@ -154,7 +153,6 @@ def main():
             bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
 
             contactPts = p.getContactPoints(body)
-            print("num contact points = ", len(contactPts))
 
             for  point in contactPts:
                 print("Collision at ", point[2])

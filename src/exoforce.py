@@ -3,6 +3,7 @@ import time
 import math
 import numpy as np
 from numpy.linalg import norm
+from termcolor import colored
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -330,35 +331,52 @@ class Movements():
 
 
 	def one_end_effector(self, link_name, pos, maxIter, chest_constraint):
+		error = False
 		endEffectorId, freeJoints = self.get_EF(link_name)
 		if chest_constraint == True:
 		    self.apply_chest_and_neck_constraints()
 		iter = 0
-		while(iter <= maxIter):
-		    jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
-		    for i in range(len(freeJoints)):
-          		p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
-		    iter = iter + 1
+		try:
+		    while(iter <= maxIter):
+		        jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
+		        for i in range(len(freeJoints)):
+          		    p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+		        iter = iter + 1
+		except SystemError:
+		    print(colored('\nSystemError:', 'red'))
+		    print(colored('COULD NOT UPDATE JOINT STATES: check if end effector position is realistic!!!\n\n', 'red'))
+		    error = True
+
+		return error
 
 
-	def multiple_end_effectors(self, link_names, positions, maxIter, chest_constraint):
-		# This function can lead to problems if the wrong positions are chosen. Hence:
-		# TODO: Implement code that makes sure that the function only reacts to adequate position inputs.
-		endEffectorIds = []
-		for i in range(len(link_names)):
-		    endEffectorId_i, freeJoints = self.get_EF(link_names[i])
-		    endEffectorIds.append(endEffectorId_i)
+	def two_end_effectors(self, positions, maxIter, chest_constraint):
+		error = False
+		_, freeJoints = self.get_EF(b'human/left_hand')
+		endEffectorIds = [self.op.get_link_index('human/left_hand'),
+                                  self.op.get_link_index('human/right_hand')]
+		
 		if chest_constraint == True:
 		    self.apply_chest_and_neck_constraints()
 		iter = 0
-		while(iter <= maxIter):
-		    jointPoses = p.calculateInverseKinematics2(self.body_id, endEffectorIds, positions)
-		    for j in range(len(freeJoints)):
-		         p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
-		    iter = iter + 1
+
+		try:
+		    while(iter <= maxIter):
+		        jointPoses = p.calculateInverseKinematics2(self.body_id, endEffectorIds, positions)
+		        for i in range(len(freeJoints)):
+		            p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+		        iter = iter + 1
+		except SystemError:
+		    print(colored('\nSystemError:', 'red'))
+		    print(colored('THE COMBINATION OF POSITIONS USED AS INPUT IN two_end_effectors() IS NOT ACCEPTABLE!!!\n\n', 'red'))
+		    error = True
+
+
+		return error
 
 
 	def simple_move(self, case):
+		error = False
 		t = time.time()
 		spine_link = self.op.get_link_index('human/spine_2')
 		spine_side_link = self.op.get_link_index('human/spine')
@@ -387,13 +405,11 @@ class Movements():
                     p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
 
 		elif case == 'side_swing':
-                    spine_state = p.getLinkState(self.body_id, spine_side_link)
-                    print('spine_state is:  ', spine_state, '\n')
                     p.resetJointState(self.body_id, spine_side_link, math.sin(t))
-		    # TODO: Connect chest orientation to cage rotation!
-		    
 
 		else:
-		    print('ERROR: No definition set for case = ', case)
+		    print(colored('ERROR: No definition set for case = ', 'red'), case)
+		    error = True
+		return error
 
 

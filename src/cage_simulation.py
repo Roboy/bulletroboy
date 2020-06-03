@@ -1,8 +1,11 @@
 import os
+import time
+import math
+import numpy as np
 import pybullet as p
 import pybullet_data
 
-from exoforce import CageConfiguration, Operator, ExoForce
+from exoforce import CageConfiguration, Operator, ExoForce, Movements
 
 if __name__ == '__main__':
     file_path = os.path.dirname(os.path.realpath(__file__))
@@ -28,18 +31,44 @@ if __name__ == '__main__':
     for tendon in exoforce.get_tendons():
         tendon.forceId = p.addUserDebugParameter("Force in " + tendon.name, 0, 200, 0)
 
-    cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
+    automatic_cage_rotation = True
+    issue = False
+
+    if automatic_cage_rotation == False:
+        cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
     # RUN SIM
     try:
         while True:
-            cage_angle = p.readUserDebugParameter(cage_angle_id)
+            t = time.time()
+            mv = Movements(human_model)
+
+	    # Define link for one_end_effector() (left_hand or right_hand)
+            link = b'human/right_hand'
+
+            # Define position (a vec3 or a list of 2 vec3s):
+            pos = []
+            pos.append([0.1 * math.cos(t) + 0.4, 0.5, 0.1 * math.sin(t) + 1.3])
+            pos.append([0.1 * math.cos(t) + 0.4,-0.5, 0.1 * math.sin(t) + 1.3])
+
+            maxIter = 100
+
+            if issue == False:
+                # Call movement function: (Examples below)
+
+                issue = mv.simple_move('forearm_roll')
+                # issue = mv.one_end_effector(link, pos, maxIter, chest_constraint = True)
+                # issue = mv.two_end_effectors(pos, maxIter, chest_constraint = True)
 
             motor_forces = []
             for tendon in exoforce.get_tendons():
                 motor_forces.append(p.readUserDebugParameter(tendon.forceId))
-            
-            exoforce.update(cage_angle, motor_forces)
+
+            if automatic_cage_rotation == False:
+            	cage_angle = p.readUserDebugParameter(cage_angle_id)
+            else:
+                cage_angle = 0
+            exoforce.update(cage_angle, motor_forces, automatic_cage_rotation)
 
             p.stepSimulation()
 

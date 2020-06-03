@@ -10,13 +10,16 @@
 source /opt/ros/eloquent/setup.bash
 mkdir -p roboy_ws/src
 cd roboy_ws/src
+
 # Cloning repos
 git clone https://github.com/Roboy/roboy3_models.git -b bullet
 git clone https://github.com/Roboy/roboy_communication.git -b dashing
 git clone https://github.com/Roboy/bulletroboy.git
+
 # Building packages
 cd roboy_ws
 colcon build --symlink-install --packages-select bulletroboy roboy_simulation_msgs
+
 # Sourcing workspace overlay (ROS2 Wiki recommends opening a new terminal before this step)
 source /opt/ros/eloquent/setup.bash
 cd roboy_ws
@@ -37,6 +40,5 @@ ros2 topic echo /roboy/simulation/joint_state
 
 Run the cage simulation of a human figure with attached tendons.
 ```bash
-ros2 run bulletroboy cage_simulation
-# see node help for execution modes
+ros2 run bulletroboy cage_simulation  # see node help for execution modes
 ```

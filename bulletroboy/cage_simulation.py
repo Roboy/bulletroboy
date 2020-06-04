@@ -5,7 +5,9 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 
-from exoforce import CageConfiguration, Operator, ExoForce, Movements
+from operator_file import Movements, Operator
+from exoforce import CageConfiguration, ExoForce
+
 
 if __name__ == '__main__':
     file_path = os.path.dirname(os.path.realpath(__file__))
@@ -51,14 +53,16 @@ if __name__ == '__main__':
             pos.append([0.1 * math.cos(t) + 0.4, 0.5, 0.1 * math.sin(t) + 1.3])
             pos.append([0.1 * math.cos(t) + 0.4,-0.5, 0.1 * math.sin(t) + 1.3])
 
+            # pos = [0.1 * math.cos(t) + 0.4, 0.5, 0.1 * math.sin(t) + 1.3]
+
             maxIter = 100
 
             if issue == False:
                 # Call movement function: (Examples below)
 
-                issue = mv.simple_move('forearm_roll')
+                # issue = mv.simple_move('forearm_roll')
                 # issue = mv.one_end_effector(link, pos, maxIter, chest_constraint = True)
-                # issue = mv.two_end_effectors(pos, maxIter, chest_constraint = True)
+                issue = mv.two_end_effectors(pos, maxIter, chest_constraint = True)
 
             motor_forces = []
             for tendon in exoforce.get_tendons():

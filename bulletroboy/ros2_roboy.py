@@ -20,7 +20,7 @@ def is_valid_file(parser, arg):
         return file_path #return open(arg, 'r')  # return an open file handle
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model-path", dest="filename", required=True,  metavar="FILE", help="path to the model URDF description", type=lambda x: is_valid_file(parser, x) )
+parser.add_argument("--model-path", dest="filename", default="../../roboy3_models/upper_body/bullet.urdf", metavar="FILE", help="path to the model URDF description", type=lambda x: is_valid_file(parser, x) )
 args = parser.parse_args()
 
 

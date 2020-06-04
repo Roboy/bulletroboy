@@ -40,15 +40,16 @@ class Operator():
 
 
 class Movements():
-	def __init__(self, body_id):
+	def __init__(self, operator, link = b'human/left_hand'):
 		"""
 		This class defines 2 types of movements:
 		-  Re-definable inverse kinematic ones (one_end_effector(), two_end_effectors())
 		-  Harcoded simple ones (simple_move() --> 4 predefined movements)
 		"""
 
-		self.body_id = body_id
-		self.op = Operator(self.body_id)
+		self.op = operator
+		self.body_id = operator.body_id
+		self.link = link
 
 
 	def get_EF_id(self, link_name):
@@ -87,15 +88,13 @@ class Movements():
 				   [0, 0, 0], [0, 0, 0], [0, 0, 1])
 
 
-	def one_end_effector(self, link_name, pos, maxIter = 100, chest_constraint = True):
+	def one_end_effector(self, pos, maxIter = 100, chest_constraint = True):
 		"""
-		Uses Inverse Kinematics to compute the JointPoses for a given End-Effector position/trajectory.
+		Uses Inverse Kinematics to compute the JointPoses for the position/trajectory of the 
+		End-Effector defined in the Movements class.
 		"""
 		
 		#    INPUTS:
-		#	  - link_name:  set it to = b'human/left_hand' to use the left hand as the end_effector or
-		#		        set it to = b'human/right_hand' to use the right hand as the end_effector.
-		#
 		#	  - pos (vec3): x,y,z coordinates of the point that the end_effector is to be positioned at.
 		#			If the movement is to be dynamic, write the xyz vector in terms of t.
 		#
@@ -112,7 +111,7 @@ class Movements():
 		
 		error = False
 		iter = 0
-		endEffectorId, freeJoints = self.get_EF_id(link_name)
+		endEffectorId, freeJoints = self.get_EF_id(self.link)
 		
 		# Chest and Neck constraints
 		if chest_constraint == True:

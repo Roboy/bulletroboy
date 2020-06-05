@@ -40,9 +40,7 @@ class Operator():
 		return index
 	
 	def move(self, case):
-		error = self.movements.simple_move(case)
-		if error == True:
-			sys.exit()
+		self.movements.simple_move(case)
 
 
 class Movements():
@@ -108,14 +106,8 @@ class Movements():
 		#
 		#	  - chest_constraint: (flag) chest and neck constraints for a stable and realistic movement.
 		#
-		#
-		#    OUTPUT:
-		#	  - error: if an error occurs during the inverse kinematic computation or the joint resetting,
-		#	           this value is set to true. (This variable can be used in a while loop to stop
-		#                  implementing the faulty function without using sys.exit())
+
 		
-		
-		error = False
 		iter = 0
 		endEffectorId, freeJoints = self.get_EF_id(self.link)
 		
@@ -123,19 +115,12 @@ class Movements():
 		if chest_constraint == True:
 			self.apply_chest_and_neck_constraints()
 		
-		# Try to move the figure. If error occurs, print Warning.
-		try:
-			while(iter <= maxIter):
-				jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
-				for i in range(len(freeJoints)):
-					p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
-				iter = iter + 1
-		except SystemError:
-			print(colored('\nSystemError:', 'red'))
-			print(colored('COULD NOT UPDATE JOINT STATES: check if end effector position is realistic!!!\n\n', 'red'))
-			error = True
+		while(iter <= maxIter):
+			jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, pos)
+			for i in range(len(freeJoints)):
+				p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+			iter = iter + 1
 
-		return error
 
 
 	def two_end_effectors(self, positions, maxIter = 100, chest_constraint = True):
@@ -151,13 +136,7 @@ class Movements():
 		#
 		#	  - chest_constraint: (flag) chest and neck constraints for a stable and realistic movement.
 		#
-		#
-		#    OUTPUT:
-		#	  - error: if an error occurs during the inverse kinematic computation or the joint resetting,
-		#	           this value is set to true. (This variable can be used in a while loop to stop
-		#                  implementing the faulty function without using sys.exit())
 
-		error = False
 		iter = 0
 
 		# Gets the hand link ids and the free revolute joints
@@ -169,20 +148,13 @@ class Movements():
 		if chest_constraint == True:
 			self.apply_chest_and_neck_constraints()
 
-		# Try to move the figure. If error occurs, print Warning.
-		try:
-			while(iter <= maxIter):
-				jointPoses = p.calculateInverseKinematics2(self.body_id, endEffectorIds, positions)
-				for i in range(len(freeJoints)):
-					p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
-				iter = iter + 1
-		except SystemError:
-			print(colored('\nSystemError:', 'red'))
-			print(colored('THE COMBINATION OF POSITIONS USED AS INPUT IN two_end_effectors() IS NOT ACCEPTABLE!!!\n\n', 'red'))
-			error = True
+		while(iter <= maxIter):
+			jointPoses = p.calculateInverseKinematics2(self.body_id, endEffectorIds, positions)
+			for i in range(len(freeJoints)):
+				p.resetJointState(self.body_id, freeJoints[i], jointPoses[i])
+			iter = iter + 1
 
 
-		return error
 
 
 	def simple_move(self, case):
@@ -192,14 +164,8 @@ class Movements():
 		
 		#    INPUTS:
 		#	  - case: names the movement to be applied.
-		#				  
-		#
-		#    OUTPUT:
-		#	  - error: if a non-existent case is used as input, this value is set to true. (This 
-		#		   variable can be used to stop a while loop).
 
 
-		error = False
 		t = time.time()
 
 		# Get link Ids
@@ -234,7 +200,4 @@ class Movements():
 		elif case == 4:
                     p.resetJointState(self.body_id, spine_side_link, math.sin(t))
 
-		else:
-		    print(colored('ERROR: No definition set for this case.', 'red'))
-		    error = True
-		return error
+

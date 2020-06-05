@@ -10,7 +10,6 @@ from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.constants import FOREARM_ROLL
 
-
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg

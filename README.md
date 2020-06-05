@@ -18,7 +18,7 @@ git clone https://github.com/Roboy/bulletroboy.git
 # Building packages in workspace
 cd roboy_ws
 source /opt/ros/eloquent/setup.bash
-colcon build --symlink-install --packages-select bulletroboy roboy_simulation_msgs
+colcon build --symlink-install --packages-select bulletroboy roboy_simulation_msgs roboy_control_msgs
 
 # Sourcing workspace overlay (ROS2 Wiki recommends opening a new terminal before this step)
 source /opt/ros/eloquent/setup.bash

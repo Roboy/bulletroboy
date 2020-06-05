@@ -1,12 +1,13 @@
+from abc import ABC, abstractmethod
 import pybullet as p
 import time
 import math
 import numpy as np
-from numpy.linalg import norm
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
+from rclpy.node import Node
 
 class CageConfiguration():
     def __init__(self, filepath=None):
@@ -37,7 +38,7 @@ class CageConfiguration():
         # parsing muscle units
         for muscle in muscles_xml:
             muscle_dict = {}
-            muscle_dict['id'] = muscle.get('id')
+            muscle_dict['id'] = int(muscle.get('id'))
             muscle_dict['viaPoints'] = []
             for via_point_xml in muscle.find('viaPoints'):
                 via_point = {}
@@ -67,7 +68,7 @@ class CageConfiguration():
         muscles_xml = ET.SubElement(cageConfiguration, 'muscleUnits')
         for muscle in self.muscle_units:
             muscle_xml = ET.SubElement(muscles_xml, 'muscleUnit')
-            muscle_xml.set('id', muscle['id'])
+            muscle_xml.set('id', str(muscle['id']))
             muscle_via_points = ET.SubElement(muscle_xml, 'viaPoints')
             for via_point in muscle['viaPoints']:
                 via_point_xml = ET.SubElement(muscle_via_points, 'viaPoint')
@@ -108,62 +109,19 @@ class CageConfiguration():
 
 
 class Tendon():
-	def __init__(self, id, motor, via_points, operator):
+	def __init__(self, id, motor, via_points):
 		"""
 		This class handles each tendon attached to the operator.
 		"""
 		self.id = id
-		self.name = "Tendon " + str(self.id)
-		self.debug_color = [0,0,255]
 		self.motor = motor
 
-		self.via_points = via_points
-		self.operator = operator
+		self.via_points = via_points # points relative to the link
+		self.attachtment_points = [None for _ in self.via_points] # points in world space
 
-		self.forceId = None
-
-		self.start_location = self.motor.pos
-		self.end_location = self.via_points[-1]['point']
-		self.segments = []
-
-		self.init_tendon()
-
-	def init_tendon(self):
-		start = self.start_location
-		for via_point in self.via_points:
-			point = self.get_point(via_point)
-			segment = p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2)
-			self.segments.append(segment)
-			start = point
-
-		self.debug_text = p.addUserDebugText(self.name, self.start_location, textColorRGB=self.debug_color, textSize=0.8)
-
-	def get_point(self, via_point):
-		return self.operator.get_link_center(via_point['link']) + via_point['point']
-
-	def apply_force(self, force):
-		# TODO: apply forces to all via points, currently the force is applied to the last via point
-
-		force_direction = np.asarray(self.start_location) - np.asarray(self.end_location)
-		force_direction /= norm(force_direction)
-
-		p.applyExternalForce(objectUniqueId=self.operator.body_id,
-			     	     linkIndex = self.operator.get_link_index(self.via_points[-1]['link']),
-			     	     forceObj = force * force_direction,
-			     	     posObj=self.start_location,
-			     	     flags=p.WORLD_FRAME)
-
-	def update_lines(self):
-		start = self.start_location
-		for segment, via_point in zip(self.segments, self.via_points):
-			point = self.get_point(via_point)
-			p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2, replaceItemUniqueId=segment)
-			self.end_location = point
-
-	def update(self, force):
-		self.update_lines()
-		p.addUserDebugText(self.name, self.start_location, self.debug_color, textSize=0.8, replaceItemUniqueId=self.debug_text)
-		self.apply_force(force)
+	def update(self, operator):
+		for i in range(len(self.attachtment_points)):
+			self.attachtment_points[i] = operator.get_link_center(self.via_points[i]['link']) + self.via_points[i]['point']
 
 
 class Cage():
@@ -195,6 +153,7 @@ class Motor():
 
 		self.id = id
 		self.pos = via_point['point']
+		self.force = 0
 
 	def rotate(self, delta, pivot):
 
@@ -212,7 +171,7 @@ class Motor():
 
 
 class MuscleUnit():
-	def __init__(self, id, via_points, parameters, operator):
+	def __init__(self, id, via_points, parameters):
 		"""
 		This class handles a muscle unit including its tendon and motor.
 		"""
@@ -220,46 +179,43 @@ class MuscleUnit():
 		self.via_points = via_points
 		self.parameters = parameters
 		self.motor = Motor(self.id, via_points[0])
-		self.tendon = Tendon(self.id, self.motor, via_points[1:], operator)
+		self.tendon = Tendon(self.id, self.motor, via_points[1:])
 
-	def update(self, force):
-		self.tendon.update(force)
+	def set_motor_force(self, force):
+		self.motor.force = force
 
 
-class ExoForce():
-	def __init__(self, cage_conf, operator):
+class ExoForce(Node, ABC):
+	def __init__(self, cage_conf, node_name):
 		"""
 		Main ExoForce class. It handles the muscle units and the cage itself.
 		"""
-		self.operator = operator
-
-		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'], self.operator)
+		super().__init__(node_name)
+		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'])
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
+	
+	@abstractmethod
+	def update(self):
+		pass
 
-	def update(self, new_angle, motor_forces, automatic_cage_rotation):
+	def rotate_cage(self, angle):
+		self.cage.rotate_cage(angle)
 
-		if automatic_cage_rotation == True:
-			chest_id = self.operator.get_link_index('human/spine')
-			chest_state = p.getLinkState(self.operator.body_id, chest_id)
-			chest_cart_orientation = chest_state[1][2]
-			new_angle = np.arcsin(chest_cart_orientation)*180/math.pi
+	def tendon_update(self, id, force):
+		self.get_muscle_unit(id).update(force)
 
-		self.cage.rotate_cage(new_angle)
-
-		for muscle, force in zip(self.muscle_units, motor_forces):
-			muscle.update(force)
-
-	def get_cage(self):
-		return self.cage
-
-	def get_muscle_units(self):
-		return self.muscle_units
+	def get_muscle_unit(self, id):
+		unit = None
+		for muscle in self.muscle_units:
+			if muscle.id == id:
+				unit = muscle
+				break
+		return unit
 	
 	def get_motors(self):
 		return [ muscle.motor for muscle in self.muscle_units ]
 
 	def get_tendons(self):
 		return [ muscle.tendon for muscle in self.muscle_units ]
-
 

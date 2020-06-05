@@ -8,6 +8,7 @@ from std_msgs.msg import Float32
 from bulletroboy.exoforce import ExoForce
 from bulletroboy.operator import Operator
 
+
 class ExoForceSim(ExoForce):
 	def __init__(self, cage_conf, human_model, mode):
 		"""

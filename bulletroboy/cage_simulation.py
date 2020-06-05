@@ -48,6 +48,7 @@ def main():
 
     rclpy.init()
     exoforce = ExoForceSim(initial_cage_conf, human_model, args.mode)
+
     spin_thread = Thread(target=rclpy.spin, args=(exoforce,))
     spin_thread.start()
 

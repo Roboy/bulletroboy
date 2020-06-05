@@ -13,6 +13,7 @@ class Operator():
 		"""
 		self.body_id = body_id
 		self.links = self.get_links()
+		self.movements = Movements(self)
 
 	def get_links(self):
 		links = []
@@ -37,6 +38,11 @@ class Operator():
 				index = i
 				break
 		return index
+	
+	def move(self, case):
+		error = self.movements.simple_move(case)
+		if error == True:
+			sys.exit()
 
 
 class Movements():
@@ -208,10 +214,10 @@ class Movements():
 
 		# Use input to move the figure with the chosen movement.
 		# If a non-existent case is used as input, print warning.
-		if case == 'spine_swing':
+		if case == 1:
                     p.resetJointState(self.body_id, spine_link, math.sin(t))
 
-		elif case == 'forearm_roll':
+		elif case == 2:
                     p.resetJointState(self.body_id, left_shoulder_1, -1.75*math.pi/4)
                     p.resetJointState(self.body_id, right_shoulder_1, 1.75*math.pi/4)
                     p.resetJointState(self.body_id, left_elbow_link, (((math.sin(3*t)+1)/8) + (11/8))*math.pi)
@@ -219,16 +225,16 @@ class Movements():
                     p.resetJointState(self.body_id, right_elbow_link, -(((math.sin(3*t+math.pi)+1)/8) + (11/8))*math.pi)
                     p.resetJointState(self.body_id, right_shoulder_0, ((-(math.cos(3*t+math.pi)+1)/8) + (1/8))*math.pi)
 
-		elif case == 'arm_roll':
+		elif case == 3:
                     p.resetJointState(self.body_id, left_shoulder_1, math.sin(t))
                     p.resetJointState(self.body_id, left_shoulder_0, math.sin(t+math.pi/2))
                     p.resetJointState(self.body_id, right_shoulder_1, -math.sin(t))
                     p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
 
-		elif case == 'side_swing':
+		elif case == 4:
                     p.resetJointState(self.body_id, spine_side_link, math.sin(t))
 
 		else:
-		    print(colored('ERROR: No definition set for case = ', 'red'), case)
+		    print(colored('ERROR: No definition set for this case.', 'red'))
 		    error = True
 		return error

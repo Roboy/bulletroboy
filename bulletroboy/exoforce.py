@@ -227,19 +227,20 @@ class MuscleUnit():
 
 
 class ExoForce():
-	def __init__(self, cage_conf, operator):
+	def __init__(self, cage_conf, operator, automatic_cage_rotation = False):
 		"""
 		Main ExoForce class. It handles the muscle units and the cage itself.
 		"""
 		self.operator = operator
-
+		self.cage_angle_id = -1
+		self.automatic_cage_rotation = automatic_cage_rotation
 		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'], self.operator)
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
-	def update(self, new_angle, motor_forces, automatic_cage_rotation):
+	def update(self, new_angle, motor_forces):
 
-		if automatic_cage_rotation == True:
+		if self.automatic_cage_rotation == True:
 			chest_id = self.operator.get_link_index('human/spine')
 			chest_state = p.getLinkState(self.operator.body_id, chest_id)
 			chest_cart_orientation = chest_state[1][2]

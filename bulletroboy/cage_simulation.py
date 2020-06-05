@@ -1,18 +1,33 @@
-import os, sys, time
-import math
-import numpy as np
+import argparse
+import os
 import pybullet as p
 import pybullet_data
+import rclpy
+from threading import Thread
 
-sys.path.append("..")
-
-from bulletroboy.operator import Operator, Movements
-from bulletroboy.exoforce import CageConfiguration, ExoForce
+from bulletroboy.operator import Operator
+from bulletroboy.exoforce import CageConfiguration
+from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.movement.primitives import FOREARM_ROLL
 
 
-if __name__ == '__main__':
+def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
+    file_path += "/" + arg
+    if not os.path.exists(file_path):
+        parser.error("The file %s does not exist!" % file_path)
+    else:
+        return file_path #return open(arg, 'r')  # return an open file handle
+
+      
+def main():
+
+    # PARSING ARGUMENTS
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--mode", dest="mode", default="debug", help="execution mode: [debug]: uses pybullet debug forces [tendon]: uses tendon forces [forces]: uses link forces")
+    parser.add_argument("--config-path", dest="config_path", default="../config/cageConfiguration.xml", metavar="FILE", help="path to the cage configuration XML file", type=lambda x: is_valid_file(parser, x) )
+    parser.add_argument("--model-path", dest="model_path", default="../models/human.urdf", metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
+    args = parser.parse_args()
 
     # SIMULATION SETUP
     p.connect(p.GUI)
@@ -22,38 +37,32 @@ if __name__ == '__main__':
     p.setRealTimeSimulation(0)     # Don't change. Else p.applyExternalForce() won't work.
 
     # LOADING SIM BODIES
-    plane = p.loadURDF("plane.urdf")
-    human_model = p.loadURDF(file_path + "/../models/human.urdf", [0, 0, 1], useFixedBase=1)
+    p.loadURDF("plane.urdf")
+    human_model = p.loadURDF(args.model_path, [0, 0, 1], useFixedBase=1)
 
     # EXOFORCE SETUP
-    initial_cage_conf = CageConfiguration(file_path + "/../config/cageConfiguration.xml")
     operator = Operator(human_model)
-    exoforce = ExoForce(initial_cage_conf, operator)
+    initial_cage_conf = CageConfiguration(args.config_path)
 
-    # DEBUG PARAMETERS
-    for tendon in exoforce.get_tendons():
-        tendon.forceId = p.addUserDebugParameter("Force in " + tendon.name, 0, 200, 0)
+    rclpy.init()
+    exoforce = ExoForceSim(initial_cage_conf, human_model, args.mode)
 
-    if exoforce.automatic_cage_rotation == False:
-        cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
+    spin_thread = Thread(target=rclpy.spin, args=(exoforce,))
+    spin_thread.start()
 
     # RUN SIM
     try:
         while True:
             operator.move(FOREARM_ROLL)
-
-            motor_forces = []
-            for tendon in exoforce.get_tendons():
-                motor_forces.append(p.readUserDebugParameter(tendon.forceId))
-
-            if exoforce.automatic_cage_rotation == False:
-            	cage_angle = p.readUserDebugParameter(cage_angle_id)
-            else:
-                cage_angle = 0
-            exoforce.update(cage_angle, motor_forces)
-
+            exoforce.update()
             p.stepSimulation()
 
     except KeyboardInterrupt:
-        pass
+        exoforce.destroy_node()
+        rclpy.shutdown()
+    
+    exoforce.destroy_node()
+    rclpy.shutdown()
 
+if __name__ == '__main__':
+    main()

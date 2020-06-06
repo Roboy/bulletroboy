@@ -27,7 +27,7 @@ class ExoForceSim(ExoForce):
 			elif self.mode == "forces":
 				# TODO: update subscriber with correct msg type
 				self.create_subscription(TendonUpdate, '/roboy/simulation/operator_forces', self.forces_update_listener, 10)
-			self.create_subscription(Float32, 'roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
 		self.sim_tendons = []
@@ -63,6 +63,8 @@ class ExoForceSim(ExoForce):
 			for tendon_sim in self.sim_tendons:
 				force = p.readUserDebugParameter(tendon_sim.force_id)
 				self.update_tendon(tendon_sim.tendon.id, force)
+
+		super().publish_state()
 
 	def update_tendon(self, id, force):
 		self.get_muscle_unit(id).force = force

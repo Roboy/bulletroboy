@@ -16,6 +16,8 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>roboy_control_msgs</depend>
   <depend>roboy_simulation_msgs</depend>
 
   <export>

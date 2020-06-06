@@ -7,6 +7,9 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 from rclpy.node import Node
+from roboy_control_msgs.msg import CageState, ViaPoint
+from roboy_control_msgs.msg import MuscleUnit as MuscleUnitMsg
+from geometry_msgs.msg import Point
 
 class CageConfiguration():
     def __init__(self, filepath=None):
@@ -41,7 +44,7 @@ class CageConfiguration():
             muscle_dict['viaPoints'] = []
             for via_point_xml in muscle.find('viaPoints'):
                 via_point = {}
-                via_point['id'] = via_point_xml.get('id')
+                via_point['id'] = int(via_point_xml.get('id'))
                 via_point['link'] = via_point_xml.get('link')
                 via_point['point'] = np.array(list(map(float, via_point_xml.text.split(" "))))
                 muscle_dict['viaPoints'].append(via_point)
@@ -71,7 +74,7 @@ class CageConfiguration():
             muscle_via_points = ET.SubElement(muscle_xml, 'viaPoints')
             for via_point in muscle['viaPoints']:
                 via_point_xml = ET.SubElement(muscle_via_points, 'viaPoint')
-                via_point_xml.set('id', via_point['id'])
+                via_point_xml.set('id', str(via_point['id']))
                 via_point_xml.set('link', via_point['link'])
                 via_point_xml.text = str(via_point['point'].tolist()).strip('[]').replace(',', '')
             muscle_parameters = ET.SubElement(muscle_xml, 'parameters')
@@ -183,6 +186,7 @@ class Motor():
 		assert via_point['link'] == 'cage'
 
 		self.id = id
+		self.link = via_point['link']
 		self.pos = via_point['point']
 		self.force = 0
 
@@ -225,6 +229,8 @@ class ExoForce(Node, ABC):
 		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'])
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
+
+		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
 	
 	@abstractmethod
 	def update(self):
@@ -250,3 +256,25 @@ class ExoForce(Node, ABC):
 	def get_tendons(self):
 		return [ muscle.tendon for muscle in self.muscle_units ]
 
+	def get_msg(self):
+		state_msg = CageState()
+		state_msg.rotation_angle = float(self.cage.angle)
+		for muscle in self.muscle_units:
+			muscle_msg = MuscleUnitMsg()
+			muscle_msg.id = muscle.id
+			for via_point, world_point in zip(muscle.via_points, [muscle.motor.pos] + muscle.tendon.attachtment_points):
+				via_point_msg = ViaPoint()
+				via_point_msg.id = via_point['id']
+				via_point_msg.position = Point()
+				via_point_msg.position.x = world_point[0]
+				via_point_msg.position.y = world_point[1]
+				via_point_msg.position.z = world_point[2]
+				via_point_msg.reference_frame = 'world'
+				via_point_msg.link = via_point['link']
+				muscle_msg.viapoints.append(via_point_msg)
+			state_msg.muscleunits.append(muscle_msg)
+			
+		return state_msg
+
+	def publish_state(self):
+		self.cage_state_publisher.publish(self.get_msg())

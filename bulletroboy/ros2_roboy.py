@@ -5,12 +5,11 @@ import pybullet as p
 import math
 import time
 
-from threading import Thread
-
 import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import JointState
-from roboy_simulation_msgs.msg import Collision
+
+from threading import Thread
+from bulletroboy.msg_publisher import JointPublisher
+from bulletroboy.msg_publisher import CollisionPublisher
 
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
@@ -25,61 +24,6 @@ parser.add_argument("--model-path", dest="filename", default="../../roboy3_model
 args = parser.parse_args()
 
 
-class JointPublisher(Node):
-
-    def __init__(self, bulletBodyId):
-        super().__init__("bullet_joint_publisher")
-        self.body_id = bulletBodyId
-        self.publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
-        timer_period = 0.1 # seconds
-        self.time = self.create_timer(timer_period, self.timer_callback)
-
-        self.joint_names = []
-        for i in range(p.getNumJoints(self.body_id)):
-            ji = p.getJointInfo(self.body_id,i)
-            self.joint_names.append(ji[1].decode("utf-8"))
-
-    def timer_callback(self):
-        msg = JointState()
-        msg.effort = [0.0]*len(self.joint_names)
-        msg.velocity = [0.0]*len(self.joint_names)
-        for i in range(p.getNumJoints(self.body_id)):
-            js = p.getJointState(self.body_id, i)
-            msg.position.append(js[0])
-            msg.name.append(self.joint_names[i])
-        self.publisher.publish(msg)
-
-class CollisionPublisher(Node):
-    def __init__(self, bulletBodyId):
-        super().__init__("bullet_collision_publisher")
-        self.body_id = bulletBodyId
-        self.publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
-
-    def send(self, collision):
-        msg = Collision()
-        msg.externalbody = collision[2]
-        msg.linkroboy = collision[3]
-        msg.linkexternalbody = collision[4]
-        msg.positiononroboy.x = collision[5][0]
-        msg.positiononroboy.y = collision[5][1]
-        msg.positiononroboy.z = collision[5][2]
-        msg.positiononexternalbody.x = collision[6][0]
-        msg.positiononexternalbody.y = collision[6][1]
-        msg.positiononexternalbody.z = collision[6][2]
-        msg.contactnormalonexternalbody.x = collision[7][0]
-        msg.contactnormalonexternalbody.y = collision[7][1]
-        msg.contactnormalonexternalbody.z = collision[7][2]
-        msg.contactdistance = collision[8]
-        msg.normalforce = collision[9]
-        msg.lateralfriction1 = collision[10]
-        msg.lateralfrictiondir1.x = collision[11][0]
-        msg.lateralfrictiondir1.y = collision[11][1]
-        msg.lateralfrictiondir1.z = collision[11][2]
-        msg.lateralfriction2 = collision[12]
-        msg.lateralfrictiondir2.x = collision[13][0]
-        msg.lateralfrictiondir2.y = collision[13][1]
-        msg.lateralfrictiondir2.z = collision[13][2]
-        self.publisher.publish(msg)
 
 class BulletRoboy():
     def __init__(self, body_id):
@@ -133,17 +77,18 @@ class BulletRoboy():
 
 def main():
     p.connect(p.GUI)
+
     body = p.loadURDF(args.filename, useFixedBase=1)
-    cube = p.loadURDF("../models/cube.urdf",[-0.5, -0.80282, 0.2], useFixedBase=1)  
+    p.loadURDF(is_valid_file(parser, "../models/cube.urdf"), [-0.5, -0.8, 0.5], useFixedBase=1)
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
     bb = BulletRoboy(body)
 
     rclpy.init()
-    publisher_node = JointPublisher(body)
+    joint_publisher_node = JointPublisher(body)
     collision_publisher_node = CollisionPublisher(body)
-    spin_thread = Thread(target=rclpy.spin, args=(publisher_node,))
+    spin_thread = Thread(target=rclpy.spin, args=(joint_publisher_node,))
     spin_thread.start()
 
     while rclpy.ok():
@@ -157,16 +102,18 @@ def main():
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:
-                print("Collision at ", point[2])
+                print("Collision at ", point[3])
                 collision_publisher_node.send(point)
 
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:
-            publisher_node.destroy_node()
+            joint_publisher_node.destroy_node()
             rclpy.shutdown()
 
-    publisher_node.destroy_node()
+    joint_publisher_node.destroy_node()
+    collision_publisher_node.destroy_node()
     rclpy.shutdown()
+    p.disconnect()
 
 if __name__ == '__main__':
     main()

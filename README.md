@@ -38,6 +38,10 @@ ros2 run bulletroboy ros2_roboy
 
 # in a new terminal, to see current joint states
 ros2 topic echo /roboy/simulation/joint_state
+
+# in a new terminal, to see collisions (need to source roboy_simulation_msgs package first)
+. /install/setup.bash
+ros2 topic echo /roboy/simulation/collision
 ```
 
 Run the cage simulation of a human figure with attached tendons.

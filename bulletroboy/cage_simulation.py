@@ -1,11 +1,9 @@
 import argparse
-import os, sys
+import os
 import pybullet as p
 import pybullet_data
 import rclpy
 from threading import Thread
-
-sys.path.append("..")
 
 from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
@@ -43,7 +41,6 @@ def main():
     human_model = p.loadURDF(args.model_path, [0, 0, 1], useFixedBase=1)
 
     # EXOFORCE SETUP
-    operator = Operator(human_model)
     initial_cage_conf = CageConfiguration(args.config_path)
 
     rclpy.init()
@@ -55,7 +52,7 @@ def main():
     # RUN SIM
     try:
         while True:
-            operator.move(FOREARM_ROLL)
+            exoforce.operator.move(FOREARM_ROLL)
             exoforce.update()
             p.stepSimulation()
 

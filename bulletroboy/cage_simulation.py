@@ -14,10 +14,10 @@ from bulletroboy.constants import FOREARM_ROLL
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg
-    if not os.path.exists(arg):
-        parser.error("The file %s does not exist!" % arg)
+    if not os.path.exists(file_path):
+        parser.error("The file %s does not exist!" % file_path)
     else:
-        return arg #return open(arg, 'r')  # return an open file handle
+        return file_path #return open(arg, 'r')  # return an open file handle
 
 
 def main():

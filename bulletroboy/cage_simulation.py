@@ -2,12 +2,14 @@ import argparse
 import os
 import pybullet as p
 import pybullet_data
-
 import rclpy
 from threading import Thread
 
+from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
+from bulletroboy.constants import FOREARM_ROLL
+
 
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
@@ -16,6 +18,7 @@ def is_valid_file(parser, arg):
         parser.error("The file %s does not exist!" % file_path)
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
+
 
 def main():
 
@@ -49,14 +52,14 @@ def main():
     # RUN SIM
     try:
         while True:
-
+            exoforce.operator.move(FOREARM_ROLL)
             exoforce.update()
             p.stepSimulation()
 
     except KeyboardInterrupt:
         exoforce.destroy_node()
         rclpy.shutdown()
-    
+
     exoforce.destroy_node()
     rclpy.shutdown()
 

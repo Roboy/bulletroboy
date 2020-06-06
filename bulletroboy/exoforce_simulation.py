@@ -5,7 +5,9 @@ from numpy.linalg import norm
 from roboy_simulation_msgs.msg import TendonUpdate
 from std_msgs.msg import Float32
 
-from bulletroboy.exoforce import ExoForce, Operator
+from bulletroboy.exoforce import ExoForce
+from bulletroboy.operator import Operator
+
 
 class ExoForceSim(ExoForce):
 	def __init__(self, cage_conf, human_model, mode):
@@ -27,7 +29,7 @@ class ExoForceSim(ExoForce):
 			elif self.mode == "forces":
 				# TODO: update subscriber with correct msg type
 				self.create_subscription(TendonUpdate, '/roboy/simulation/operator_forces', self.forces_update_listener, 10)
-			self.create_subscription(Float32, 'roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
 		self.sim_tendons = []
@@ -50,8 +52,7 @@ class ExoForceSim(ExoForce):
         # TODO: implement force update
 		pass
 
-	def update(self):
-		
+	def update(self):		
 		for tendon_sim in self.sim_tendons:
 			tendon_sim.tendon.update(self.operator)
 			tendon_sim.update_lines()
@@ -63,6 +64,8 @@ class ExoForceSim(ExoForce):
 			for tendon_sim in self.sim_tendons:
 				force = p.readUserDebugParameter(tendon_sim.force_id)
 				self.update_tendon(tendon_sim.tendon.id, force)
+
+		super().publish_state()
 
 	def update_tendon(self, id, force):
 		self.get_muscle_unit(id).force = force

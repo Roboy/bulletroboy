@@ -5,7 +5,9 @@ from numpy.linalg import norm
 from roboy_simulation_msgs.msg import TendonUpdate
 from std_msgs.msg import Float32
 
-from bulletroboy.exoforce import ExoForce, Operator
+from bulletroboy.exoforce import ExoForce
+from bulletroboy.operator import Operator
+
 
 class ExoForceSim(ExoForce):
 	def __init__(self, cage_conf, human_model, mode):
@@ -50,8 +52,7 @@ class ExoForceSim(ExoForce):
         # TODO: implement force update
 		pass
 
-	def update(self):
-		
+	def update(self):		
 		for tendon_sim in self.sim_tendons:
 			tendon_sim.tendon.update(self.operator)
 			tendon_sim.update_lines()

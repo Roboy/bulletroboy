@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import pybullet as p
+import time
 import math
 import numpy as np
 
@@ -10,6 +11,7 @@ from rclpy.node import Node
 from roboy_control_msgs.msg import CageState, ViaPoint
 from roboy_control_msgs.msg import MuscleUnit as MuscleUnitMsg
 from geometry_msgs.msg import Point
+
 
 class CageConfiguration():
     def __init__(self, filepath=None):
@@ -108,38 +110,6 @@ class CageConfiguration():
                 msg += f"\t\t{k}: {v}\n"
         return msg
 
-
-class Operator():
-	def __init__(self, body_id):
-		"""
-		This class handles the operator body and its links in the simulation.
-		"""
-		self.body_id = body_id
-		self.links = self.get_links()
-
-	def get_links(self):
-		links = []
-		for i in range(p.getNumJoints(self.body_id)):
-			link = {}
-			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
-			link['id'] = i
-			links.append(link)
-		return links
-
-	def get_link_center(self, link_name):
-		center = None
-		index = self.get_link_index(link_name)
-		if index:
-			center = np.asarray(p.getLinkState(self.body_id, self.links[index]['id'])[0])
-		return center
-
-	def get_link_index(self, link_name):
-		index = None
-		for i, link in enumerate(self.links):
-			if link['name'] == link_name:
-				index = i
-				break
-		return index
 
 
 class Tendon():

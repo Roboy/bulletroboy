@@ -8,7 +8,7 @@ from threading import Thread
 from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
-from bulletroboy.movement.primitives import FOREARM_ROLL
+from bulletroboy.constants import FOREARM_ROLL
 
 
 def is_valid_file(parser, arg):
@@ -19,7 +19,7 @@ def is_valid_file(parser, arg):
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
 
-      
+
 def main():
 
     # PARSING ARGUMENTS
@@ -59,7 +59,7 @@ def main():
     except KeyboardInterrupt:
         exoforce.destroy_node()
         rclpy.shutdown()
-    
+
     exoforce.destroy_node()
     rclpy.shutdown()
 

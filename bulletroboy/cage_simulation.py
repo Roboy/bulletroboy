@@ -8,7 +8,7 @@ from threading import Thread
 from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
-from bulletroboy.movement.primitives import FOREARM_ROLL
+from bulletroboy.movement.constants import FOREARM_ROLL
 
 
 def is_valid_file(parser, arg):

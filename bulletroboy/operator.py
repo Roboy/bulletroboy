@@ -75,11 +75,8 @@ class Movements():
 
 	def apply_chest_and_neck_constraints(self):
 		"""
-		Keeps the chest and neck in a straight position.
+		Keeps the chest and neck in a straight position. In speific cases it makes the 			movement more ergonomic and human-like.
 		"""
-		# WHY USE THIS: The inverse kinematics functions use the spine link as often as the other
-		# arm links. However, ergonomically, humans dont move the spine that much. Constraining
-		# the spine and neck recreates a more human-like movement in certain cases.
 
 		# Constraint on the Chest
 		p.createConstraint(self.body_id, self.op.get_link_index('human/spine_1'), -1,
@@ -94,20 +91,21 @@ class Movements():
 
 	def one_end_effector(self, pos, maxIter = 100, chest_constraint = True):
 		"""
-		Uses Inverse Kinematics to compute the JointPoses for the position/trajectory of the 
+		Uses Inverse Kinematics to compute the JointPoses for the position of the 
 		End-Effector defined in the Movements class.
-		"""
 		
-		#    INPUTS:
-		#	  - pos (vec3): x,y,z coordinates of the point that the end_effector is to be positioned at.
-		#			If the movement is to be dynamic, write the xyz vector in terms of t.
-		#
-		#	  - maxIter:	maximum number of iterations for the inverse kinematic computation.
-		#
-		#	  - chest_constraint: (flag) chest and neck constraints for a stable and realistic movement.
-		#
+		Args:
+		   pos (list of 3 floats): x,y,z coordinates of the point that the end_effector is to be positioned at. If the movement is to be dynamic, write the xyz vector in terms of t.
+		   maxIter (int): maximum number of iterations for the inverse kinematic computation.
+		   chest_constraint (bool): chest and neck constraints for a stable and realistic movement.
+		
+		Raises:
+		   -
 
-		
+		Returns:
+		   -
+		"""
+
 		iter = 0
 		endEffectorId, freeJoints = self.get_EF_id(self.link)
 		
@@ -125,17 +123,19 @@ class Movements():
 
 	def two_end_effectors(self, positions, maxIter = 100, chest_constraint = True):
 		"""
-		Uses Inverse Kinematics to compute the JointPoses for the position/trajectory of both hands.
-		"""
+		Uses Inverse Kinematics to compute the JointPoses for the position of both hands.
 		
-		#    INPUTS:
-		#	  - pos: list of 2 vec3s. pos[0] = desired x,y,z position/trajectory of the left hand.
-		#				  pos[1] = desired x,y,z position/trajectory of the right hand.
-		#
-		#	  - maxIter: maximum number of iterations for the inverse kinematic computation.
-		#
-		#	  - chest_constraint: (flag) chest and neck constraints for a stable and realistic movement.
-		#
+		Args:
+		   pos (list of 6 floats): x,y,z coordinates of the desired position of the left_hand followed by the x,y,z coordinates of the desired position of the right_hand.
+		   maxIter (int): maximum number of iterations for the inverse kinematic computation.
+		   chest_constraint (bool): chest and neck constraints for a stable and realistic movement.
+		
+		Raises:
+		   -
+
+		Returns:
+		   -
+		"""
 
 		iter = 0
 
@@ -160,12 +160,17 @@ class Movements():
 	def simple_move(self, case):
 		"""
 		Defines a series of hardcoded movements for a direct use. (Movements Library)
+
+		Args:
+		   case (int): the constant corresponding with the movement to be applied
+		
+		Raises:
+		   -
+
+		Returns:
+		   -
 		"""
 		
-		#    INPUTS:
-		#	  - case: names the movement to be applied.
-
-
 		t = time.time()
 
 		# Get link Ids

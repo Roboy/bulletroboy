@@ -52,8 +52,7 @@ def main():
     # RUN SIM
     try:
         while True:
-            exoforce.operator.move(FOREARM_ROLL)
-            exoforce.update()
+            exoforce.update(FOREARM_ROLL)
             p.stepSimulation()
 
     except KeyboardInterrupt:

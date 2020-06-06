@@ -7,6 +7,7 @@ from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
 from bulletroboy.operator import Operator
+from bulletroboy.movement.primitives import FOREARM_ROLL
 
 
 class ExoForceSim(ExoForce):
@@ -52,7 +53,8 @@ class ExoForceSim(ExoForce):
         # TODO: implement force update
 		pass
 
-	def update(self):
+	def update(self, case = FOREARM_ROLL):
+		self.operator.move(case)
 		
 		for tendon_sim in self.sim_tendons:
 			tendon_sim.tendon.update(self.operator)

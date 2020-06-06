@@ -9,6 +9,7 @@ from xml.dom import minidom
 
 from rclpy.node import Node
 
+
 class CageConfiguration():
     def __init__(self, filepath=None):
         """

@@ -8,8 +8,8 @@ import time
 import rclpy
 
 from threading import Thread
-from bulletroboy.msg_publisher import JointPublisher
-from bulletroboy.msg_publisher import CollisionPublisher
+from bulletroboy.msg_publisher import BulletRoboyNode
+
 
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
@@ -44,8 +44,10 @@ class BulletRoboy():
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if info[12] == b'hand_left':
-                self.endEffectorId = i;
+                self.endEffectorId = i
                 print("EF id: " + str(i))
+
+
 
     def accurateCalculateInverseKinematics(self, targetPos, threshold, maxIter):
       closeEnough = False
@@ -75,6 +77,8 @@ class BulletRoboy():
         self.prevPose1 = ls[4]
         self.hasPrevPose = 1
 
+
+
 def main():
     p.connect(p.GUI)
 
@@ -86,9 +90,9 @@ def main():
     bb = BulletRoboy(body)
 
     rclpy.init()
-    joint_publisher_node = JointPublisher(body)
-    collision_publisher_node = CollisionPublisher(body)
-    spin_thread = Thread(target=rclpy.spin, args=(joint_publisher_node,))
+    bullet_node = BulletRoboyNode(body)
+
+    spin_thread = Thread(target=rclpy.spin, args=(bullet_node,))
     spin_thread.start()
 
     while rclpy.ok():
@@ -102,16 +106,15 @@ def main():
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:
-                print("Collision at ", point[3])
-                collision_publisher_node.send(point)
+                print("Collision at link ", point[3])
+                bullet_node.send_collision(point)
 
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:
-            joint_publisher_node.destroy_node()
+            bullet_node.destroy_node()
             rclpy.shutdown()
 
-    joint_publisher_node.destroy_node()
-    collision_publisher_node.destroy_node()
+    bullet_node.destroy_node()
     rclpy.shutdown()
     p.disconnect()
 

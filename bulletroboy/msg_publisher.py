@@ -7,12 +7,15 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 
-class JointPublisher(Node):
-
+class BulletRoboyNode(Node):
     def __init__(self, bulletBodyId):
-        super().__init__("bullet_joint_publisher")
+        super().__init__("bullet_roboy_node")
         self.body_id = bulletBodyId
-        self.publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
+        self.joint_publisher = self.create_joint_publisher()
+        self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
+
+    def create_joint_publisher(self):
+        publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
         timer_period = 0.1 # seconds
         self.time = self.create_timer(timer_period, self.timer_callback)
 
@@ -20,6 +23,7 @@ class JointPublisher(Node):
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)
             self.joint_names.append(ji[1].decode("utf-8"))
+        return publisher
 
     def timer_callback(self):
         msg = JointState()
@@ -29,15 +33,9 @@ class JointPublisher(Node):
             js = p.getJointState(self.body_id, i)
             msg.position.append(js[0])
             msg.name.append(self.joint_names[i])
-        self.publisher.publish(msg)
+        self.joint_publisher.publish(msg)
 
-class CollisionPublisher(Node):
-    def __init__(self, bulletBodyId):
-        super().__init__("bullet_collision_publisher")
-        self.body_id = bulletBodyId
-        self.publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
-
-    def send(self, collision):
+    def send_collision(self, collision):
         msg = Collision()
         msg.externalbody = collision[2]
         msg.linkroboy = collision[3]
@@ -61,4 +59,6 @@ class CollisionPublisher(Node):
         msg.lateralfrictiondir2.x = collision[13][0]
         msg.lateralfrictiondir2.y = collision[13][1]
         msg.lateralfrictiondir2.z = collision[13][2]
-        self.publisher.publish(msg)
+        self.collision_publisher.publish(msg)
+
+    

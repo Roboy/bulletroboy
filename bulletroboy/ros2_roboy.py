@@ -11,6 +11,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 
+from bulletroboy.environment_control import EnvironmentCtrl
+
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg
@@ -101,7 +103,10 @@ class BulletRoboy():
 
 def main():
     p.connect(p.GUI)
-    body = p.loadURDF(args.filename, useFixedBase=1)
+    body = p.loadURDF(args.filename, [0, 0, 0.2], useFixedBase=1)
+    
+    env = EnvironmentCtrl()
+
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
@@ -114,6 +119,7 @@ def main():
 
     while rclpy.ok():
         try:
+            env.update()
             t = time.time()
             pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
             threshold = 0.001

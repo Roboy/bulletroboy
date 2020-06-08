@@ -119,6 +119,7 @@ def main():
 
     while rclpy.ok():
         try:
+            #update the environement parameters with each step
             env.update()
             t = time.time()
             pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]

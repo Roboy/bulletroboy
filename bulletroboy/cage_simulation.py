@@ -10,16 +10,6 @@ from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.movement.primitives import FOREARM_ROLL
 
-from rclpy.node import Node
-from sensor_msgs.msg import JointState
-
-# JointState will have to be adapted to fit both roboy and the figure
-
-class FigureInfoPublisher(Node):
-
-    def __init__(self, operator):
-         self.operator = operator
-         self.body_id = self.operator.body_id
 
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))

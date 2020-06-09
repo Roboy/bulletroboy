@@ -42,6 +42,29 @@ class Operator():
 	def move(self, case):
 		self.movements.simple_move(case)
 
+	def publish_state(self, publisher, msg):
+		ef_strings = ['human/left_hand', 'human/right_hand']
+		ef = [self.get_link_index(ef_strings[0]), self.get_link_index(ef_strings[1])]
+		endEffectorInfo = [p.getLinkState(self.body_id, ef[i])[:2] for i in range(2)]
+		left_hand_info = p.getLinkState(self.body_id, ef[0])[:2]
+		right_hand_info = p.getLinkState(self.body_id, ef[1])[:2]
+
+
+		for endEffector in endEffectorInfo:
+			for i in range(2):
+				msg.header.frame_id = ef_strings[i]
+
+				msg.pose.position.x = endEffectorInfo[i][0][0]
+				msg.pose.position.y = endEffectorInfo[i][0][1]
+				msg.pose.position.z = endEffectorInfo[i][0][2]
+
+				msg.pose.orientation.x = endEffectorInfo[i][1][0]
+				msg.pose.orientation.y = endEffectorInfo[i][1][1]
+				msg.pose.orientation.z = endEffectorInfo[i][1][2]
+				msg.pose.orientation.w = endEffectorInfo[i][1][3]
+				
+				publisher.publish(msg)
+
 
 class Movements():
 	def __init__(self, operator, link = b'human/left_hand'):

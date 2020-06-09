@@ -20,7 +20,6 @@ class ExoForceSim(ExoForce):
 		self.mode = mode
 		self.operator = Operator(human_model)
 		self.init_sim()
-		# self.endEffectors = np.array(['human/left_hand','human/right_hand'])
 
 		if self.mode == "debug":
 			self.init_debug_parameters()

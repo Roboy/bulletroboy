@@ -16,6 +16,7 @@ from bulletroboy.environment_control import EnvironmentCtrl
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg
+    print(file_path)
     if not os.path.exists(file_path):
         parser.error("The file %s does not exist!" % file_path)
     else:
@@ -128,6 +129,7 @@ def main():
             bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:
+            env.stop()
             publisher_node.destroy_node()
             rclpy.shutdown()
 

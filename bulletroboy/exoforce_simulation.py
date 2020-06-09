@@ -19,8 +19,6 @@ class ExoForceSim(ExoForce):
 
 		self.mode = mode
 		self.operator = Operator(human_model)
-		self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-		self.operator_msg= PoseStamped()
 		self.init_sim()
 		self.endEffectors = np.array(['human/left_hand','human/right_hand'])
 
@@ -69,7 +67,7 @@ class ExoForceSim(ExoForce):
 				self.update_tendon(tendon_sim.tendon.id, force)
 
 		super().publish_state()
-		self.operator.publish_state(self.operator_publisher, self.operator_msg, self.endEffectors)
+		self.operator.publish_state(self.operator.operator_publisher, self.operator.operator_msg, self.endEffectors)
 
 
 	def update_tendon(self, id, force):

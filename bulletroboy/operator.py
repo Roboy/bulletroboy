@@ -1,21 +1,29 @@
 import pybullet as p
 import time
 import math
+import rclpy
 import numpy as np
+
+from rclpy.node import Node
 from numpy.linalg import norm
 from termcolor import colored
+from roboy_simulation_msgs.msg import TendonUpdate
+from geometry_msgs.msg import PoseStamped
 
 
-class Operator():
+
+class Operator(Node):
 	def __init__(self, body_id):
 		"""
 		This class handles the operator body and its links in the simulation.
 		"""
+		super().__init__("operator_node")		
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
-		# self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-		# self.operator_msg= PoseStamped()
+		self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		self.operator_msg= PoseStamped()
+
 
 	def get_links(self):
 		links = []

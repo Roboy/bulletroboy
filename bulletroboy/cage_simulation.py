@@ -2,12 +2,14 @@ import argparse
 import os
 import pybullet as p
 import pybullet_data
-
 import rclpy
 from threading import Thread
 
+from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
+from bulletroboy.movement.primitives import FOREARM_ROLL
+
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 
@@ -27,6 +29,7 @@ def is_valid_file(parser, arg):
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
 
+      
 def main():
 
     # PARSING ARGUMENTS
@@ -59,7 +62,7 @@ def main():
     # RUN SIM
     try:
         while True:
-
+            exoforce.operator.move(FOREARM_ROLL)
             exoforce.update()
             p.stepSimulation()
 

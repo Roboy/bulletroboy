@@ -3,6 +3,7 @@ import numpy as np
 from numpy.linalg import norm
 
 from roboy_simulation_msgs.msg import TendonUpdate
+from roboy_simulation_msgs.msg import Collision
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
@@ -18,6 +19,7 @@ class ExoForceSim(ExoForce):
 
 		self.mode = mode
 		self.operator = Operator(human_model)
+		self.create_subscription(Collision, '/roboy/kinematic/forces_imitator', self.collision_listener, 10)
 
 		self.init_sim()
 
@@ -52,6 +54,14 @@ class ExoForceSim(ExoForce):
         # TODO: implement force update
 		pass
 
+	def collision_listener(self, operator_reaction):
+		self.update_reaction(operator_reaction.linkname,
+				     operator_reaction.positiononexternalbody,
+				     operator_reaction.contactnormal,
+				     operator_reaction.contactdistance,
+				     operator_normalforce)
+
+
 	def update(self):		
 		for tendon_sim in self.sim_tendons:
 			tendon_sim.tendon.update(self.operator)
@@ -70,6 +80,15 @@ class ExoForceSim(ExoForce):
 	def update_tendon(self, id, force):
 		self.get_muscle_unit(id).force = force
 		if force > 0: self.get_tendon_sim(id).apply_force(force)
+
+	def update_reaction(self, linkname, posOnBody, contNormal, contDist, normalForce):
+		self.operator.get_link_index(linkname)
+		p.applyExternalForce(self.operator.body_id,
+				     self.operator.get_link_index(linkname),
+				     contNormal, #Maybe this needs to be multiplied with normalForce? Test checks.
+				     posOnBody,
+				     p.LINK_FRAME) # Because message is defined from link_frame.
+
 
 	def get_tendon_sim(self, id):
 		tendon_sim = None

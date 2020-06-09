@@ -1,7 +1,6 @@
 import pybullet as p
 import numpy as np
 from numpy.linalg import norm
-# import rclpy
 
 from roboy_simulation_msgs.msg import TendonUpdate
 from geometry_msgs.msg import PoseStamped
@@ -22,9 +21,6 @@ class ExoForceSim(ExoForce):
 		self.operator = Operator(human_model)
 		self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator_info', 10)
 		self.operator_msg= PoseStamped()
-
-		"""self.point = Point()
-		self.orientation = Quaternion()"""
 		self.init_sim()
 
 		if self.mode == "debug":

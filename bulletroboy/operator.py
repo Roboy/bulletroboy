@@ -14,6 +14,8 @@ class Operator():
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
+		# self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		# self.operator_msg= PoseStamped()
 
 	def get_links(self):
 		links = []
@@ -42,25 +44,26 @@ class Operator():
 	def move(self, case):
 		self.movements.simple_move(case)
 
-	def publish_state(self, publisher, msg):
-ef_names = ['human/left_hand', 'human/right_hand']
+	def publish_state(self, publisher, msg, ef_names):
 
 		for ef in ef_names:
 		   ef_id = self.get_link_index(ef)
 		   link_info = p.getLinkState(self.body_id, ef_id)[:2]
 		   link_pos = link_info[0]
 		   link_orn = link_info[1]
-		   msg.header.frame_id = ef
-		   msg.pose.position.x = link.....
-				msg.pose.position.y = endEffectorInfo[i][0][1]
-				msg.pose.position.z = endEffectorInfo[i][0][2]
 
-				msg.pose.orientation.x = endEffectorInfo[i][1][0]
-				msg.pose.orientation.y = endEffectorInfo[i][1][1]
-				msg.pose.orientation.z = endEffectorInfo[i][1][2]
-				msg.pose.orientation.w = endEffectorInfo[i][1][3]
-				
-				publisher.publish(msg)
+		   msg.header.frame_id = ef
+
+		   msg.pose.position.x = link_pos[0]
+		   msg.pose.position.y = link_pos[1]
+		   msg.pose.position.z = link_pos[2]
+
+		   msg.pose.orientation.x = link_orn[0]
+		   msg.pose.orientation.y = link_orn[1]
+		   msg.pose.orientation.z = link_orn[2]
+		   msg.pose.orientation.w = link_orn[3]
+
+		   publisher.publish(msg)
 
 
 class Movements():

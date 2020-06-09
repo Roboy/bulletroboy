@@ -52,7 +52,7 @@ class Operator(Node):
 	def move(self, case):
 		self.movements.simple_move(case)
 
-	def publish_state(self, publisher, msg, ef_names):
+	def publish_state(self, publisher, msg, ef_names = np.array(['human/left_hand','human/right_hand'])):
 
 		for ef in ef_names:
 		   ef_id = self.get_link_index(ef)

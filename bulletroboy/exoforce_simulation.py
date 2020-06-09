@@ -20,7 +20,7 @@ class ExoForceSim(ExoForce):
 		self.mode = mode
 		self.operator = Operator(human_model)
 		self.init_sim()
-		self.endEffectors = np.array(['human/left_hand','human/right_hand'])
+		# self.endEffectors = np.array(['human/left_hand','human/right_hand'])
 
 		if self.mode == "debug":
 			self.init_debug_parameters()
@@ -67,7 +67,7 @@ class ExoForceSim(ExoForce):
 				self.update_tendon(tendon_sim.tendon.id, force)
 
 		super().publish_state()
-		self.operator.publish_state(self.operator.operator_publisher, self.operator.operator_msg, self.endEffectors)
+		self.operator.publish_state(self.operator.operator_publisher, self.operator.operator_msg)
 
 
 	def update_tendon(self, id, force):

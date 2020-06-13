@@ -34,7 +34,7 @@ Run the simulation example, where
 - the joint states are published with ROS2.
 ```bash
 # run ros2 node
-ros2 run bulletroboy ros2_roboy
+ros2 run bulletroboy roboy_simulation
 
 # in a new terminal, to see current joint states
 ros2 topic echo /roboy/simulation/joint_state

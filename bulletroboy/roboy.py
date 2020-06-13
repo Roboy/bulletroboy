@@ -92,27 +92,20 @@ class CollisionPublisher():
 
     def send(self, collision):
         msg = Collision()
-        # msg.externalbody = collision[2]
-        # msg.linkroboy = collision[3]
-        # msg.linkexternalbody = collision[4]
-        # msg.positiononroboy.x = collision[5][0]
-        # msg.positiononroboy.y = collision[5][1]
-        # msg.positiononroboy.z = collision[5][2]
-        # msg.positiononexternalbody.x = collision[6][0]
-        # msg.positiononexternalbody.y = collision[6][1]
-        # msg.positiononexternalbody.z = collision[6][2]
-        # msg.contactnormalonexternalbody.x = collision[7][0]
-        # msg.contactnormalonexternalbody.y = collision[7][1]
-        # msg.contactnormalonexternalbody.z = collision[7][2]
-        # msg.contactdistance = collision[8]
-        # msg.normalforce = collision[9]
-        # msg.lateralfriction1 = collision[10]
-        # msg.lateralfrictiondir1.x = collision[11][0]
-        # msg.lateralfrictiondir1.y = collision[11][1]
-        # msg.lateralfrictiondir1.z = collision[11][2]
-        # msg.lateralfriction2 = collision[12]
-        # msg.lateralfrictiondir2.x = collision[13][0]
-        # msg.lateralfrictiondir2.y = collision[13][1]
-        # msg.lateralfrictiondir2.z = collision[13][2]
-        # self.publisher.publish(msg)
+        
+        msg.linkid = collision[3]
+
+        msg.position.x = collision[5][0]
+        msg.position.y = collision[5][1]
+        msg.position.z = collision[5][2]
+
+        msg.contactnormal.x = collision[7][0]
+        msg.contactnormal.y = collision[7][1]
+        msg.contactnormal.z = collision[7][2]
+
+        msg.contactdistance = collision[8]
+
+        msg.normalforce = collision[9]
+
+        self.publisher.publish(msg)
     

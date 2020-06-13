@@ -46,7 +46,7 @@ class ForcesImitator(Node):
             linkId (str):The id of the link whose ratio needs to be calculated.
 
         Returns:
-           Ratio (between 0 and 1)
+            int:atio (between 0 and 1)
         """
 
         return 1
@@ -58,7 +58,7 @@ class ForcesImitator(Node):
             collision (Collision):The collision that happened on the robot side.
 
         Returns:
-           Collision scaled to human
+            Collision:Collision scaled to human
         """
 
         return collision

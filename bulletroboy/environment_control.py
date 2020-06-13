@@ -1,5 +1,6 @@
 import pybullet as p
 import pybullet_data
+import rclpy
 
 import time
 
@@ -35,8 +36,8 @@ class EnvironmentCtrl():
         self.add_model_id = p.addUserDebugParameter("Add model from pybullet_data " , 1, 0, 0)
 
         #Number of times delete cube button was clicked
-        self.delete_cube = 0
-        self.delete_cube_id = p.addUserDebugParameter("Delete last cube " , 1, 0, 0)
+        self.delete_obj = 0
+        self.delete_obj_id = p.addUserDebugParameter("Delete last object " , 1, 0, 0)
         
         #The cobjects added
         self.objects = []
@@ -72,15 +73,15 @@ class EnvironmentCtrl():
             try:
                 self.objects.append(p.loadURDF(model, pos, globalScaling = scale))
             except:
-                print("The model " , model, " does not exist.")
+                rclpy.logging._root_logger.error("The model " , model, " does not exist.")
 
             
-        count = p.readUserDebugParameter(self.delete_cube_id)
-        for i in range(int(count - self.delete_cube)):
-            self.delete_cube = count
+        count = p.readUserDebugParameter(self.delete_obj_id)
+        for i in range(int(count - self.delete_obj)):
+            self.delete_obj = count
             if(self.objects):
                 p.removeBody(self.objects.pop())
-                self.delete_cube = count
+                self.delete_obj = count
 
 
     def stop(self):

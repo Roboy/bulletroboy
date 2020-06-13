@@ -46,7 +46,7 @@ class ForcesImitator(Node):
             linkId (str):The id of the link whose ratio needs to be calculated.
 
         Returns:
-            int:atio (between 0 and 1)
+            int:ratio (between 0 and 1)
         """
 
         return 1

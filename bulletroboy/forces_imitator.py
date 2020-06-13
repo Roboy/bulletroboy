@@ -21,7 +21,7 @@ class ForcesImitator(Node):
         self.time = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
-        #Publishes collision to exoforce if any.
+        """Publishes collision to exoforce if any."""
 
         if not self.result:
             return;
@@ -35,38 +35,41 @@ class ForcesImitator(Node):
     #     self.get_logger().info('I heard: "%s"' % msg.data)
 
     def collision_listener(self, msg):
-        #Collision subscriber handler.
+        """Collision subscriber handler."""
 
         self.transformFromRobotToOperator(msg)
 
     def robotToHumanLinkRatio(self, linkId):
-        #Calculates the ratio between robot link and human link.
+        """Calculates the ratio between robot link and human link.
 
-        #Parameters:
-        #    linkId (str):The id of the link whose ratio needs to be calculated.
+        Parameters:
+            linkId (str):The id of the link whose ratio needs to be calculated.
 
-        #Returns:
-        #   Ratio (between 0 and 1)
+        Returns:
+           Ratio (between 0 and 1)
+        """
 
         return 1
     
     def scaleToOperator(self, collision):
-        #Scales down the collision from robot to human.
+        """Scales down the collision from robot to human.
 
-        #Parameters:
-        #    collision (Collision):The collision that happened on the robot side.
+        Parameters:
+            collision (Collision):The collision that happened on the robot side.
 
-        #Returns:
-        #   Collision scaled to human
+        Returns:
+           Collision scaled to human
+        """
 
         return collision
 
     def transformFromRobotToOperator(self, collision):
-        #Calculates the collision on the human and assign it to the 'result' var.
+        """Calculates the collision on the human and assign it to the 'result' var.
 
-        #Parameters:
-        #    collision (Collision):The collision that happened on the robot side.
-        
+        Parameters:
+            collision (Collision):The collision that happened on the robot side.
+        """
+
         self.result = self.scaleToOperator(collision)
 
 

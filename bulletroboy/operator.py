@@ -71,7 +71,7 @@ class Operator(Node):
 		   msg.pose.orientation.z = link_orn[2]
 		   msg.pose.orientation.w = link_orn[3]
 
-		   publisher.publish(msg)
+		   self.ef_publisher.publish(msg)
 
 
 class Movements():

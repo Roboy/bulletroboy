@@ -10,26 +10,22 @@ class ForcesImitator(Node):
 
         self.result = None
 
-        self.environmentSubscription = self.create_subscription(
-            Collision,
-            'not/yet/defined',
-            self.listener_environnment_callback,
-            10)
-
         self.robotCollisionSubscription = self.create_subscription(
             Collision,
             '/roboy/simulation/collision',
-            self.listener_robot_callback,
+            self.collision_listener,
             10)
 
-        self.publisher = self.create_publisher(Collision, '/roboy/kinematic/forces_imitator', 10)
-        timer_period = 0.1 # seconds
+        self.exoforceCollisionPublisher = self.create_publisher(Collision, 'roboy/exoforce/collisions', 10)
+        timer_period = 0.005 # seconds
         self.time = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
+        #Publishes collision to exoforce if any.
+
         if not self.result:
             return;
-        self.publisher.publish(self.result)
+        self.exoforceCollisionPublisher.publish(self.result)
         self.result = None
 
 
@@ -38,22 +34,40 @@ class ForcesImitator(Node):
     #     self.update()
     #     self.get_logger().info('I heard: "%s"' % msg.data)
 
-    def listener_environnment_callback(self, msg):
-        self.updateToHumanCollision(msg)
+    def collision_listener(self, msg):
+        #Collision subscriber handler.
 
-    def listener_robot_callback(self, msg):
-        self.updateToHumanCollision(msg)
+        self.transformFromRobotToOperator(msg)
 
-    def robotToHumanLinkRatio(self, linkName):
+    def robotToHumanLinkRatio(self, linkId):
+        #Calculates the ratio between robot link and human link.
+
+        #Parameters:
+        #    linkId (str):The id of the link whose ratio needs to be calculated.
+
+        #Returns:
+        #   Ratio (between 0 and 1)
+
         return 1
     
-    def proportionalHumanForce(self, collision, ratio):
+    def scaleToOperator(self, collision):
+        #Scales down the collision from robot to human.
+
+        #Parameters:
+        #    collision (Collision):The collision that happened on the robot side.
+
+        #Returns:
+        #   Collision scaled to human
+
         return collision
 
-    def updateToHumanCollision(self, collision):
-        linkName = collision.linkname
-        forceRatio = self.robotToHumanLinkRatio(linkName)
-        self.result = self.proportionalHumanForce(collision, forceRatio)
+    def transformFromRobotToOperator(self, collision):
+        #Calculates the collision on the human and assign it to the 'result' var.
+
+        #Parameters:
+        #    collision (Collision):The collision that happened on the robot side.
+        
+        self.result = self.scaleToOperator(collision)
 
 
 def main(args=None):

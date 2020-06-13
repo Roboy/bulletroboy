@@ -66,7 +66,6 @@ class ExoForceSim(ExoForce):
 				self.update_tendon(tendon_sim.tendon.id, force)
 
 		super().publish_state()
-		self.operator.publish_state(self.operator.operator_publisher, self.operator.operator_msg)
 
 
 	def update_tendon(self, id, force):

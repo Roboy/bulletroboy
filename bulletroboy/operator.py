@@ -55,6 +55,7 @@ class Operator(Node):
 	def publish_state(self, ef_names = np.array(['human/left_hand','human/right_hand'])):
 
 		for ef in ef_names:
+                    msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)
 		   link_info = p.getLinkState(self.body_id, ef_id)[:2]
 		   link_pos = link_info[0]

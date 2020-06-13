@@ -21,7 +21,7 @@ class Operator(Node):
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
-		self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
 		
 
 

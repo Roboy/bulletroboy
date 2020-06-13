@@ -4,6 +4,7 @@ import math
 import numpy as np
 from numpy.linalg import norm
 from termcolor import colored
+from roboy_simulation_msgs.msg import Collision
 
 
 class Operator():
@@ -14,6 +15,7 @@ class Operator():
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
+		self.create_subscription(Collision, '/roboy/simulation/operator/contacts', self.force_mapper_listener, 10)
 
 	def get_links(self):
 		links = []
@@ -41,6 +43,10 @@ class Operator():
 	
 	def move(self, case):
 		self.movements.simple_move(case)
+
+	def force_mapper_listener(self, contact_info):
+		self.apply_forces(contact_info)		# There is already an apply forces function. Use it!!
+		
 
 
 class Movements():

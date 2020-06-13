@@ -1,6 +1,8 @@
 import pybullet as p
 import time
 
+import numpy as np
+
 import rclpy
 from rclpy.node import Node
 
@@ -95,9 +97,10 @@ class CollisionPublisher():
         
         msg.linkid = collision[3]
 
-        msg.position.x = collision[5][0]
-        msg.position.y = collision[5][1]
-        msg.position.z = collision[5][2]
+        pos_in_lf = self.get_pos_in_link_frame(collision[3], collision[5])
+        msg.position.x = pos_in_lf[0]
+        msg.position.y = pos_in_lf[1]
+        msg.position.z = pos_in_lf[2]
 
         msg.contactnormal.x = collision[7][0]
         msg.contactnormal.y = collision[7][1]
@@ -109,3 +112,15 @@ class CollisionPublisher():
 
         self.publisher.publish(msg)
     
+    def get_pos_in_link_frame(self, link, position):
+        frame_pos = (p.getLinkState(self.body_id, link))[4]
+        frame_orn = (p.getLinkState(self.body_id, link))[5]
+
+        inv_frame_pos, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
+
+        rotation = np.array(p.getMatrixFromQuaternion(inv_frame_orn))
+        rotation = rotation.reshape(3,3)
+        translation = np.array(frame_pos)
+
+        return rotation.dot(position) + translation
+

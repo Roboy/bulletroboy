@@ -45,7 +45,7 @@ def main():
         # cage_state_publisher.publish(state)
 
         robotCollision = Collision()
-        robotCollision.linkid = 'right_elbow'
+        robotCollision.linkid = 1
         robotCollision.position = Vector3()
         robotCollision.contactnormal = Vector3()
         robotCollision.contactdistance = float(5)

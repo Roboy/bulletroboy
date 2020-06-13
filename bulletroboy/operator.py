@@ -22,7 +22,7 @@ class Operator(Node):
 		self.links = self.get_links()
 		self.movements = Movements(self)
 		self.operator_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-		self.operator_msg= PoseStamped()
+		
 
 
 	def get_links(self):

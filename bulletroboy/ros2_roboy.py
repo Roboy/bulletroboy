@@ -17,7 +17,7 @@ def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg
     if not os.path.exists(file_path):
-        parser.error("The file %s does not exist!" % file_path)
+        rclpy.logging._root_logger.error("The file %s does not exist!" % file_path)
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
 
@@ -70,8 +70,8 @@ class BulletRoboy():
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if info[12] == b'hand_left':
-                self.endEffectorId = i;
-                print("EF id: " + str(i))
+                self.endEffectorId = i
+                rclpy.logging._root_logger.info("EF id: " + str(i))
 
     def accurateCalculateInverseKinematics(self, targetPos, threshold, maxIter):
       closeEnough = False

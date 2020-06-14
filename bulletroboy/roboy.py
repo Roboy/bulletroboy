@@ -33,6 +33,8 @@ class BulletRoboy(Node):
                 print("EF id: " + str(i))
 
         timer_period = 0.1 # seconds
+
+        #Publishers and subscribers
         self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
         self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
         self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
@@ -46,6 +48,8 @@ class BulletRoboy(Node):
       while (not closeEnough and iter < maxIter):
         jointPoses = p.calculateInverseKinematics(self.body_id, self.endEffectorId, targetPos)
         #import pdb; pdb.set_trace()
+        # rclpy.logging._root_logger.info("resetting joints states")
+
         for i in range(len(self.freeJoints)):
           p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
         ls = p.getLinkState(self.body_id, self.endEffectorId)
@@ -109,6 +113,8 @@ class CollisionPublisher():
         msg.contactdistance = collision[8]
 
         msg.normalforce = collision[9]
+
+        rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
 
         self.publisher.publish(msg)
     

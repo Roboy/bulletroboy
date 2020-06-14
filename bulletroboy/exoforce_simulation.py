@@ -58,10 +58,13 @@ class ExoForceSim(ExoForce):
 
 		self.apply_force_on_op(forces.linkid, force_vec, position_vec)
 
-	def apply_force_on_op(self, linkid, force_vec, position):
-		#print("force_vec = ", force_vec)
-		p.applyExternalForce(self.operator.body_id, linkid, force_vec,
-				     position, p.WORLD_FRAME)
+	def apply_force_on_op(self, linkid, force_vec, position_on_link):
+		body_id = self.operator.body_id
+		link_pos = list(p.getLinkState(body_id, linkid)[0])
+		force_position = [sum(x) for x in zip(link_pos, position_on_link)]
+		print("force_position: ", force_position)
+
+		p.applyExternalForce(body_id, linkid, force_vec, force_position, p.WORLD_FRAME)
 
 
 	def update(self):		
@@ -122,7 +125,6 @@ class TendonSim():
 	def apply_force(self, force):
 		# TODO: apply forces to all via points, currently the force is applied to the last via point
 		force_direction = np.asarray(self.start_location) - np.asarray(self.tendon.attachtment_points[-1])
-		# print("start location: ", self.start_location)
 		force_direction /= norm(force_direction)
 
 		p.applyExternalForce(objectUniqueId=self.operator.body_id,

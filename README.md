@@ -48,7 +48,7 @@ ros2 run bulletroboy cage_simulation  # see node help for execution modes
 ## Running the loop.
 
 # The Operator:
-To test the operator reacting to the collisions message (currently created with fake publisher in test_publisher.py) follow these instructions:
+To test the operator reacting to the collisions message follow these instructions:
 
 - open three terminals and in each of them run the following lines of code:
 
@@ -58,7 +58,7 @@ source /opt/ros/eloquent/setup.bash
 . install/setup.bash
 cd src/bulletroboy/bulletroboy
 ```
-- Now in the first terminal run to initiate the collisions message (test) publisher:
+- Now in the first terminal run this line to initiate the collisions message (test) publisher:
 
 ```bash
 python3 test_publisher.py
@@ -70,7 +70,7 @@ python3 test_publisher.py
 ros2 topic echo /roboy/exoforce/collisions
 ```
 
-- In the third terminal run this line. (The operator may move strangely due to the test_publisher message - it should work better with the loop feedback and the real message)
+- In the third terminal run this line. (Curretly, the operator follows the collisions message from test_publisher. Once its merged with the other loop components this will change.)
 
 ```bash
 python3 cage_simulation.py -m forces

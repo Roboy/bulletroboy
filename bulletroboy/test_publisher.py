@@ -59,11 +59,11 @@ def main():
         contact_info.position.y = 0.0
         contact_info.position.z = 0.0
         contact_info.contactnormal = Vector3()
-        contact_info.contactnormal.x = 0.2*np.cos(t) + 0.8
-        contact_info.contactnormal.y = 0.2*np.sin(t) + 0.8
-        contact_info.contactnormal.z = 0.0
+        contact_info.contactnormal.x = 0.0
+        contact_info.contactnormal.y = 0.0
+        contact_info.contactnormal.z = 1.2*np.sin(t)
         contact_info.contactdistance = 0.0
-        contact_info.normalforce = 200.0
+        contact_info.normalforce = 350.0
 
         collision_message_publisher.publish(contact_info)
 

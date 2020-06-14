@@ -27,11 +27,13 @@ def main():
     p.connect(p.GUI)
 
     body = p.loadURDF(args.filename, useFixedBase=1)
-    p.loadURDF(is_valid_file(parser, "../models/cube.urdf"), [-0.5, -0.8, 0.5], useFixedBase=1)
+    p.loadURDF(is_valid_file(parser, "../models/cube.urdf"), [-0.5, -0.8, 0.4], useFixedBase=1)
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
     rclpy.init()
+
+    rclpy.logging._root_logger.info("Starting Bullet Roboy node ")
 
     bb = BulletRoboy(body)
 
@@ -44,12 +46,13 @@ def main():
             pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
             threshold = 0.001
             maxIter = 100
+            # rclpy.logging._root_logger.info("Moving roboy")
             bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
 
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:
-                print("Collision at link ", point[3])
+                rclpy.logging._root_logger.info("Collision at link %i" % point[3])
                 bb.collision_publisher.send(point)
 
             bb.drawDebugLines(pos)

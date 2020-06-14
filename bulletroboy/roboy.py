@@ -34,6 +34,8 @@ class BulletRoboy(Node):
                 print("EF id: " + str(i))
 
         timer_period = 0.1 # seconds
+
+        #Publishers and subscribers
         self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
         self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
         self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
@@ -52,6 +54,8 @@ class BulletRoboy(Node):
       while (not closeEnough and iter < maxIter):
         jointPoses = p.calculateInverseKinematics(self.body_id, self.endEffectorId, targetPos)
         #import pdb; pdb.set_trace()
+        # rclpy.logging._root_logger.info("resetting joints states")
+
         for i in range(len(self.freeJoints)):
           p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
         ls = p.getLinkState(self.body_id, self.endEffectorId)
@@ -115,13 +119,15 @@ class CollisionPublisher():
 
         msg.normalforce = collision[9]
 
+        rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
+
         self.publisher.publish(msg)
     
     def get_pos_in_link_frame(self, link, position):
         frame_pos = (p.getLinkState(self.body_id, link))[4]
         frame_orn = (p.getLinkState(self.body_id, link))[5]
 
-        inv_frame_pos, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
+        _, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
 
         rotation = np.array(p.getMatrixFromQuaternion(inv_frame_orn))
         rotation = rotation.reshape(3,3)

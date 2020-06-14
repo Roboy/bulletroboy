@@ -53,18 +53,13 @@ class ExoForceSim(ExoForce):
 		force = forces.normalforce
 		vector = forces.contactnormal
 
-		"""force_vec = Vector3()
-		force_vec.x = force * vector.x
-		force_vec.y = force * vector.y
-		force_vec.z = force * vector.z"""
-
 		force_vec = [force * vector.x, force * vector.y, force * vector.z]
 		position_vec = [forces.position.x, forces.position.y, forces.position.z]
 
 		self.apply_force_on_op(forces.linkid, force_vec, position_vec)
 
 	def apply_force_on_op(self, linkid, force_vec, position):
-		print("force_vec = ", force_vec)
+		#print("force_vec = ", force_vec)
 		p.applyExternalForce(self.operator.body_id, linkid, force_vec,
 				     position, p.WORLD_FRAME)
 
@@ -87,15 +82,6 @@ class ExoForceSim(ExoForce):
 	def update_tendon(self, id, force):
 		self.get_muscle_unit(id).force = force
 		if force > 0: self.get_tendon_sim(id).apply_force(force)
-
-	def update_reaction(self, linkname, posOnBody, contNormal, contDist, normalForce):
-		self.operator.get_link_index(linkname)
-		p.applyExternalForce(self.operator.body_id,
-				     self.operator.get_link_index(linkname),
-				     contNormal, #Maybe this needs to be multiplied with normalForce? Test checks.
-				     posOnBody,
-				     p.LINK_FRAME) # Because message is defined from link_frame.
-
 
 	def get_tendon_sim(self, id):
 		tendon_sim = None
@@ -136,6 +122,7 @@ class TendonSim():
 	def apply_force(self, force):
 		# TODO: apply forces to all via points, currently the force is applied to the last via point
 		force_direction = np.asarray(self.start_location) - np.asarray(self.tendon.attachtment_points[-1])
+		# print("start location: ", self.start_location)
 		force_direction /= norm(force_direction)
 
 		p.applyExternalForce(objectUniqueId=self.operator.body_id,

@@ -25,6 +25,8 @@ args = parser.parse_args()
 
 
 def main():
+    """Sets up pybullet environment and runs simulation.
+    """
     p.connect(p.GUI)
 
     body = p.loadURDF(args.filename, [0, 0, 0.2], useFixedBase=1)
@@ -57,7 +59,7 @@ def main():
 
             for  point in contactPts:
                 rclpy.logging._root_logger.info("Collision at link %i" % point[3])
-                bb.collision_publisher.send(point)
+                bb.collision_publisher.publish(point)
 
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:

@@ -10,6 +10,9 @@ from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 
 class BulletRoboy(Node):
+    """
+    This class represents the Roboy in simulation. It handles movements of the roboy as well as publishing and receiving ros messages.
+    """
     def __init__(self, body_id):
         super().__init__("bullet_roboy")
         self.body_id = body_id
@@ -73,7 +76,9 @@ class BulletRoboy(Node):
         self.hasPrevPose = 1
         
 class JointPublisher():
-
+    """
+    This class handles publishing joint state messages.
+    """
     def __init__(self, bulletBodyId, publisher):
         self.body_id = bulletBodyId
         self.publisher = publisher
@@ -83,6 +88,8 @@ class JointPublisher():
             self.joint_names.append(ji[1].decode("utf-8"))
 
     def timer_callback(self):
+        """Callback function for the timer, publishes joint message every time it gets triggered by timer. 
+        """
         msg = JointState()
         msg.effort = [0.0]*len(self.joint_names)
         msg.velocity = [0.0]*len(self.joint_names)
@@ -93,26 +100,39 @@ class JointPublisher():
         self.publisher.publish(msg)
 
 class CollisionPublisher():
+    """
+    This class handles publishing collision messages.
+    """
     def __init__(self, bulletBodyId, publisher):
         self.body_id = bulletBodyId
         self.publisher = publisher
 
-    def send(self, collision):
+    def publish(self, collision):
+        """Processes the collision message and publishes it.
+
+        Args:
+            collision: item of the contact points list output of pybullet getcontactPoints.
+        """
         msg = Collision()
-        
+
+        #collision[3] == linkIndexA in PyBullet docu
         msg.linkid = collision[3]
 
+        #collision[5] == positionOnA in PyBullet docu
         pos_in_lf = self.get_pos_in_link_frame(collision[3], collision[5])
         msg.position.x = pos_in_lf[0]
         msg.position.y = pos_in_lf[1]
         msg.position.z = pos_in_lf[2]
 
+        #collision[7] == contactNormalOnB in PyBullet docu
         msg.contactnormal.x = collision[7][0]
         msg.contactnormal.y = collision[7][1]
         msg.contactnormal.z = collision[7][2]
 
+        #collision[8] == contactDistance in PyBullet docu
         msg.contactdistance = collision[8]
 
+        #collision[9] == normalForce in PyBullet docu
         msg.normalforce = collision[9]
 
         rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
@@ -120,8 +140,20 @@ class CollisionPublisher():
         self.publisher.publish(msg)
     
     def get_pos_in_link_frame(self, link, position):
-        frame_pos = (p.getLinkState(self.body_id, link))[4]
-        frame_orn = (p.getLinkState(self.body_id, link))[5]
+        """Changes the position of the collision from world's coordinates system to link frame.
+
+        Args:
+            link: link id in which a collision happened.
+            position: vector that would be changed.
+
+        Returns:
+            The position in link frame.
+        """
+
+        #[0] == linkWorldPosition in PyBullet docu
+        #[1] == linkWorldOrientation in PyBullet docu
+        frame_pos = (p.getLinkState(self.body_id, link))[0]
+        frame_orn = (p.getLinkState(self.body_id, link))[1]
 
         _, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
 

@@ -1,19 +1,29 @@
 import pybullet as p
 import time
 import math
+import rclpy
 import numpy as np
+
+from rclpy.node import Node
 from numpy.linalg import norm
 from termcolor import colored
+from roboy_simulation_msgs.msg import TendonUpdate
+from geometry_msgs.msg import PoseStamped
 
 
-class Operator():
+
+class Operator(Node):
 	def __init__(self, body_id):
 		"""
 		This class handles the operator body and its links in the simulation.
 		"""
+		super().__init__("operator_node")		
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
+		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		
+
 
 	def get_links(self):
 		links = []
@@ -41,6 +51,28 @@ class Operator():
 	
 	def move(self, case):
 		self.movements.simple_move(case)
+
+	def publish_state(self, ef_names = np.array(['human/left_hand','human/right_hand'])):
+
+		for ef in ef_names:
+		   msg = PoseStamped()
+		   ef_id = self.get_link_index(ef)
+		   link_info = p.getLinkState(self.body_id, ef_id)[:2]
+		   link_pos = link_info[0]
+		   link_orn = link_info[1]
+
+		   msg.header.frame_id = ef
+
+		   msg.pose.position.x = link_pos[0]
+		   msg.pose.position.y = link_pos[1]
+		   msg.pose.position.z = link_pos[2]
+
+		   msg.pose.orientation.x = link_orn[0]
+		   msg.pose.orientation.y = link_orn[1]
+		   msg.pose.orientation.z = link_orn[2]
+		   msg.pose.orientation.w = link_orn[3]
+
+		   self.ef_publisher.publish(msg)
 
 
 class Movements():
@@ -204,5 +236,3 @@ class Movements():
 
 		elif case == 4:
                     p.resetJointState(self.body_id, spine_side_link, math.sin(t))
-
-

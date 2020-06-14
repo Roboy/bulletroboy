@@ -8,6 +8,7 @@ from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
 from bulletroboy.operator import Operator
+from geometry_msgs.msg import Vector3
 
 
 class ExoForceSim(ExoForce):
@@ -19,7 +20,6 @@ class ExoForceSim(ExoForce):
 
 		self.mode = mode
 		self.operator = Operator(human_model)
-		self.create_subscription(Collision, '/roboy/kinematic/forces_imitator', self.collision_listener, 10)
 
 		self.init_sim()
 
@@ -29,8 +29,7 @@ class ExoForceSim(ExoForce):
 			if self.mode == "tendon":
 				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
-				# TODO: update subscriber with correct msg type
-				self.create_subscription(TendonUpdate, '/roboy/simulation/operator_forces', self.forces_update_listener, 10)
+				self.create_subscription(Collision, '/roboy/exoforce/collisions', self.forces_update_listener, 10)
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
@@ -51,15 +50,23 @@ class ExoForceSim(ExoForce):
 		self.rotate_cage(angle.data)
 
 	def forces_update_listener(self, forces):
-        # TODO: implement force update
-		pass
+		force = forces.normalforce
+		vector = forces.contactnormal
 
-	def collision_listener(self, operator_reaction):
-		self.update_reaction(operator_reaction.linkname,
-				     operator_reaction.positiononexternalbody,
-				     operator_reaction.contactnormal,
-				     operator_reaction.contactdistance,
-				     operator_normalforce)
+		"""force_vec = Vector3()
+		force_vec.x = force * vector.x
+		force_vec.y = force * vector.y
+		force_vec.z = force * vector.z"""
+
+		force_vec = [force * vector.x, force * vector.y, force * vector.z]
+		position_vec = [forces.position.x, forces.position.y, forces.position.z]
+
+		self.apply_force_on_op(forces.linkid, force_vec, position_vec)
+
+	def apply_force_on_op(self, linkid, force_vec, position):
+		print("force_vec = ", force_vec)
+		p.applyExternalForce(self.operator.body_id, linkid, force_vec,
+				     position, p.WORLD_FRAME)
 
 
 	def update(self):		

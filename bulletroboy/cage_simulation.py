@@ -52,7 +52,7 @@ def main():
     # RUN SIM
     try:
         while True:
-            exoforce.operator.move(FOREARM_ROLL)
+            # exoforce.operator.move(FOREARM_ROLL)
             exoforce.update()
             p.stepSimulation()
 

@@ -3,6 +3,7 @@ import numpy as np
 from numpy.linalg import norm
 
 from roboy_simulation_msgs.msg import TendonUpdate
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
@@ -18,7 +19,6 @@ class ExoForceSim(ExoForce):
 
 		self.mode = mode
 		self.operator = Operator(human_model)
-
 		self.init_sim()
 
 		if self.mode == "debug":
@@ -66,6 +66,7 @@ class ExoForceSim(ExoForce):
 				self.update_tendon(tendon_sim.tendon.id, force)
 
 		super().publish_state()
+
 
 	def update_tendon(self, id, force):
 		self.get_muscle_unit(id).force = force

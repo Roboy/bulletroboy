@@ -9,12 +9,13 @@ import rclpy
 
 from threading import Thread
 from bulletroboy.roboy import BulletRoboy
+from bulletroboy.environment_control import EnvironmentCtrl
 
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg
     if not os.path.exists(file_path):
-        parser.error("The file %s does not exist!" % file_path)
+        rclpy.logging._root_logger.error("The file %s does not exist!" % file_path)
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
 
@@ -26,8 +27,9 @@ args = parser.parse_args()
 def main():
     p.connect(p.GUI)
 
-    body = p.loadURDF(args.filename, useFixedBase=1)
-    p.loadURDF(is_valid_file(parser, "../models/cube.urdf"), [-0.5, -0.8, 0.4], useFixedBase=1)
+    body = p.loadURDF(args.filename, [0, 0, 0.2], useFixedBase=1)
+    env = EnvironmentCtrl()
+
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
@@ -42,6 +44,8 @@ def main():
 
     while rclpy.ok():
         try:
+            #update the environement parameters with each step
+            env.update()
             t = time.time()
             pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
             threshold = 0.001
@@ -57,9 +61,12 @@ def main():
 
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:
+            env.stop()
             bb.destroy_node()
             rclpy.shutdown()
+            p.disconnect()
 
+    env.stop()
     bb.destroy_node()
     rclpy.shutdown()
     p.disconnect()

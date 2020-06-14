@@ -30,7 +30,8 @@ class BulletRoboy(Node):
                 self.freeJoints.append(i)
             if info[12] == b'hand_left':
                 self.endEffectorId = i
-                print("EF id: " + str(i))
+
+                rclpy.logging._root_logger.info("EF id: " + str(i))
 
         timer_period = 0.1 # seconds
 
@@ -129,4 +130,3 @@ class CollisionPublisher():
         translation = np.array(frame_pos)
 
         return rotation.dot(position) + translation
-

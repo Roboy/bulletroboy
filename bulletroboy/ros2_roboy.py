@@ -11,11 +11,13 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 
+from bulletroboy.environment_control import EnvironmentCtrl
+
 def is_valid_file(parser, arg):
     file_path = os.path.dirname(os.path.realpath(__file__))
     file_path += "/" + arg
     if not os.path.exists(file_path):
-        parser.error("The file %s does not exist!" % file_path)
+        rclpy.logging._root_logger.error("The file %s does not exist!" % file_path)
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
 
@@ -68,8 +70,8 @@ class BulletRoboy():
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if info[12] == b'hand_left':
-                self.endEffectorId = i;
-                print("EF id: " + str(i))
+                self.endEffectorId = i
+                rclpy.logging._root_logger.info("EF id: " + str(i))
 
     def accurateCalculateInverseKinematics(self, targetPos, threshold, maxIter):
       closeEnough = False
@@ -101,7 +103,10 @@ class BulletRoboy():
 
 def main():
     p.connect(p.GUI)
-    body = p.loadURDF(args.filename, useFixedBase=1)
+    body = p.loadURDF(args.filename, [0, 0, 0.2], useFixedBase=1)
+    
+    env = EnvironmentCtrl()
+
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(1)
 
@@ -114,6 +119,8 @@ def main():
 
     while rclpy.ok():
         try:
+            #update the environement parameters with each step
+            env.update()
             t = time.time()
             pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
             threshold = 0.001
@@ -121,6 +128,7 @@ def main():
             bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
             bb.drawDebugLines(pos)
         except KeyboardInterrupt:
+            env.stop()
             publisher_node.destroy_node()
             rclpy.shutdown()
 

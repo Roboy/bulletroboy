@@ -116,7 +116,7 @@ class CollisionPublisher():
         frame_pos = (p.getLinkState(self.body_id, link))[4]
         frame_orn = (p.getLinkState(self.body_id, link))[5]
 
-        inv_frame_pos, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
+        _, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
 
         rotation = np.array(p.getMatrixFromQuaternion(inv_frame_orn))
         rotation = rotation.reshape(3,3)

@@ -8,6 +8,7 @@ from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
+from geometry_msgs.msg import PoseStamped
 
 class BulletRoboy(Node):
     def __init__(self, body_id):
@@ -36,7 +37,12 @@ class BulletRoboy(Node):
         self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
         self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
         self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
+        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move,10)
 
+    def move(self, link_info):
+        link_pos= [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
+        link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
+        
 
 
     def accurateCalculateInverseKinematics(self, targetPos, threshold, maxIter):
@@ -54,7 +60,6 @@ class BulletRoboy(Node):
         dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
         closeEnough = (dist2 < threshold)
         iter = iter + 1
-      #print ("Num iter: "+str(iter) + "threshold: "+str(dist2))
       return jointPoses
 
     def drawDebugLines(self, targetPos):

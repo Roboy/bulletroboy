@@ -7,6 +7,7 @@ from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
+from roboy_simulation_msgs.srv import LinkNameFromId
 
 class BulletRoboy(Node):
     """
@@ -47,7 +48,28 @@ class BulletRoboy(Node):
         #Collision publisher
         self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
 
+        #Services
 
+        #LinkNameFromId service
+        self.link_name_service = self.create_service(LinkNameFromId, '/roboy/simulation/roboy/link_name_from_link_id', self.get_link_name_from_id)
+    
+    def get_links(self):
+        links = []
+        for i in range(p.getNumJoints(self.body_id)):
+            link = {}
+            link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+            link['id'] = i
+            links.append(link)
+        return links
+
+    def get_link_name_from_id(self, request, response):
+        self.get_logger().info("Service LinkNameFromLinkId: request received")
+        response.link_name = ""
+        for link in self.get_links():
+            if link['id'] == request.link_id:
+                response.link_name = link['name']
+                break
+        return response
 
     def accurateCalculateInverseKinematics(self, targetPos, threshold, maxIter):
       closeEnough = False

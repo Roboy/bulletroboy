@@ -23,7 +23,7 @@ class ForcesMapper(Node):
         self.link_names_map = self.load_roboy_to_human_link_name_map()
 
         # Define clients
-        self.roboy_link_name_from_id_client = self.create_client(LinkNameFromId, 'add_two_ints')
+        self.roboy_link_name_from_id_client = self.create_client(LinkNameFromId, '/roboy/simulation/roboy/link_name_from_link_id')
         self.operator_link_id_from_name_client = self.create_client(LinkIdFromName, '/roboy/simulation/operator/link_id_from_link_name')
 
         # Connect to services

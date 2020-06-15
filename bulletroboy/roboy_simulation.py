@@ -53,7 +53,7 @@ def main():
             threshold = 0.001
             maxIter = 100
             # rclpy.logging._root_logger.info("Moving roboy")
-            bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
+            # bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
 
             contactPts = p.getContactPoints(body)
 
@@ -61,7 +61,7 @@ def main():
                 rclpy.logging._root_logger.info("Collision at link %i" % point[3])
                 bb.collision_publisher.publish(point)
 
-            bb.drawDebugLines(pos)
+            # bb.drawDebugLines(pos)
         except KeyboardInterrupt:
             env.stop()
             bb.destroy_node()

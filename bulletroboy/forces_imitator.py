@@ -3,6 +3,7 @@ from rclpy.node import Node
 
 # from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
+from bulletroboy.topics import COLLISION_ROBOY, COLLISION_EXOFORCE
 
 class ForcesImitator(Node):
     def __init__(self):
@@ -12,11 +13,11 @@ class ForcesImitator(Node):
 
         self.robotCollisionSubscription = self.create_subscription(
             Collision,
-            '/roboy/simulation/collision',
+            COLLISION_ROBOY,
             self.collision_listener,
             10)
 
-        self.exoforceCollisionPublisher = self.create_publisher(Collision, 'roboy/exoforce/collisions', 10)
+        self.exoforceCollisionPublisher = self.create_publisher(Collision, COLLISION_EXOFORCE, 10)
         timer_period = 0.005 # seconds
         self.time = self.create_timer(timer_period, self.timer_callback)
 
@@ -36,7 +37,7 @@ class ForcesImitator(Node):
 
     def collision_listener(self, msg):
         """Collision subscriber handler."""
-
+        rclpy.logging._root_logger.info('Collision received')
         self.transformFromRobotToOperator(msg)
 
     def robotToHumanLinkRatio(self, linkId):

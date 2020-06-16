@@ -11,6 +11,7 @@ from std_msgs.msg import Float32
 from bulletroboy.exoforce import ExoForce
 from bulletroboy.operator import Operator
 from geometry_msgs.msg import Vector3
+from bulletroboy.topics import TENDON_FORCE, COLLISION_EXOFORCE, CAGE_ROTATION
 
 
 class ExoForceSim(ExoForce):
@@ -28,10 +29,10 @@ class ExoForceSim(ExoForce):
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
+				self.create_subscription(TendonUpdate, TENDON_FORCE, self.tendon_update_listener, 10)
 			elif self.mode == "forces":
-				self.create_subscription(Collision, '/roboy/simulation/collision', self.forces_update_listener, 10)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+				self.create_subscription(Collision, COLLISION_EXOFORCE, self.forces_update_listener, 10)
+			self.create_subscription(Float32, CAGE_ROTATION, self.cage_rotation_listener, 10)
 
 	def init_sim(self):
 		self.sim_tendons = []

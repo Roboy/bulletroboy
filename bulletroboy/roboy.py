@@ -10,6 +10,7 @@ from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from bulletroboy.link_mapping import OPERATOR_TO_ROBOY_NAMES
+from bulletroboy.topics import ENDEFFECTOR_POSE, COLLISION_ROBOY, ROBOY_JOINT_STATE
 
 class BulletRoboy(Node):
     """
@@ -47,10 +48,10 @@ class BulletRoboy(Node):
         #Publishers and subscribers
         timer_period = 0.1 # seconds
 
-        self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
+        self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, ROBOY_JOINT_STATE, 1))
         self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
-        self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collisions', 1))
-        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
+        self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, COLLISION_ROBOY, 1))
+        self.create_subscription(PoseStamped, ENDEFFECTOR_POSE, self.move, 10)
         
     def move(self, link_info):
         rclpy.logging._root_logger.info('Endeffector pose received')

@@ -48,12 +48,6 @@ def main():
         try:
             #update the environement parameters with each step
             env.update()
-            t = time.time()
-            pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
-            threshold = 0.001
-            maxIter = 100
-            # rclpy.logging._root_logger.info("Moving roboy")
-            # bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
             p.stepSimulation()
             contactPts = p.getContactPoints(body)
 

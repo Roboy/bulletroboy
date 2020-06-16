@@ -26,7 +26,7 @@ class BulletRoboy(Node):
         self.trailDuration = 15
         numJoints = p.getNumJoints(self.body_id)
         self.freeJoints = []
-
+        
         for i in range(numJoints):
             info = p.getJointInfo(self.body_id,i)
             if info[2] == p.JOINT_REVOLUTE:
@@ -150,10 +150,15 @@ class CollisionPublisher():
             The position in link frame.
         """
 
-        #[0] == linkWorldPosition in PyBullet docu
-        #[1] == linkWorldOrientation in PyBullet docu
-        frame_pos = (p.getLinkState(self.body_id, link))[0]
-        frame_orn = (p.getLinkState(self.body_id, link))[1]
+        frame_pos = [0,0,0]
+        frame_orn = [0,0,0,0]
+
+        if(link == -1):
+            frame_pos, frame_orn = (p.getBasePositionAndOrientation(self.body_id))[:2]
+        else:
+            #[0] == linkWorldPosition in PyBullet docu
+            #[1] == linkWorldOrientation in PyBullet docu
+            frame_pos, frame_orn = (p.getLinkState(self.body_id, link))[:2]
 
         _, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
 

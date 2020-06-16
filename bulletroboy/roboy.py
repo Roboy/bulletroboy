@@ -25,7 +25,7 @@ class BulletRoboy(Node):
         self.prevPose1 = [0, 0, 0]
         #trailDuration is duration (in seconds) after debug lines will be removed automatically
         #use 0 for no-removal
-        self.trailDuration = 20
+        self.trailDuration = 5
         self.black_line = p.addUserDebugLine([0,0,0], [0,0,0] + np.array([0,0,0.1]), [0, 0, 0.3], 1, self.trailDuration)
         self.red_line = p.addUserDebugLine([0,0,0], [0,0,0] + np.array([0,0,0.1]), [0, 0, 0.3], 1, self.trailDuration)
 
@@ -49,7 +49,7 @@ class BulletRoboy(Node):
 
         self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
         self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
-        self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
+        self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collisions', 1))
         self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
         
     def move(self, link_info):

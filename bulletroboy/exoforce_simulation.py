@@ -2,6 +2,8 @@ import pybullet as p
 import numpy as np
 from numpy.linalg import norm
 
+import rclpy
+
 from roboy_simulation_msgs.msg import TendonUpdate
 from roboy_simulation_msgs.msg import Collision
 from std_msgs.msg import Float32
@@ -28,7 +30,7 @@ class ExoForceSim(ExoForce):
 			if self.mode == "tendon":
 				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
-				self.create_subscription(Collision, '/roboy/exoforce/collisions', self.forces_update_listener, 10)
+				self.create_subscription(Collision, '/roboy/simulation/collision', self.forces_update_listener, 10)
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
@@ -49,6 +51,7 @@ class ExoForceSim(ExoForce):
 		self.rotate_cage(angle.data)
 
 	def forces_update_listener(self, forces):
+		rclpy.logging._root_logger.info('Updating tendon')
 		force = forces.normalforce
 		vector = forces.contactnormal
 

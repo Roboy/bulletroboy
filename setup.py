@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             'roboy_simulation = bulletroboy.roboy_simulation:main',
             'cage_simulation = bulletroboy.cage_simulation:main',
-            'test_publisher = bulletroboy.test_publisher:main'
+            'test_publisher = bulletroboy.test_publisher:main',
+            'forces_imitator = bulletroboy.forces_imitator:main'
         ],
     },
 )

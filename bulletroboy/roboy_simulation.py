@@ -29,11 +29,11 @@ def main():
     """
     p.connect(p.GUI)
 
-    body = p.loadURDF(args.filename, [0, 0, 0.2], useFixedBase=1)
+    body = p.loadURDF(args.filename, [0, 0, 0.2], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)
-    p.setRealTimeSimulation(1)
+    p.setRealTimeSimulation(0)
 
     rclpy.init()
 
@@ -54,7 +54,7 @@ def main():
             maxIter = 100
             # rclpy.logging._root_logger.info("Moving roboy")
             # bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
-
+            p.stepSimulation()
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:

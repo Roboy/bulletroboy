@@ -19,17 +19,19 @@ class BulletRoboy(Node):
         super().__init__("bullet_roboy")
         self.body_id = body_id
         self.t = 0.
+
+        # DEBUGGING VARIABLES
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]
-        self.hasPrevPose = 0
-        self.ikSolver = 0
         #trailDuration is duration (in seconds) after debug lines will be removed automatically
         #use 0 for no-removal
-        self.trailDuration = 15
+        self.trailDuration = 20
+        self.black_line = p.addUserDebugLine([0,0,0], [0,0,0] + np.array([0,0,0.1]), [0, 0, 0.3], 1, self.trailDuration)
+        self.red_line = p.addUserDebugLine([0,0,0], [0,0,0] + np.array([0,0,0.1]), [0, 0, 0.3], 1, self.trailDuration)
+
         numJoints = p.getNumJoints(self.body_id)
         self.freeJoints = []
         self.endEffectors = {}
-        print(p.getBasePositionAndOrientation(body_id))
 
         for i in range(numJoints):
             info = p.getJointInfo(self.body_id,i)
@@ -48,59 +50,60 @@ class BulletRoboy(Node):
         self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
         self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
         self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
-        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move,10)
-        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.drawDebugLines,10)
-    
-    def move(self, link_info):
-        print('RECEIVED')
-        #process message
-        ef_id = self.endEffectors[OPERATOR_TO_ROBOY_NAMES[link_info.header.frame_id]]
-        link_pos= [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z - 0.1]
-        link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
-        link_pos, link_orn = self.get_pos_in_world(link_pos, link_orn)
-        print(link_info.header.frame_id)
-        print(link_pos, link_orn)
-        print(p.getLinkState(self.body_id, ef_id)[:2])
+        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
         
+    def move(self, link_info):
+        rclpy.logging._root_logger.info('Endeffector pose received')
+
+        #process message
+        ef_name = OPERATOR_TO_ROBOY_NAMES[link_info.header.frame_id]
+        ef_id = self.endEffectors[ef_name]
+        
+        link_pos = [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
+        link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
+        link_pos, link_orn = self.adapt_pos_to_roboy(link_pos, link_orn)
+        self.drawDebugLine(ef_name, link_pos)
+
         #move
+        threshold = 0.001
         maxIter = 100
-        iter = 0
-        while(iter <= maxIter):
-            jointPoses = p.calculateInverseKinematics(self.body_id, ef_id, link_pos, link_orn)
-            for i in range(len(self.freeJoints)):
-                p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
-            iter = iter + 1
-        print(p.getLinkState(self.body_id, ef_id)[:2])
+        self.accurateCalculateInverseKinematics(ef_id, link_pos, link_orn, threshold, maxIter)
 
-    # def accurateCalculateInverseKinematics(self, targetPos, threshold, maxIter):
-    #   closeEnough = False
-    #   iter = 0
-    #   dist2 = 1e30
-    #   while (not closeEnough and iter < maxIter):
-    #     jointPoses = p.calculateInverseKinematics(self.body_id, self.endEffectorId, targetPos)
-    #     #import pdb; pdb.set_trace()
-    #     # rclpy.logging._root_logger.info("resetting joints states")
 
-    #     for i in range(len(self.freeJoints)):
-    #       p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
-    #     ls = p.getLinkState(self.body_id, self.endEffectorId)
-    #     newPos = ls[4]
-    #     diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
-    #     dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
-    #     closeEnough = (dist2 < threshold)
-    #     iter = iter + 1
-    #   return jointPoses
+    def accurateCalculateInverseKinematics(self, endEffectorId, targetPos, targetOrn, threshold, maxIter):
+      closeEnough = False
+      iter = 0
+      dist2 = 1e30
+      while (not closeEnough and iter < maxIter):
+        jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos, targetOrn)
+        #import pdb; pdb.set_trace()
+        # rclpy.logging._root_logger.info("resetting joints states")
+
+        for i in range(len(self.freeJoints)):
+          p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
+        ls = p.getLinkState(self.body_id, endEffectorId)
+        newPos = ls[4]
+        diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
+        dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+        closeEnough = (dist2 < threshold)
+        iter = iter + 1
+      return jointPoses
 
     def get_pos_in_world(self, pos, orn):
-        # torso_pos, torso_orn = p.getBasePositionAndOrientation(self.body_id)
-        # new_pos, new_orn = p.multiplyTransforms(torso_pos, torso_orn, pos, orn)
+        torso_pos, torso_orn = p.getBasePositionAndOrientation(self.body_id)
+        return p.multiplyTransforms(torso_pos, torso_orn, pos, orn)
 
-        # new_pos, new_orn = p.multiplyTransforms(new_pos, new_orn, [0,0,0], p.getQuaternionFromEuler([0, 0, -1.5708]))
-        new_pos, new_orn = pos, orn
-        rotation = np.array([[0,1,0],[-1,0,0],[0,0,1]])
-        new_pos = rotation.dot(np.array(new_pos))
-        
-        _, new_orn = p.multiplyTransforms(new_pos, new_orn, [0,0,0],self.axis_angle_to_quaternion(0, 0, 1, 90))
+    def adapt_pos_to_roboy(self, pos, orn):
+        new_pos = np.array(pos) - [0,0,0.2]
+        new_orn = orn
+        # pos, orn = self.get_pos_in_world(pos, orn)
+
+        # rotation = np.array([[0,1,0],[-1,0,0],[0,0,1]])
+        # new_pos = rotation.dot(np.array(pos)) - [0,0.05,0.2]
+
+        # _, new_orn = p.multiplyTransforms(new_pos, new_orn, [0,0,0],self.axis_angle_to_quaternion(0, 0, 1, 90))
+        # new_orn = self.quaternion_multiply(orn, self.axis_angle_to_quaternion(0, 0, 1, -90))
+        # new_orn = self.quaternion_multiply(new_orn, p.getQuaternionFromEuler([0, 0, 1.5708]))
 
         return new_pos, new_orn
 
@@ -110,38 +113,49 @@ class BulletRoboy(Node):
         qz = az * math.sin(angle/2)
         qw = math.cos(angle/2)
         return qx, qy, qz, qw
+    
+    def quaternion_multiply(self, quaternion0, quaternion1):
+        w0, x0, y0, z0 = quaternion0
+        w1, x1, y1, z1 = quaternion1
+        return np.array([-x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
+                     x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
+                     -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
+                     x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0], dtype=np.float64)
 
-    # def drawDebugLines(self, link_info):
-    #     # drawing debug lines
-    #     link_pos= [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
-    #     link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
-        
-    #     targetPos, _ = self.get_pos_in_world(link_pos, link_orn)
-    #     for ef in self.endEffectors:
-    #         ls = p.getLinkState(self.body_id, self.endEffectors[ef])
-    #         if (self.hasPrevPose):
-    #             p.addUserDebugLine(self.prevPose, targetPos, [0, 0, 0.3], 1, self.trailDuration)
-    #             p.addUserDebugLine(self.prevPose1, ls[4], [1, 0, 0], 1, self.trailDuration)
-    #         print(targetPos)
-    #         self.prevPose = targetPos
-    #         self.prevPose1 = ls[4]
-    #         self.hasPrevPose = 1
-        
-    def drawDebugLines(self, link_info):
-        # drawing debug lines
+    # TODO REMOVE THIS METHOD
+    def debug_orn(self, link_info):
         link_pos= [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
         link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
-        targetPos, _ = self.get_pos_in_world(link_pos, link_orn)
-        for ef in self.endEffectors:
-            ls = p.getLinkState(self.body_id, self.endEffectors[ef])
-            if (self.hasPrevPose):
-                p.addUserDebugLine(self.prevPose, targetPos, [0, 0, 0.3], 1, self.trailDuration)
-                p.addUserDebugLine(self.prevPose1, link_pos, [1, 0, 0], 1, self.trailDuration)
-            #print(targetPos)
-            self.prevPose = targetPos
+        p.resetBasePositionAndOrientation(self.original, link_pos, link_orn)
+
+        targetPos, targetOrn = self.get_pos_in_world(link_pos, link_orn)
+        p.resetBasePositionAndOrientation(self.target, targetPos, targetOrn)
+           
+    def drawDebugLine(self, ef, link_pos):
+        # drawing debug lines
+
+        # targetPos, targetOrn = self.adapt_pos_to_roboy(link_pos, link_orn)
+        # link_rot_mat = p.getMatrixFromQuaternion(link_orn)
+        # link_rot_mat = np.array(link_rot_mat).reshape((3,3))
+        # target_rot_mat = p.getMatrixFromQuaternion(targetOrn)
+        # target_rot_mat = np.array(target_rot_mat).reshape((3,3))
+
+        # self.black_line = p.addUserDebugLine(targetPos, 
+        #                             targetPos + target_rot_mat.dot(np.array([0,0,0.1])), 
+        #                             [0, 0, 0.3], 2, 
+        #                             self.trailDuration, 
+        #                             replaceItemUniqueId=self.black_line)
+        # self.red_line = p.addUserDebugLine(link_pos, 
+        #                                 link_pos + link_rot_mat.dot(np.array([0,0,0.1])), 
+        #                                 [1, 0, 0], 2, 
+        #                                 self.trailDuration, 
+        #                                 replaceItemUniqueId=self.red_line)
+        if(ef == 'hand_left'):
+            # p.addUserDebugLine(self.prevPose, targetPos, [0, 1, 0], 1, self.trailDuration)
+            p.addUserDebugLine(self.prevPose1, link_pos, [0, 0, 1], 1, self.trailDuration)
+            # self.prevPose = targetPos
             self.prevPose1 = link_pos
-            self.hasPrevPose = 1
-            
+
 class JointPublisher():
     """
     This class handles publishing joint state messages.

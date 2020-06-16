@@ -22,11 +22,10 @@ class Operator(Node):
         self.links = self.get_links()
         self.movements = Movements(self)
         self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-        print(p.getBasePositionAndOrientation(body_id))
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]
         self.prevPose2 = [0, 0, 0]
-        self.hasPrevPose = 0
+
         self.trailDuration = 1
 
     def get_links(self):
@@ -57,7 +56,8 @@ class Operator(Node):
         self.movements.simple_move(case)
 
     def get_pos_in_link_frame(self, position, orn):
-        frame_pos,frame_orn = p.getBasePositionAndOrientation(self.body_id)
+        # frame_pos,frame_orn = p.getBasePositionAndOrientation(self.body_id)
+        frame_pos,frame_orn = p.getLinkState(self.body_id, self.get_link_index('human/spine_2'))[:2]
         inv_frame_pos, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
 
         return p.multiplyTransforms(inv_frame_pos, inv_frame_orn, position, orn)
@@ -78,42 +78,42 @@ class Operator(Node):
 
         return p.multiplyTransforms(frame_pos, frame_orn, position, orn)
 
-    def drawDebugLines(self, pos_or, pos_in_LF, new_pos):
+    # def drawDebugLines(self, pos_or, pos_in_LF, new_pos):
+    def drawDebugLines(self, ef, pos_or):
         # drawing debug lines
-        
+        if(ef == 'human/left_hand'):
             p.addUserDebugLine(self.prevPose, pos_or, [0, 0, 0.3], 1, self.trailDuration)
-            p.addUserDebugLine(self.prevPose1, pos_in_LF, [1, 0, 0], 1, self.trailDuration)
-            p.addUserDebugLine(self.prevPose2, new_pos, [0, 1, 0], 1, self.trailDuration)
+            # p.addUserDebugLine(self.prevPose1, pos_in_LF, [1, 0, 0], 1, self.trailDuration)
+            # p.addUserDebugLine(self.prevPose2, new_pos, [0, 1, 0], 1, self.trailDuration)
             self.prevPose = pos_or
-            self.prevPose1 = pos_in_LF
-            self.prevPose2 = new_pos
-            self.hasPrevPose = 1
-    def publish_state(self, ef_names = np.array(['human/left_hand','human/right_hand'])):
-
+            # self.prevPose1 = pos_in_LF
+            # self.prevPose2 = new_pos
+            
+    def publish_state(self, ef_names = np.array(['human/left_hand', 'human/right_hand'])):
+        rclpy.logging._root_logger.info('Sending Endeffector pose')
         for ef in ef_names:
-           msg = PoseStamped()
-           ef_id = self.get_link_index(ef)
-           link_info = p.getLinkState(self.body_id, ef_id)[:2]
+            msg = PoseStamped()
+            ef_id = self.get_link_index(ef)
+            link_info = p.getLinkState(self.body_id, ef_id)[:2]
            
-           link_pos, link_orn = self.get_pos_in_link_frame(link_info[0], link_info[1])
+            # link_pos, link_orn = self.get_pos_in_link_frame(link_info[0], link_info[1])
+            link_pos = link_info[0]
+            link_orn = link_info[1]
+            # self.drawDebugLines(link_info[0], link_pos,self.undo(link_pos, link_orn)[0])
+            self.drawDebugLines(ef, link_pos)
            
-           self.drawDebugLines(link_info[0], link_pos,self.undo(link_pos, link_orn)[0])
-        #    link_pos = link_info[0]
-        #    link_orn = link_info[1]
+            msg.header.frame_id = ef
 
-           
-           msg.header.frame_id = ef
+            msg.pose.position.x = link_pos[0]
+            msg.pose.position.y = link_pos[1]
+            msg.pose.position.z = link_pos[2] 
 
-           msg.pose.position.x = link_pos[0]
-           msg.pose.position.y = link_pos[1]
-           msg.pose.position.z = link_pos[2]
+            msg.pose.orientation.x = link_orn[0]
+            msg.pose.orientation.y = link_orn[1]
+            msg.pose.orientation.z = link_orn[2]
+            msg.pose.orientation.w = link_orn[3]
 
-           msg.pose.orientation.x = link_orn[0]
-           msg.pose.orientation.y = link_orn[1]
-           msg.pose.orientation.z = link_orn[2]
-           msg.pose.orientation.w = link_orn[3]
-
-           self.ef_publisher.publish(msg)
+            self.ef_publisher.publish(msg)
 
 
 class Movements():
@@ -136,7 +136,6 @@ class Movements():
            link_info = p.getLinkState(self.body_id, ef_id)[:2]
            link_pos = link_info[0]
            link_orn = link_info[1]
-           print(p.getLinkState(self.body_id, ef_id)[:2])
            msg.header.frame_id = ef
 
            msg.pose.position.x = link_pos[0]

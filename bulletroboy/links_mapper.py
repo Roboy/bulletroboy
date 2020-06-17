@@ -1,4 +1,3 @@
-import pybullet as p
 import yaml
 
 class LinksMapper(object):

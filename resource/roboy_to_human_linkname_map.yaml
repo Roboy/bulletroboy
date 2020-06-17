@@ -1,0 +1,78 @@
+---
+roboyToHumanLinkNameMap:
+  head: human/head
+  shoulder_right_link1: human/right_shoulder_0
+  shoulder_right_link2: human/right_shoulder_1
+  shoulder_right_link2: human/right_shoulder
+  elbow_right: human/right_elbow
+  wrist_right_link1: human/right_wrist_0
+  wrist_right_link2: human/right_wrist_1
+  wrist_right_link2: human/right_wrist
+  hand_right: human/right_hand
+  rh_palm: human/right_hand
+  shoulder_left_link1: human/left_shoulder_0
+  shoulder_left_link2: human/left_shoulder_1
+  shoulder_left_link2: human/left_shoulder
+  elbow_left: human/left_elbow
+  wrist_left_link1: human/left_wrist_0
+  wrist_left_link2: human/left_wrist_1
+  wrist_left_link2: human/left_wrist
+  hand_left: human/left_hand
+  lh_palm: human/left_hand
+
+  # Unmapped Robot links
+  
+  # lowerarm_right
+  # upperarm_left
+  # lowerarm_left
+  # upperarm_right
+  # torso
+  # head_link1
+  # head_link2
+  # camera_left
+  # camera_right
+  # lh_manipulator
+  # lh_ffknuckle
+  # lh_ffproximal
+  # lh_ffmiddle
+  # lh_ffdistal
+  # lh_fftip
+  # lh_mfknuckle
+  # lh_mfproximal
+  # lh_mfmiddle
+  # lh_mfdistal
+  # lh_mftip
+  # lh_rfknuckle
+  # lh_rfproximal
+  # rest of finger links
+
+  # Unmapped Human links
+
+  # human/right_arm_mount
+  # human/left_arm_mount
+  # human/base
+  # human/spine_0
+  # human/spine_1
+  # human/spine_2
+  # human/spine
+  # human/shoulder_center
+  # human/neck_0
+  # human/neck_1
+  # human/neck
+  # human/right_leg_mount
+  # human/right_hip_0
+  # human/right_hip_1
+  # human/right_hip
+  # human/right_knee
+  # human/right_ankle_0
+  # human/right_ankle
+  # human/right_foot
+  # human/left_leg_mount
+  # human/left_hip_0
+  # human/left_hip_1
+  # human/left_hip
+  # human/left_knee
+  # human/left_ankle_0
+  # human/left_ankle
+  # human/left_foot
+...

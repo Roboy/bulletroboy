@@ -6,7 +6,7 @@ import rclpy
 from threading import Thread
 
 from bulletroboy.operator import Operator
-from bulletroboy.exoforce import CageConfiguration
+from bulletroboy.utils import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.constants import FOREARM_ROLL
 

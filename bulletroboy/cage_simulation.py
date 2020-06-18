@@ -9,6 +9,7 @@ from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.constants import FOREARM_ROLL
+from bulletroboy.constants import SPINE_SWING
 
 
 def is_valid_file(parser, arg):
@@ -26,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", dest="mode", default="debug", help="execution mode: [debug]: uses pybullet debug forces [tendon]: uses tendon forces [forces]: uses link forces")
     parser.add_argument("--config-path", dest="config_path", default="../config/cageConfiguration.xml", metavar="FILE", help="path to the cage configuration XML file", type=lambda x: is_valid_file(parser, x) )
-    parser.add_argument("--model-path", dest="model_path", default="../models/human.urdf", metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
+    parser.add_argument("--model-path", dest="model_path", default="../models/humanoid.urdf", metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
     args = parser.parse_args()
 
     # SIMULATION SETUP
@@ -38,7 +39,14 @@ def main():
 
     # LOADING SIM BODIES
     p.loadURDF("plane.urdf")
-    human_model = p.loadURDF(args.model_path, [0, 0, 1], useFixedBase=1)
+    # Magic Numbers used for orientation and scaling (change later)
+    human_model = p.loadURDF(args.model_path, [0, 0, 1], p.getQuaternionFromEuler([1.5708, 0, 0]), globalScaling=0.284, useFixedBase=1)
+    num_joints = p.getNumJoints(human_model)
+    print('Number of Joints of the humanoid.urdf: ', num_joints)
+    print('Id of the human_model: ', human_model)
+    for i in range(num_joints):
+        info = p.getJointInfo(human_model, i)
+        print('info: ', info)
 
     # EXOFORCE SETUP
     initial_cage_conf = CageConfiguration(args.config_path)

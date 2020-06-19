@@ -22,10 +22,10 @@ class Operator(Node):
 		self.links = self.get_links()
 		self.movements = Movements(self)
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-		self.srv = self.create_service(HumanLinkIdFromName, 'human_link_id_from_link_name', self.human_link_id_from_link_name)
+		self.link_id_service = self.create_service(HumanLinkIdFromName, '/roboy/simulation/operator/human_link_id_from_link_name', self.get_link_id_from_link_name)
 		
 
-	def human_link_id_from_link_name(self, request, response):
+	def get_link_id_from_link_name(self, request, response):
 		link = list(filter(lambda link: link['name'] == request.human_link_name, self.get_links()))
 		assert len(link) == 1
 		response.human_link_id = link[0]

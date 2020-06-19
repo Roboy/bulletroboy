@@ -1,34 +1,34 @@
 ---
 roboyToHumanLinkNameMap:
   torso: chest
-  shoulder_right_link1: right_shoulder
-  shoulder_right_link2: right_shoulder
-  shoulder_right_link2: right_shoulder
-  elbow_right: right_elbow
-  wrist_right_link1: right_wrist
-  wrist_right_link2: right_wrist
-  wrist_right_link2: right_wrist
-  shoulder_left_link1: left_shoulder
-  shoulder_left_link2: left_shoulder
-  shoulder_left_link2: left_shoulder
-  elbow_left: left_elbow
-  wrist_left_link1: left_wrist
-  wrist_left_link2: left_wrist
-  wrist_left_link2: left_wrist
+  upperarm_right: right_shoulder
+  lowerarm_right: right_elbow
+  hand_right: right_wrist
+  upperarm_left: left_shoulder
+  lowerarm_left: left_elbow
+  hand_left: left_wrist
+  head: neck
 
   # Unmapped Robot links
   
-  # head
-  # hand_right
+  # wrist_right_link1
+  # wrist_right_link2
+  # wrist_right_link
   # rh_palm
-  # hand_left
-  # lh_palm
-  # lowerarm_right
-  # upperarm_left
-  # lowerarm_left
-  # upperarm_right
-  # head_link1
+  # wrist_left_link1
+  # wrist_left_link2
+  # wrist_left_link
   # head_link2
+  # head_link1
+  # lh_palm
+  # elbow_right
+  # shoulder_right_link2
+  # shoulder_right_link1
+  # shoulder_right_link
+  # elbow_left
+  # shoulder_left_link1
+  # shoulder_left_link2
+  # shoulder_left_link
   # camera_left
   # camera_right
   # lh_manipulator

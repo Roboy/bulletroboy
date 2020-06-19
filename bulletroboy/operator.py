@@ -26,7 +26,7 @@ class Operator(Node):
 		
 
 	def human_link_id_from_link_name(self, request, response):
-		link = list(filter(lambda link: link['name'] == request.humanLinkName, self.get_links()))
+		link = list(filter(lambda link: link['name'] == request.human_link_name, self.get_links()))
 		assert len(link) == 1
 		response.human_link_id = link[0]
 		return response 

@@ -3,6 +3,7 @@ from rclpy.node import Node
 
 # from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
+import yaml
 
 class ForcesImitator(Node):
     def __init__(self):
@@ -71,6 +72,12 @@ class ForcesImitator(Node):
         """
 
         self.result = self.scaleToOperator(collision)
+
+    def load_roboy_to_human_link_name_map(self):
+        with open('../resources/roboy_to_human_linknam_map.yaml') as f:
+            linkNameMaps = yaml.safe_load(f)
+            return linkNameMaps.get("roboyToHumanLinkNameMap")
+
 
 
 def main(args=None):

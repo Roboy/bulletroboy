@@ -5,7 +5,7 @@ from rclpy.node import Node
 from roboy_simulation_msgs.msg import Collision
 import yaml
 
-class ForcesImitator(Node):
+class ForcesMapper(Node):
     def __init__(self):
         super().__init__('forces_imitator')
 
@@ -83,9 +83,9 @@ class ForcesImitator(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    forcesImitator = ForcesImitator()
-    rclpy.spin(forcesImitator)
-    forcesImitator.destroy_node()
+    forcesMapper = ForcesMapper()
+    rclpy.spin(forcesMapper)
+    forcesMapper.destroy_node()
     rclpy.shutdown()
 
 

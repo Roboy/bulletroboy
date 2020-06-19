@@ -9,21 +9,21 @@ import time
 def main():
     rclpy.init()
     node = rclpy.create_node("test_publisher")
-    force_publisher = node.create_publisher(TendonUpdate, '/roboy/simulation/tendon_force', 10)
-    angle_publisher = node.create_publisher(Float32, '/roboy/simulation/cage_rotation', 10)
+    # force_publisher = node.create_publisher(TendonUpdate, '/roboy/simulation/tendon_force', 10)
+    # angle_publisher = node.create_publisher(Float32, '/roboy/simulation/cage_rotation', 10)
     cage_state_publisher = node.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
     robot_collision_publisher = node.create_publisher(Collision, '/roboy/simulation/collision', 10)
 
     while True:
 
-        msg = TendonUpdate()
-        msg.tendon_id = 0
-        msg.force = 200.0
-        force_publisher.publish(msg)
+        # msg = TendonUpdate()
+        # msg.tendon_id = 0
+        # msg.force = 200.0
+        # force_publisher.publish(msg)
 
-        angle = Float32()
-        angle.data = 58.0
-        angle_publisher.publish(angle)
+        # angle = Float32()
+        # angle.data = 58.0
+        # angle_publisher.publish(angle)
 
         state = CageState()
         state.rotation_angle = 47.8

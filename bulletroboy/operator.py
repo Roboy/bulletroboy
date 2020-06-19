@@ -9,7 +9,7 @@ from numpy.linalg import norm
 from termcolor import colored
 from roboy_simulation_msgs.msg import TendonUpdate
 from geometry_msgs.msg import PoseStamped
-
+from bulletroboy.srv import HumanLinkIdFromName
 
 
 class Operator(Node):
@@ -22,8 +22,14 @@ class Operator(Node):
 		self.links = self.get_links()
 		self.movements = Movements(self)
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		self.srv = self.create_service(HumanLinkIdFromName, 'human_link_id_from_link_name', self.human_link_id_from_link_name)
 		
 
+	def human_link_id_from_link_name(self, request, response):
+		link = list(filter(lambda link: link['name'] == request.humanLinkName, self.get_links()))
+		assert len(link) == 1
+		response.human_link_id = link[0]
+		return response 
 
 	def get_links(self):
 		links = []

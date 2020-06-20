@@ -1,16 +1,16 @@
 import rclpy
-from roboy_control_msgs.srv import GetCageEndEfectors
+from roboy_control_msgs.srv import GetCageEndEffectors
 import time
 
 def main():
     rclpy.init()
     node = rclpy.create_node("test_client")
-    cli = node.create_client(GetCageEndEfectors, '/roboy/configuration/end_efectors')
+    cli = node.create_client(GetCageEndEffectors, '/roboy/configuration/end_effectors')
 
     while not cli.wait_for_service(timeout_sec=1.0):
             node.get_logger().info('service not available, waiting again...')
 
-    req = GetCageEndEfectors.Request()
+    req = GetCageEndEffectors.Request()
     res = cli.call_async(req)
 
     while rclpy.ok():
@@ -22,7 +22,7 @@ def main():
                 node.get_logger().info(
                     'Service call failed %r' % (e,))
             else:
-                for ef in response.end_efectors:
+                for ef in response.end_effectors:
                     node.get_logger().info(f"{ef.name} tendons {len(ef.muscle_units)}:")
                     for muscle in ef.muscle_units:
                         node.get_logger().info(f"muscle [{muscle.id}] max_force [{muscle.max_force}]")

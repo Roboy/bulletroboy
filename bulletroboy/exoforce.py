@@ -8,8 +8,8 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 from rclpy.node import Node
-from roboy_control_msgs.msg import CageState, ViaPoint, EndEfector, MuscleUnit as MuscleUnitMsg
-from roboy_control_msgs.srv import GetCageEndEfectors
+from roboy_control_msgs.msg import CageState, ViaPoint, EndEffector, MuscleUnit as MuscleUnitMsg
+from roboy_control_msgs.srv import GetCageEndEffectors
 from geometry_msgs.msg import Point
 
 
@@ -184,7 +184,7 @@ class MuscleUnit():
 		self.via_points = via_points
 		self.motor = Motor(self.id, via_points[0])
 		self.tendon = Tendon(self.id, self.motor, via_points[1:])
-		self.end_efector = via_points[-1]["link"]
+		self.end_effector = via_points[-1]["link"]
 		# parameters
 		self.max_force = float(parameters['max_force'])
 
@@ -202,16 +202,16 @@ class ExoForce(Node, ABC):
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
-		self.init_end_efectors()
+		self.init_end_effectors()
 
 		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
-		self.initial_conf_service = self.create_service(GetCageEndEfectors, '/roboy/configuration/end_efectors', self.get_end_efectors_callback)
+		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
 	
-	def init_end_efectors(self):
-		self.end_efectors = []
+	def init_end_effectors(self):
+		self.end_effectors = []
 		for muscle in self.muscle_units:
-			ef = muscle.end_efector
-			if ef not in self.end_efectors: self.end_efectors.append(ef)
+			ef = muscle.end_effector
+			if ef not in self.end_effectors: self.end_effectors.append(ef)
 
 	@abstractmethod
 	def update(self):
@@ -231,10 +231,10 @@ class ExoForce(Node, ABC):
 				break
 		return unit
 	
-	def get_ef_muscle_units(self, end_efector):
+	def get_ef_muscle_units(self, end_effector):
 		muscle_units = []
 		for muscle in self.muscle_units:
-			if muscle.end_efector == end_efector:
+			if muscle.end_effector == end_effector:
 				muscle_units.append(muscle)
 		return muscle_units
 
@@ -265,11 +265,11 @@ class ExoForce(Node, ABC):
 	def publish_state(self):
 		self.cage_state_publisher.publish(self.get_msg())
 
-	def get_end_efectors_callback(self, request, response):
+	def get_end_effectors_callback(self, request, response):
 
-		for ef in self.end_efectors:
-			end_efector_msg = EndEfector()
-			end_efector_msg.name = ef
+		for ef in self.end_effectors:
+			end_effector_msg = EndEffector()
+			end_effector_msg.name = ef
 			for muscle in self.get_ef_muscle_units(ef):
 				muscle_msg = MuscleUnitMsg()
 				muscle_msg.id = muscle.id
@@ -281,7 +281,7 @@ class ExoForce(Node, ABC):
 					via_point_msg.reference_frame = 'link' if via_point['link'] != "cage" else 'world'
 					via_point_msg.link = via_point['link']
 					muscle_msg.viapoints.append(via_point_msg)
-				end_efector_msg.muscle_units.append(muscle_msg)
-			response.end_efectors.append(end_efector_msg)
+				end_effector_msg.muscle_units.append(muscle_msg)
+			response.end_effectors.append(end_effector_msg)
 
 		return response

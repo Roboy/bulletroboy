@@ -202,17 +202,16 @@ class ExoForce(Node, ABC):
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
-		self.end_efectors = {}
 		self.init_end_efectors()
 
 		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
 		self.initial_conf_service = self.create_service(GetCageEndEfectors, '/roboy/configuration/end_efectors', self.get_end_efectors_callback)
 	
 	def init_end_efectors(self):
+		self.end_efectors = []
 		for muscle in self.muscle_units:
 			ef = muscle.end_efector
-			if ef not in self.end_efectors: self.end_efectors.update({ef:[]})
-			self.end_efectors[ef].append(self.get_muscle_msg(muscle, params=True))
+			if ef not in self.end_efectors: self.end_efectors.append(ef)
 
 	@abstractmethod
 	def update(self):
@@ -232,6 +231,13 @@ class ExoForce(Node, ABC):
 				break
 		return unit
 	
+	def get_ef_muscle_units(self, end_efector):
+		muscle_units = []
+		for muscle in self.muscle_units:
+			if muscle.end_efector == end_efector:
+				muscle_units.append(muscle)
+		return muscle_units
+
 	def get_motors(self):
 		return [ muscle.motor for muscle in self.muscle_units ]
 
@@ -242,29 +248,19 @@ class ExoForce(Node, ABC):
 		state_msg = CageState()
 		state_msg.rotation_angle = float(self.cage.angle)
 		for muscle in self.muscle_units:
-			muscle_msg = self.get_muscle_msg(muscle, just_motor=True)
+			muscle_msg = MuscleUnitMsg()
+			muscle_msg.id = muscle.id
+			for via_point, world_point in zip(muscle.via_points, [muscle.motor.pos] + muscle.tendon.attachtment_points):
+				via_point_msg = ViaPoint()
+				via_point_msg.id = via_point['id']
+				via_point_msg.position = Point()
+				via_point_msg.position.x, via_point_msg.position.y, via_point_msg.position.z = world_point
+				via_point_msg.reference_frame = 'world'
+				via_point_msg.link = via_point['link']
+				muscle_msg.viapoints.append(via_point_msg)
 			state_msg.muscleunits.append(muscle_msg)
 			
 		return state_msg
-
-	def get_muscle_msg(self, muscle, params=False, just_motor=False):
-		muscle_msg = MuscleUnitMsg()
-		muscle_msg.id = muscle.id
-		if params: muscle_msg.max_force = muscle.max_force
-		for i, (via_point, point) in enumerate(zip(muscle.via_points, [muscle.motor.pos] + [via_point["point"] for via_point in muscle.tendon.via_points])):
-			if not just_motor and i==0: continue
-			via_point_msg = ViaPoint()
-			via_point_msg.id = via_point['id']
-			via_point_msg.position = Point()
-			via_point_msg.position.x = point[0]
-			via_point_msg.position.y = point[1]
-			via_point_msg.position.z = point[2]
-			via_point_msg.reference_frame = 'world'
-			via_point_msg.link = via_point['link']
-			muscle_msg.viapoints.append(via_point_msg)
-			if just_motor: break
-		
-		return muscle_msg
 
 	def publish_state(self):
 		self.cage_state_publisher.publish(self.get_msg())
@@ -274,7 +270,18 @@ class ExoForce(Node, ABC):
 		for ef in self.end_efectors:
 			end_efector_msg = EndEfector()
 			end_efector_msg.name = ef
-			end_efector_msg.muscle_units = self.end_efectors[ef]
+			for muscle in self.get_ef_muscle_units(ef):
+				muscle_msg = MuscleUnitMsg()
+				muscle_msg.id = muscle.id
+				muscle_msg.max_force = muscle.max_force
+				for via_point in muscle.via_points:
+					via_point_msg = ViaPoint()
+					via_point_msg.id = via_point['id']
+					via_point_msg.position.x, via_point_msg.position.y, via_point_msg.position.z = via_point['point']
+					via_point_msg.reference_frame = 'link' if via_point['link'] != "cage" else 'world'
+					via_point_msg.link = via_point['link']
+					muscle_msg.viapoints.append(via_point_msg)
+				end_efector_msg.muscle_units.append(muscle_msg)
 			response.end_efectors.append(end_efector_msg)
 
 		return response

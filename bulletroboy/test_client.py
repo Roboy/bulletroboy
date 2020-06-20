@@ -25,7 +25,9 @@ def main():
                 for ef in response.end_efectors:
                     node.get_logger().info(f"{ef.name} tendons {len(ef.muscle_units)}:")
                     for muscle in ef.muscle_units:
-                        node.get_logger().info(f"id [{muscle.id}] max_force [{muscle.max_force}] points [{muscle.viapoints[0].position}]")
+                        node.get_logger().info(f"muscle [{muscle.id}] max_force [{muscle.max_force}]")
+                        for via_point in muscle.viapoints:
+                            node.get_logger().info(f"via_point [{via_point.id}] reference_frame [{via_point.reference_frame}] link [{via_point.link}] point [{via_point.position}]")
 
             break
 

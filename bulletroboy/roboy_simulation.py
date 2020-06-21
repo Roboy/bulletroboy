@@ -3,7 +3,6 @@ import os
 
 import pybullet as p
 import math
-import time
 
 import rclpy
 
@@ -28,8 +27,8 @@ def main():
     """Sets up pybullet environment and runs simulation.
     """
     p.connect(p.GUI)
-
-    body = p.loadURDF(args.filename, [0, 0, 0.2], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1)
+    flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+    body = p.loadURDF(args.filename, [0, 0, 0.2], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1, flags=flags)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)
@@ -48,12 +47,6 @@ def main():
         try:
             #update the environement parameters with each step
             env.update()
-            t = time.time()
-            pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
-            threshold = 0.001
-            maxIter = 100
-            # rclpy.logging._root_logger.info("Moving roboy")
-            # bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
             p.stepSimulation()
             contactPts = p.getContactPoints(body)
 

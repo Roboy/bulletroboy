@@ -38,10 +38,16 @@ class BulletRoboy(Node):
 
         timer_period = 0.1 # seconds
 
-        #Publishers and subscribers
-        self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
-        self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
-        self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
+        #Joint state publisher
+        self.joint_names = []
+        for i in range(p.getNumJoints(self.body_id)):
+            ji = p.getJointInfo(self.body_id,i)
+            self.joint_names.append(ji[1].decode("utf-8"))
+        self.joint_publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
+        self.timer = self.create_timer(timer_period, self.joint_state_timer_callback)
+        
+        #Collision publisher
+        self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
 
 
 
@@ -75,19 +81,7 @@ class BulletRoboy(Node):
         self.prevPose1 = ls[4]
         self.hasPrevPose = 1
         
-class JointPublisher():
-    """
-    This class handles publishing joint state messages.
-    """
-    def __init__(self, bulletBodyId, publisher):
-        self.body_id = bulletBodyId
-        self.publisher = publisher
-        self.joint_names = []
-        for i in range(p.getNumJoints(self.body_id)):
-            ji = p.getJointInfo(self.body_id,i)
-            self.joint_names.append(ji[1].decode("utf-8"))
-
-    def timer_callback(self):
+    def joint_state_timer_callback(self):
         """Callback function for the timer, publishes joint message every time it gets triggered by timer. 
         """
         msg = JointState()
@@ -97,17 +91,9 @@ class JointPublisher():
             js = p.getJointState(self.body_id, i)
             msg.position.append(js[0])
             msg.name.append(self.joint_names[i])
-        self.publisher.publish(msg)
+        self.joint_publisher.publish(msg)
 
-class CollisionPublisher():
-    """
-    This class handles publishing collision messages.
-    """
-    def __init__(self, bulletBodyId, publisher):
-        self.body_id = bulletBodyId
-        self.publisher = publisher
-
-    def publish(self, collision):
+    def publish_collision(self, collision):
         """Processes the collision message and publishes it.
 
         Args:
@@ -137,7 +123,7 @@ class CollisionPublisher():
 
         rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
 
-        self.publisher.publish(msg)
+        self.collision_publisher.publish(msg)
     
     def get_pos_in_link_frame(self, link, position):
         """Changes the position of the collision from world's coordinates system to link frame.

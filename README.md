@@ -39,8 +39,7 @@ ros2 run bulletroboy roboy_simulation
 # in a new terminal, to see current joint states
 ros2 topic echo /roboy/simulation/joint_state
 
-# in a new terminal, to see collisions (need to source roboy_simulation_msgs package first)
-. /install/setup.bash
+# in a new terminal, to see collisions 
 ros2 topic echo /roboy/simulation/collision
 ```
 

@@ -94,7 +94,7 @@ class TendonSim():
 
 		self.force_id = None
 
-		self.start_location = self.tendon.motor.pos
+		self.start_location = self.tendon.motor.via_point.world_point
 		self.segments = []
 
 		self.init_lines()
@@ -102,7 +102,7 @@ class TendonSim():
 	def init_lines(self):
 		start = self.start_location
 		for via_point in self.tendon.via_points:
-			point = self.operator.get_link_center(via_point['link']) + via_point['point']
+			point = self.operator.get_link_center(via_point.link) + via_point.link_point
 			segment = p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2)
 			self.segments.append(segment)
 			start = point
@@ -114,14 +114,15 @@ class TendonSim():
 		force_direction /= norm(force_direction)
 
 		p.applyExternalForce(objectUniqueId=self.operator.body_id,
-			     	     linkIndex = self.operator.get_link_index(self.tendon.via_points[-1]['link']),
+			     	     linkIndex = self.operator.get_link_index(self.tendon.via_points[-1].link),
 			     	     forceObj = force * force_direction,
 			     	     posObj=self.start_location,
 			     	     flags=p.WORLD_FRAME)
 
 	def update_lines(self):
 		start = self.start_location
-		for segment, point in zip(self.segments, self.tendon.attachtment_points):
+		for segment, via_point in zip(self.segments, self.tendon.via_points):
+			point = via_point.world_point
 			p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2, replaceItemUniqueId=segment)
 			start = point
 		p.addUserDebugText(self.name, self.start_location, self.debug_color, textSize=0.8, replaceItemUniqueId=self.debug_text)

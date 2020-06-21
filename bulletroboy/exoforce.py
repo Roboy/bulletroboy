@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 from rclpy.node import Node
-from roboy_control_msgs.msg import CageState, ViaPoint, EndEffector, MuscleUnit as MuscleUnitMsg
+from roboy_control_msgs.msg import CageState, EndEffector, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
 from roboy_control_msgs.srv import GetCageEndEffectors
 from geometry_msgs.msg import Point
 
@@ -111,6 +111,21 @@ class CageConfiguration():
         return msg
 
 
+class ViaPoint():
+	def __init__(self, via_point):
+		self.id = via_point['id']
+		self.link = via_point['link']
+		self.link_point = via_point['point']
+		self.world_point = via_point['point']
+
+	def to_msg(self, init_conf=False):
+		via_point_msg = ViaPointMsg()
+		via_point_msg.id = self.id
+		via_point_msg.position.x, via_point_msg.position.y, via_point_msg.position.z = self.link_point if init_conf else self.world_point
+		via_point_msg.link = self.link
+		via_point_msg.reference_frame = self.link if init_conf else "world"
+		return via_point_msg
+
 
 class Tendon():
 	def __init__(self, id, motor, via_points):
@@ -119,13 +134,11 @@ class Tendon():
 		"""
 		self.id = id
 		self.motor = motor
-
-		self.via_points = via_points # points relative to the link
-		self.attachtment_points = [None for _ in self.via_points] # points in world space
+		self.via_points = via_points
 
 	def update(self, operator):
-		for i in range(len(self.attachtment_points)):
-			self.attachtment_points[i] = operator.get_link_center(self.via_points[i]['link']) + self.via_points[i]['point']
+		for via_point in self.via_points:
+			via_point.world_point = operator.get_link_center(via_point.link) + via_point.link_point
 
 
 class Cage():
@@ -136,7 +149,7 @@ class Cage():
 		self.origin = np.array([0, 0, 0])
 		self.height = height
 		self.radius = radius
-		self.angle = 0
+		self.angle = 0.0
 
 		self.motors = motors
 
@@ -153,16 +166,15 @@ class Motor():
 		"""
 		This class handles a motor attached to the cage.
 		"""
-		assert via_point['link'] == 'cage'
+		assert via_point.link == "cage"
 
 		self.id = id
-		self.link = via_point['link']
-		self.pos = via_point['point']
+		self.via_point = via_point
 		self.force = 0
 
 	def rotate(self, delta, pivot):
 
-		x, y = self.pos[:2]
+		x, y = self.via_point.world_point[:2]
 		offset_x, offset_y = pivot[:2]
 		adjusted_x = (x - offset_x)
 		adjusted_y = (y - offset_y)
@@ -171,8 +183,8 @@ class Motor():
 		qx = offset_x + cos_rad * adjusted_x + sin_rad * adjusted_y
 		qy = offset_y + -sin_rad * adjusted_x + cos_rad * adjusted_y
 		
-		self.pos[0] = qx
-		self.pos[1] = qy
+		self.via_point.world_point[0] = qx
+		self.via_point.world_point[1] = qy
 
 
 class MuscleUnit():
@@ -181,15 +193,24 @@ class MuscleUnit():
 		This class handles a muscle unit including its tendon and motor.
 		"""
 		self.id = id
-		self.via_points = via_points
-		self.motor = Motor(self.id, via_points[0])
-		self.tendon = Tendon(self.id, self.motor, via_points[1:])
-		self.end_effector = via_points[-1]["link"]
+		self.via_points = [ViaPoint(via_point) for via_point in via_points]
+		self.motor = Motor(self.id, self.via_points[0])
+		self.tendon = Tendon(self.id, self.motor, self.via_points[1:])
+		self.end_effector = self.via_points[-1]
 		# parameters
 		self.max_force = float(parameters['max_force'])
 
 	def set_motor_force(self, force):
 		self.motor.force = force
+
+	def to_msg(self, init_conf=False):
+		muscle_msg = MuscleUnitMsg()
+		muscle_msg.id = self.id
+		if init_conf: muscle_msg.max_force = self.max_force
+		for via_point in self.via_points:
+			via_point_msg = via_point.to_msg(init_conf)
+			muscle_msg.viapoints.append(via_point_msg)
+		return muscle_msg
 
 
 class ExoForce(Node, ABC):
@@ -210,7 +231,7 @@ class ExoForce(Node, ABC):
 	def init_end_effectors(self):
 		self.end_effectors = []
 		for muscle in self.muscle_units:
-			ef = muscle.end_effector
+			ef = muscle.end_effector.link
 			if ef not in self.end_effectors: self.end_effectors.append(ef)
 
 	@abstractmethod
@@ -244,26 +265,17 @@ class ExoForce(Node, ABC):
 	def get_tendons(self):
 		return [ muscle.tendon for muscle in self.muscle_units ]
 
-	def get_msg(self):
+	def to_msg(self):
 		state_msg = CageState()
-		state_msg.rotation_angle = float(self.cage.angle)
+		state_msg.rotation_angle = self.cage.angle
 		for muscle in self.muscle_units:
-			muscle_msg = MuscleUnitMsg()
-			muscle_msg.id = muscle.id
-			for via_point, world_point in zip(muscle.via_points, [muscle.motor.pos] + muscle.tendon.attachtment_points):
-				via_point_msg = ViaPoint()
-				via_point_msg.id = via_point['id']
-				via_point_msg.position = Point()
-				via_point_msg.position.x, via_point_msg.position.y, via_point_msg.position.z = world_point
-				via_point_msg.reference_frame = 'world'
-				via_point_msg.link = via_point['link']
-				muscle_msg.viapoints.append(via_point_msg)
+			muscle_msg = muscle.to_msg()
 			state_msg.muscleunits.append(muscle_msg)
 			
 		return state_msg
 
 	def publish_state(self):
-		self.cage_state_publisher.publish(self.get_msg())
+		self.cage_state_publisher.publish(self.to_msg())
 
 	def get_end_effectors_callback(self, request, response):
 
@@ -271,16 +283,7 @@ class ExoForce(Node, ABC):
 			end_effector_msg = EndEffector()
 			end_effector_msg.name = ef
 			for muscle in self.get_ef_muscle_units(ef):
-				muscle_msg = MuscleUnitMsg()
-				muscle_msg.id = muscle.id
-				muscle_msg.max_force = muscle.max_force
-				for via_point in muscle.via_points:
-					via_point_msg = ViaPoint()
-					via_point_msg.id = via_point['id']
-					via_point_msg.position.x, via_point_msg.position.y, via_point_msg.position.z = via_point['point']
-					via_point_msg.reference_frame = 'link' if via_point['link'] != "cage" else 'world'
-					via_point_msg.link = via_point['link']
-					muscle_msg.viapoints.append(via_point_msg)
+				muscle_msg = muscle.to_msg(init_conf=True)
 				end_effector_msg.muscle_units.append(muscle_msg)
 			response.end_effectors.append(end_effector_msg)
 

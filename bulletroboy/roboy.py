@@ -3,7 +3,6 @@ import time
 
 import numpy as np
 
-import rclpy
 from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
@@ -33,8 +32,7 @@ class BulletRoboy(Node):
                 self.freeJoints.append(i)
             if info[12] == b'hand_left':
                 self.endEffectorId = i
-
-                rclpy.logging._root_logger.info("EF id: " + str(i))
+                self.get_logger().info("EF id: " + str(i))
 
         timer_period = 0.1 # seconds
 
@@ -58,7 +56,7 @@ class BulletRoboy(Node):
       while (not closeEnough and iter < maxIter):
         jointPoses = p.calculateInverseKinematics(self.body_id, self.endEffectorId, targetPos)
         #import pdb; pdb.set_trace()
-        # rclpy.logging._root_logger.info("resetting joints states")
+        # self.get_logger().info("resetting joints states")
 
         for i in range(len(self.freeJoints)):
           p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
@@ -121,7 +119,7 @@ class BulletRoboy(Node):
         #collision[9] == normalForce in PyBullet docu
         msg.normalforce = collision[9]
 
-        rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
+        self.get_logger().info("Publishing collision in link %i" % msg.linkid)
 
         self.collision_publisher.publish(msg)
     

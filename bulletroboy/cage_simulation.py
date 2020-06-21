@@ -25,8 +25,8 @@ def main():
     # PARSING ARGUMENTS
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", dest="mode", default="debug", help="execution mode: [debug]: uses pybullet debug forces [tendon]: uses tendon forces [forces]: uses link forces")
-    parser.add_argument("--config-path", dest="config_path", default="../config/cageConfiguration.xml", metavar="FILE", help="path to the cage configuration XML file", type=lambda x: is_valid_file(parser, x) )
-    parser.add_argument("--model-path", dest="model_path", default="../models/human.urdf", metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
+    parser.add_argument("--config-path", dest="config_path", default=is_valid_file(parser, "../config/cageConfiguration.xml"), metavar="FILE", help="path to the cage configuration XML file")
+    parser.add_argument("--model-path", dest="model_path", default=is_valid_file(parser, "../models/human.urdf"), metavar="FILE", help="path to the human model URDF description")
     args = parser.parse_args()
 
     # SIMULATION SETUP

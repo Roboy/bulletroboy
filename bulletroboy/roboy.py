@@ -45,13 +45,22 @@ class BulletRoboy(Node):
                 rclpy.logging._root_logger.info("EF hand_right id: " + str(i))
 
         #Publishers and subscribers
-        timer_period = 0.1 # seconds
 
-        self.joint_publisher = JointPublisher(body_id, self.create_publisher(JointState, '/roboy/simulation/joint_state', 1))
-        self.timer = self.create_timer(timer_period, self.joint_publisher.timer_callback)
-        self.collision_publisher = CollisionPublisher(body_id, self.create_publisher(Collision, '/roboy/simulation/collision', 1))
-        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
+        #Joint state publisher
+        timer_period = 0.1 # seconds
+        self.joint_names = []
+        for i in range(p.getNumJoints(self.body_id)):
+            ji = p.getJointInfo(self.body_id,i)
+            self.joint_names.append(ji[1].decode("utf-8"))
+        self.joint_publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
+        self.timer = self.create_timer(timer_period, self.joint_state_timer_callback)
         
+        #Collision publisher
+        self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
+
+        #Operator EF pose subscriber
+        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
+
     def move(self, link_info):
         rclpy.logging._root_logger.info('Endeffector pose received')
 
@@ -68,26 +77,26 @@ class BulletRoboy(Node):
         threshold = 0.001
         maxIter = 100
         self.accurateCalculateInverseKinematics(ef_id, link_pos, link_orn, threshold, maxIter)
-
+        
 
     def accurateCalculateInverseKinematics(self, endEffectorId, targetPos, targetOrn, threshold, maxIter):
-      closeEnough = False
-      iter = 0
-      dist2 = 1e30
-      while (not closeEnough and iter < maxIter):
-        jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos, targetOrn)
-        #import pdb; pdb.set_trace()
-        # rclpy.logging._root_logger.info("resetting joints states")
-
-        for i in range(len(self.freeJoints)):
-          p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
-        ls = p.getLinkState(self.body_id, endEffectorId)
-        newPos = ls[4]
-        diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
-        dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
-        closeEnough = (dist2 < threshold)
-        iter = iter + 1
-      return jointPoses
+        closeEnough = False
+        iter = 0
+        dist2 = 1e30
+        while (not closeEnough and iter < maxIter):
+            jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos, targetOrn)
+            #import pdb; pdb.set_trace()
+            # rclpy.logging._root_logger.info("resetting joints states")
+ 
+            for i in range(len(self.freeJoints)):
+                p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
+            ls = p.getLinkState(self.body_id, endEffectorId)
+            newPos = ls[4]
+            diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
+            dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+            closeEnough = (dist2 < threshold)
+            iter = iter + 1
+        return jointPoses
 
     def get_pos_in_world(self, pos, orn):
         torso_pos, torso_orn = p.getBasePositionAndOrientation(self.body_id)
@@ -133,7 +142,6 @@ class BulletRoboy(Node):
            
     def drawDebugLine(self, ef, link_pos):
         # drawing debug lines
-
         # targetPos, targetOrn = self.adapt_pos_to_roboy(link_pos, link_orn)
         # link_rot_mat = p.getMatrixFromQuaternion(link_orn)
         # link_rot_mat = np.array(link_rot_mat).reshape((3,3))
@@ -155,20 +163,9 @@ class BulletRoboy(Node):
             p.addUserDebugLine(self.prevPose1, link_pos, [0, 0, 1], 1, self.trailDuration)
             # self.prevPose = targetPos
             self.prevPose1 = link_pos
+      
+    def joint_state_timer_callback(self):
 
-class JointPublisher():
-    """
-    This class handles publishing joint state messages.
-    """
-    def __init__(self, bulletBodyId, publisher):
-        self.body_id = bulletBodyId
-        self.publisher = publisher
-        self.joint_names = []
-        for i in range(p.getNumJoints(self.body_id)):
-            ji = p.getJointInfo(self.body_id,i)
-            self.joint_names.append(ji[1].decode("utf-8"))
-
-    def timer_callback(self):
         """Callback function for the timer, publishes joint message every time it gets triggered by timer. 
         """
         msg = JointState()
@@ -178,17 +175,9 @@ class JointPublisher():
             js = p.getJointState(self.body_id, i)
             msg.position.append(js[0])
             msg.name.append(self.joint_names[i])
-        self.publisher.publish(msg)
+        self.joint_publisher.publish(msg)
 
-class CollisionPublisher():
-    """
-    This class handles publishing collision messages.
-    """
-    def __init__(self, bulletBodyId, publisher):
-        self.body_id = bulletBodyId
-        self.publisher = publisher
-
-    def publish(self, collision):
+    def publish_collision(self, collision):
         """Processes the collision message and publishes it.
 
         Args:
@@ -218,7 +207,7 @@ class CollisionPublisher():
 
         rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
 
-        self.publisher.publish(msg)
+        self.collision_publisher.publish(msg)
     
     def get_pos_in_link_frame(self, link, position):
         """Changes the position of the collision from world's coordinates system to link frame.
@@ -231,10 +220,15 @@ class CollisionPublisher():
             The position in link frame.
         """
 
-        #[0] == linkWorldPosition in PyBullet docu
-        #[1] == linkWorldOrientation in PyBullet docu
-        frame_pos = (p.getLinkState(self.body_id, link))[0]
-        frame_orn = (p.getLinkState(self.body_id, link))[1]
+        frame_pos = [0,0,0]
+        frame_orn = [0,0,0,0]
+
+        if(link == -1):
+            frame_pos, frame_orn = (p.getBasePositionAndOrientation(self.body_id))[:2]
+        else:
+            #[0] == linkWorldPosition in PyBullet docu
+            #[1] == linkWorldOrientation in PyBullet docu
+            frame_pos, frame_orn = (p.getLinkState(self.body_id, link))[:2]
 
         _, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
 

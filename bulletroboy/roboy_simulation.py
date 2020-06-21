@@ -59,7 +59,7 @@ def main():
 
             for  point in contactPts:
                 rclpy.logging._root_logger.info("Collision at link %i" % point[3])
-                bb.collision_publisher.publish(point)
+                bb.publish_collision(point)
 
             # bb.drawDebugLines(pos)
         except KeyboardInterrupt:

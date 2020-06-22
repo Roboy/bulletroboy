@@ -47,3 +47,35 @@ Run the cage simulation of a human figure with attached tendons.
 ```bash
 ros2 run bulletroboy cage_simulation  # see node help for execution modes
 ```
+
+## Running the loop.
+
+# The Operator:
+To test the operator reacting to the collisions message follow these instructions:
+
+- open three terminals and in each of them run the following lines of code:
+
+```bash
+cd roboy_ws
+source /opt/ros/eloquent/setup.bash
+. install/setup.bash
+cd src/bulletroboy/bulletroboy
+```
+- Now in the first terminal run this line to initiate the collisions message (test) publisher:
+
+```bash
+python3 test_publisher.py
+```
+
+- In the second terminal run this line to check the running ros2 collisions message:
+
+```bash
+ros2 topic echo /roboy/exoforce/collisions
+```
+
+- In the third terminal run this line. (Curretly, the operator follows the collisions message from test_publisher. Once its merged with the other loop components this will change.)
+
+```bash
+python3 cage_simulation.py -m forces
+```
+

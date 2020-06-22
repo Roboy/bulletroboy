@@ -11,13 +11,13 @@ from threading import Thread
 from bulletroboy.roboy import BulletRoboy
 from bulletroboy.environment_control import EnvironmentCtrl
 
+MODEL_DEFAULT_PATH =  os.path.dirname(os.path.realpath(__file__)) + "/" + "../../roboy3_models/upper_body/bullet.urdf"
+
 def is_valid_file(parser, arg):
-    file_path = os.path.dirname(os.path.realpath(__file__))
-    file_path += "/" + arg
-    if not os.path.exists(file_path):
-        rclpy.logging._root_logger.error("The file %s does not exist!" % file_path)
+    if not os.path.exists(arg):
+        rclpy.logging._root_logger.error("The file %s does not exist!" % arg)
     else:
-        return file_path #return open(arg, 'r')  # return an open file handle
+        return arg #return open(arg, 'r')  # return an open file handle
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
     """
     # PARSING ARGUMENTS
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", dest="filename", default=is_valid_file(parser, "../../roboy3_models/upper_body/bullet.urdf"), metavar="FILE", help="path to the model URDF description")
+    parser.add_argument("--model-path", dest="filename", default=MODEL_DEFAULT_PATH, metavar="FILE", help="path to the model URDF description", type=lambda x: is_valid_file(parser, x))
     args = parser.parse_args()
     
     # SETTING UP WORLD

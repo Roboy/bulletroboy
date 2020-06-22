@@ -3,7 +3,6 @@ import time
 import math
 import numpy as np
 
-import rclpy
 from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
@@ -205,7 +204,7 @@ class BulletRoboy(Node):
         #collision[9] == normalForce in PyBullet docu
         msg.normalforce = collision[9]
 
-        rclpy.logging._root_logger.info("Publishing collision in link %i" % msg.linkid)
+        self.get_logger().info("Publishing collision in link %i" % msg.linkid)
 
         self.collision_publisher.publish(msg)
     

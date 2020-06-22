@@ -18,14 +18,16 @@ def is_valid_file(parser, arg):
     else:
         return file_path #return open(arg, 'r')  # return an open file handle
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--model-path", dest="filename", default="../../roboy3_models/upper_body/bullet.urdf", metavar="FILE", help="path to the model URDF description", type=lambda x: is_valid_file(parser, x) )
-args = parser.parse_args()
-
 
 def main():
     """Sets up pybullet environment and runs simulation.
     """
+    # PARSING ARGUMENTS
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-path", dest="filename", default=is_valid_file(parser, "../../roboy3_models/upper_body/bullet.urdf"), metavar="FILE", help="path to the model URDF description")
+    args = parser.parse_args()
+    
+    # SETTING UP WORLD
     p.connect(p.GUI)
     flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
     body = p.loadURDF(args.filename, [0, 0, 0.2], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1, flags=flags)
@@ -34,8 +36,8 @@ def main():
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(0)
 
+    #INITIALISING ROS AND NODE
     rclpy.init()
-
     rclpy.logging._root_logger.info("Starting Bullet Roboy node ")
 
     bb = BulletRoboy(body)
@@ -51,7 +53,6 @@ def main():
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:
-                rclpy.logging._root_logger.info("Collision at link %i" % point[3])
                 bb.publish_collision(point)
 
             # bb.drawDebugLines(pos)

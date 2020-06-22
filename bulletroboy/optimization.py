@@ -8,17 +8,11 @@ from mpl_toolkits.mplot3d import Axes3D
 
 MIN_FORCE = 0.01
 
-def equalize(forces):
-    mean = np.mean(forces)
-    distances = forces - mean
-    loss = np.sqrt(np.sum(np.square(distances)))
-    return loss
-
 def force_decomposition(force_vector, force_point, tendons, attachment_points):
     #start = time.time()
     force_direction = force_vector / np.linalg.norm(force_vector)
-    max_forces = [int(tendons[id]['max_force']) for id in tendons]
-    tendon_vectors = (attachment_points - np.array([force_point]).T).T
+    max_forces = [float(tendons[id]['max_force']) for id in tendons]
+    tendon_vectors = attachment_points - force_point
     tendon_directions = tendon_vectors / np.linalg.norm(tendon_vectors, axis=1, keepdims=True)
 
     # projecting vector directions to force direction, only tendons with positive values, will be part of the decomposition
@@ -29,10 +23,13 @@ def force_decomposition(force_vector, force_point, tendons, attachment_points):
     forces = None
     if len(active_tendons) > 0:
         initial_forces = np.random.rand(len(active_tendons)) * np.mean(force_vector)
-        constraints = [{'type':'eq', 'fun': lambda x: np.sum(active_tendons.T * np.array([x]), axis=1) - force_vector},
+        constraints = [{'type':'eq', 'fun': lambda x: np.sum(active_tendons.T * x, axis=1) - force_vector},
                        {'type':'ineq', 'fun': lambda x: active_max_forces - x},
                        {'type':'ineq', 'fun': lambda x: x}]
-        solution = minimize(equalize, initial_forces, constraints=constraints, options={'maxiter': 200})
+        solution = minimize(lambda x: np.sqrt(np.sum(np.square(x))),
+                            initial_forces,
+                            constraints=constraints,
+                            options={'maxiter': 200})
 
         if solution.success:
             forces = {id: force for id, force in zip(tendons, solution.x) if force > MIN_FORCE}
@@ -44,7 +41,7 @@ def force_decomposition(force_vector, force_point, tendons, attachment_points):
     return forces
 
 ######   GETTING TENDONS FROM CAGE CONFIGURATION FILE   ######
-cage_conf_file_path = os.path.dirname(os.path.realpath(__file__)) + "/cageConfiguration.xml"
+cage_conf_file_path = os.path.dirname(os.path.realpath(__file__)) + "/../config/cageConfiguration.xml"
 cage_conf = CageConfiguration(cage_conf_file_path)
 
 tendon_groups = {}
@@ -69,39 +66,21 @@ print("\n")
 #
 # attachment = attachment.reshape(-1, 3)
 
-def get_attachment_points(radius, hight, angles, joint):
-    attachment_points = np.zeros((3, 8))
-    attachment_points[0, 0] = radius
-    attachment_points[0, 1] = radius * np.cos(angles[0])
-    attachment_points[0, 2] = radius * np.cos(angles[1])
-    attachment_points[0, 3] = 0
-    attachment_points[0, 4] = radius
-    attachment_points[0, 5] = radius * np.cos(angles[0])
-    attachment_points[0, 6] = radius * np.cos(angles[1])
-    attachment_points[0, 7] = 0
-    attachment_points[2, 0:3] = hight
-    attachment_points[2, 3] = 1.5
-    attachment_points[2, 4:7] = 0
-    attachment_points[2, 7] = 1
+def get_attachment_points(radius, height, angles, joint):
+    attachment_points = []
+    
+    attachment_points.append(np.array([radius, 0, height]))
+    attachment_points.append(np.array([radius * np.cos(angles[0]), radius * np.sin(angles[0]), height]))
+    attachment_points.append(np.array([radius * np.cos(angles[1]), radius * np.sin(angles[1]), height]))
+    attachment_points.append(np.array([0, 0, 1.5]))
+    attachment_points.append(np.array([radius, 0, 0.0]))
+    attachment_points.append(np.array([radius * np.cos(angles[0]), radius * np.sin(angles[0]), 0.0]))
+    attachment_points.append(np.array([radius * np.cos(angles[1]), radius * np.sin(angles[1]), 0.0]))
+    attachment_points.append(np.array([0, 0, 1.0]))
 
-    if joint=="human/left_wrist":
-        attachment_points[1, 0] = 0
-        attachment_points[1, 1] = radius * np.sin(angles[0])
-        attachment_points[1, 2] = radius * np.sin(angles[1])
-        attachment_points[1, 3] = 0
-        attachment_points[1, 4] = 0
-        attachment_points[1, 5] = radius * np.sin(angles[0])
-        attachment_points[1, 6] = radius * np.sin(angles[1])
-        attachment_points[1, 7] = 0
-    elif joint=="human/right_wrist":
-        attachment_points[1, 0] = 0
-        attachment_points[1, 1] = -radius * np.sin(angles[0])
-        attachment_points[1, 2] = -radius * np.sin(angles[1])
-        attachment_points[1, 3] = 0
-        attachment_points[1, 4] = 0
-        attachment_points[1, 5] = -radius * np.sin(angles[0])
-        attachment_points[1, 6] = -radius * np.sin(angles[1])
-        attachment_points[1, 7] = 0
+    if joint=="human/right_wrist":
+        attachment_points[:,1] *= -1
+
     return attachment_points
 
 ### define workspace ###

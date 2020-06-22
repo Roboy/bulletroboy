@@ -52,7 +52,7 @@ class Operator(Node):
 	def move(self, case):
 		self.movements.simple_move(case)
 
-	def publish_state(self, ef_names = np.array(['human/left_hand','human/right_hand'])):
+	def publish_state(self, ef_names = np.array(['left_wrist','right_wrist'])):
 
 		for ef in ef_names:
 		   msg = PoseStamped()
@@ -76,7 +76,7 @@ class Operator(Node):
 
 
 class Movements():
-	def __init__(self, operator, link = b'human/left_hand'):
+	def __init__(self, operator, link = b'left_wrist'):
 		"""
 		This class defines 2 types of movements:
 		-  Re-definable inverse kinematic ones (one_end_effector(), two_end_effectors())
@@ -172,9 +172,9 @@ class Movements():
 		iter = 0
 
 		# Gets the hand link ids and the free revolute joints
-		_, freeJoints = self.get_EF_id(b'human/left_hand')
-		endEffectorIds = [self.op.get_link_index('human/left_hand'),
-                                  self.op.get_link_index('human/right_hand')]
+		_, freeJoints = self.get_EF_id(b'left_wrist')
+		endEffectorIds = [self.op.get_link_index('left_wrist'),
+                                  self.op.get_link_index('right_wrist')]
 		
 		# Chest and Neck constraints
 		if chest_constraint == True:
@@ -206,33 +206,46 @@ class Movements():
 		t = time.time()
 
 		# Get link Ids
-		spine_link = self.op.get_link_index('human/spine_2')
-		spine_side_link = self.op.get_link_index('human/spine')
-		left_shoulder_1 = self.op.get_link_index('human/left_shoulder_1')
-		right_shoulder_1 = self.op.get_link_index('human/right_shoulder_1')
-		left_shoulder_0 = self.op.get_link_index('human/left_shoulder_0')
-		right_shoulder_0 = self.op.get_link_index('human/right_shoulder_0')
-		left_elbow_link = self.op.get_link_index('human/left_elbow')
-		right_elbow_link = self.op.get_link_index('human/right_elbow')
+		root_link = self.op.get_link_index('root')				# FIXED
+		chest_link = self.op.get_link_index('chest')				# SPHERICAL
+		left_shoulder = self.op.get_link_index('left_shoulder')			# SPHERICAL
+		right_shoulder = self.op.get_link_index('right_shoulder')		# SPHERICAL
+		left_elbow_link = self.op.get_link_index('left_elbow')			# REVOLUTE
+		right_elbow_link = self.op.get_link_index('right_elbow')		# REVOLUTE
 
-		# Use input to move the figure with the chosen movement.
-		# If a non-existent case is used as input, print warning.
+		# SPINE_SWING
 		if case == 1:
-                    p.resetJointState(self.body_id, spine_link, math.sin(t))
+			p.resetJointState(self.body_id, left_elbow_link, 0.0)
+			p.resetJointState(self.body_id, right_elbow_link, 0.0)
+			p.resetJointStateMultiDof(self.body_id, left_shoulder, p.getQuaternionFromEuler([math.pi/2,0,0]))
+			p.resetJointStateMultiDof(self.body_id, right_shoulder, p.getQuaternionFromEuler([-math.pi/2,0,0]))
+			p.resetJointStateMultiDof(self.body_id, chest_link, p.getQuaternionFromEuler([0,math.sin(t),0]))
 
+		# FOREARM_ROLL
 		elif case == 2:
-                    p.resetJointState(self.body_id, left_shoulder_1, -1.75*math.pi/4)
-                    p.resetJointState(self.body_id, right_shoulder_1, 1.75*math.pi/4)
-                    p.resetJointState(self.body_id, left_elbow_link, (((math.sin(3*t)+1)/8) + (11/8))*math.pi)
-                    p.resetJointState(self.body_id, left_shoulder_0, ((-(math.cos(3*t)+1)/8) + (1/8))*math.pi)
-                    p.resetJointState(self.body_id, right_elbow_link, -(((math.sin(3*t+math.pi)+1)/8) + (11/8))*math.pi)
-                    p.resetJointState(self.body_id, right_shoulder_0, ((-(math.cos(3*t+math.pi)+1)/8) + (1/8))*math.pi)
+			left_shoulder_quat = p.getQuaternionFromEuler([0,((-(math.cos(3*t)+1)/8) + (13/8))*math.pi,math.pi/2])
+			right_shoulder_quat = p.getQuaternionFromEuler([0,-(((math.cos(3*t)+1)/8) + (11/8))*math.pi,math.pi/2])
 
+			p.resetJointStateMultiDof(self.body_id, left_shoulder, left_shoulder_quat)
+			p.resetJointStateMultiDof(self.body_id, right_shoulder, right_shoulder_quat)
+			p.resetJointState(self.body_id, left_elbow_link, -(((math.sin(3*t)+1)/8) + (11/8))*math.pi)
+			p.resetJointState(self.body_id, right_elbow_link, -(((math.sin(3*t+math.pi)+1)/8) + (11/8))*math.pi)
+
+		# ARM ROLL
 		elif case == 3:
-                    p.resetJointState(self.body_id, left_shoulder_1, math.sin(t))
-                    p.resetJointState(self.body_id, left_shoulder_0, math.sin(t+math.pi/2))
-                    p.resetJointState(self.body_id, right_shoulder_1, -math.sin(t))
-                    p.resetJointState(self.body_id, right_shoulder_0, math.sin(t+math.pi/2))
+			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2,math.sin(t),0])
+			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2,-math.sin(t)-math.pi,0])
+			p.resetJointState(self.body_id, left_elbow_link, 0)
+			p.resetJointState(self.body_id, right_elbow_link, 0)
+			p.resetJointStateMultiDof(self.body_id, left_shoulder, left_shoulder_quat)
+			p.resetJointStateMultiDof(self.body_id, right_shoulder, right_shoulder_quat)
 
+		# SIDE_SWING
 		elif case == 4:
-                    p.resetJointState(self.body_id, spine_side_link, math.sin(t))
+			p.resetJointState(self.body_id, left_elbow_link, 0.0)
+			p.resetJointState(self.body_id, right_elbow_link, 0.0)
+			p.resetJointStateMultiDof(self.body_id, left_shoulder, p.getQuaternionFromEuler([math.pi/2,0,0]))
+			p.resetJointStateMultiDof(self.body_id, right_shoulder, p.getQuaternionFromEuler([-math.pi/2,0,0]))
+			p.resetJointStateMultiDof(self.body_id, chest_link, p.getQuaternionFromEuler([math.sin(t),0,0]))
+
+

@@ -9,7 +9,7 @@ from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.constants import FOREARM_ROLL
-from bulletroboy.constants import SPINE_SWING
+from bulletroboy.constants import SIDE_SWING
 
 
 def is_valid_file(parser, arg):

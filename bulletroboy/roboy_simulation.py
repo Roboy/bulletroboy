@@ -29,8 +29,8 @@ def main():
     
     # SETTING UP WORLD
     p.connect(p.GUI)
-    flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
-    body = p.loadURDF(args.filename, [0, 0, 0.2], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1, flags=flags)
+    #flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+    body = p.loadURDF(args.filename, [0, 0, 0.8], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1)#, flags=flags)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)

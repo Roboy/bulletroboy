@@ -23,7 +23,9 @@ class Operator(Node):
 		self.links = self.get_links()
 		self.movements = Movements(self)
 		self.ef_publisher = self.create_publisher(PoseStamped, ENDEFFECTOR_POSE, 10)
-		
+		self.prevPose = [0, 0, 0]
+
+		self.trailDuration = 1
 
 
 	def get_links(self):
@@ -53,14 +55,22 @@ class Operator(Node):
 	def move(self, case):
 		self.movements.simple_move(case)
 
+	def drawDebugLines(self, ef, pos_or):
+		# drawing debug lines
+		if(ef == 'left_wrist'):
+			p.addUserDebugLine(self.prevPose, pos_or, [0, 0, 0.3], 1, self.trailDuration)
+			self.prevPose = pos_or
 	def publish_state(self, ef_names = np.array(['left_wrist','right_wrist'])):
-
+		
 		for ef in ef_names:
+		   self.get_logger().info('Sending Endeffector pose: ' + ef)
 		   msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)
-		   link_info = p.getLinkState(self.body_id, ef_id)[:2]
+		   link_info = p.getLinkState(self.body_id, ef_id)[4:6]
 		   link_pos = link_info[0]
 		   link_orn = link_info[1]
+
+		   self.drawDebugLines(ef, link_pos)
 
 		   msg.header.frame_id = ef
 

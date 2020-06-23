@@ -3,7 +3,6 @@ import time
 import math
 import numpy as np
 
-import rclpy
 from rclpy.node import Node
 
 from sensor_msgs.msg import JointState
@@ -24,12 +23,11 @@ class BulletRoboy(Node):
         # DEBUGGING VARIABLES
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]
+        self.hasPrevPose = 0
         #trailDuration is duration (in seconds) after debug lines will be removed automatically
         #use 0 for no-removal
         self.trailDuration = 5
-        self.black_line = p.addUserDebugLine([0,0,0], [0,0,0] + np.array([0,0,0.1]), [0, 0, 0.3], 1, self.trailDuration)
-        self.red_line = p.addUserDebugLine([0,0,0], [0,0,0] + np.array([0,0,0.1]), [0, 0, 0.3], 1, self.trailDuration)
-
+        
         numJoints = p.getNumJoints(self.body_id)
         self.freeJoints = []
         self.endEffectors = {}
@@ -40,10 +38,10 @@ class BulletRoboy(Node):
                 self.freeJoints.append(i)
             if info[12] == b'hand_left':
                 self.endEffectors['hand_left'] = i
-                rclpy.logging._root_logger.info("EF hand_left id: " + str(i))
+                self.get_logger().info("EF hand_left id: " + str(i))
             if info[12] == b'hand_right':
                 self.endEffectors['hand_right'] = i
-                rclpy.logging._root_logger.info("EF hand_right id: " + str(i))
+                self.get_logger().info("EF hand_right id: " + str(i))
 
         #Publishers and subscribers
 
@@ -64,7 +62,7 @@ class BulletRoboy(Node):
 
 
     def move(self, link_info):
-        rclpy.logging._root_logger.info('Endeffector pose received')
+        self.get_logger().info('Endeffector pose received: ' + link_info.header.frame_id)
 
         #process message
         ef_name = OPERATOR_TO_ROBOY_NAMES[link_info.header.frame_id]
@@ -72,32 +70,37 @@ class BulletRoboy(Node):
         
         link_pos = [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
         link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
-        link_pos, link_orn = self.adapt_pos_to_roboy(link_pos, link_orn)
-        self.drawDebugLine(ef_name, link_pos)
+        # link_pos, link_orn = self.adapt_pos_to_roboy(link_pos, link_orn)
+        
 
         #move
         threshold = 0.001
         maxIter = 100
         self.accurateCalculateInverseKinematics(ef_id, link_pos, link_orn, threshold, maxIter)
-        
+        if(ef_name == 'hand_right'):
+            self.drawDebugLine(ef_id, link_pos)
 
     def accurateCalculateInverseKinematics(self, endEffectorId, targetPos, targetOrn, threshold, maxIter):
         closeEnough = False
         iter = 0
         dist2 = 1e30
+        # print(targetPos)
+        # print(targetOrn)
+
         while (not closeEnough and iter < maxIter):
-            jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos, targetOrn)
-            #import pdb; pdb.set_trace()
-            # rclpy.logging._root_logger.info("resetting joints states")
- 
+            jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos)#, targetOrn)
+            #import pdb; pdb.set_trace() 
             for i in range(len(self.freeJoints)):
                 p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
+                # p.setJointMotorControlMultiDof(self.body_id, endEffectorId, p.POSITION_CONTROL, targetPosition=targetPos)
+            # p.resetJointStatesMultiDof(self.body_id, self.freeJoints, jointPoses)
             ls = p.getLinkState(self.body_id, endEffectorId)
             newPos = ls[4]
             diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
             dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
             closeEnough = (dist2 < threshold)
             iter = iter + 1
+        # print("link_info after reset " ,p.getLinkState(self.body_id, endEffectorId)[:2])
         return jointPoses
 
     def get_pos_in_world(self, pos, orn):
@@ -142,30 +145,15 @@ class BulletRoboy(Node):
         targetPos, targetOrn = self.get_pos_in_world(link_pos, link_orn)
         p.resetBasePositionAndOrientation(self.target, targetPos, targetOrn)
            
-    def drawDebugLine(self, ef, link_pos):
+    def drawDebugLine(self, ef_id, link_pos):
         # drawing debug lines
-        # targetPos, targetOrn = self.adapt_pos_to_roboy(link_pos, link_orn)
-        # link_rot_mat = p.getMatrixFromQuaternion(link_orn)
-        # link_rot_mat = np.array(link_rot_mat).reshape((3,3))
-        # target_rot_mat = p.getMatrixFromQuaternion(targetOrn)
-        # target_rot_mat = np.array(target_rot_mat).reshape((3,3))
-
-        # self.black_line = p.addUserDebugLine(targetPos, 
-        #                             targetPos + target_rot_mat.dot(np.array([0,0,0.1])), 
-        #                             [0, 0, 0.3], 2, 
-        #                             self.trailDuration, 
-        #                             replaceItemUniqueId=self.black_line)
-        # self.red_line = p.addUserDebugLine(link_pos, 
-        #                                 link_pos + link_rot_mat.dot(np.array([0,0,0.1])), 
-        #                                 [1, 0, 0], 2, 
-        #                                 self.trailDuration, 
-        #                                 replaceItemUniqueId=self.red_line)
-        if(ef == 'hand_left'):
-            # p.addUserDebugLine(self.prevPose, targetPos, [0, 1, 0], 1, self.trailDuration)
-            p.addUserDebugLine(self.prevPose1, link_pos, [0, 0, 1], 1, self.trailDuration)
-            # self.prevPose = targetPos
-            self.prevPose1 = link_pos
-      
+        ls = p.getLinkState(self.body_id, ef_id)
+        if(self.hasPrevPose):
+            p.addUserDebugLine(self.prevPose, link_pos, [0, 0, 0.3], 1, self.trailDuration)
+            p.addUserDebugLine(self.prevPose1, ls[4], [1, 0, 0], 1, self.trailDuration)
+        self.prevPose = link_pos
+        self.prevPose1 = ls[4]
+        self.hasPrevPose = 1  
     def joint_state_timer_callback(self):
 
         """Callback function for the timer, publishes joint message every time it gets triggered by timer. 

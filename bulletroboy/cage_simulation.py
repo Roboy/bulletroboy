@@ -9,15 +9,16 @@ from bulletroboy.operator import Operator
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.constants import FOREARM_ROLL
+from bulletroboy.constants import SIDE_SWING
 
+CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../config/cageConfiguration.xml"
+MODEL_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../models/human.urdf"
 
 def is_valid_file(parser, arg):
-    file_path = os.path.dirname(os.path.realpath(__file__))
-    file_path += "/" + arg
-    if not os.path.exists(file_path):
-        parser.error("The file %s does not exist!" % file_path)
+    if not os.path.exists(arg):
+        parser.error("The file %s does not exist!" % arg)
     else:
-        return file_path #return open(arg, 'r')  # return an open file handle
+        return arg #return open(arg, 'r')  # return an open file handle
 
 
 def main():
@@ -38,16 +39,28 @@ def main():
 
     # LOADING SIM BODIES
     p.loadURDF("plane.urdf")
-    human_model = p.loadURDF(args.model_path, [0, 0, 1], p.getQuaternionFromEuler([math.pi/2, 0, 0]), globalScaling=0.284, useFixedBase=1)
+    
+    # Magic Numbers used for orientation and scaling (change later)
+    human_model = p.loadURDF(args.model_path, [0, 0, 1], p.getQuaternionFromEuler([1.5708, 0, 0]), globalScaling=0.284, useFixedBase=1)
+    num_joints = p.getNumJoints(human_model)
+    print('Number of Joints of the humanoid.urdf: ', num_joints)
+    print('Id of the human_model: ', human_model)
+    for i in range(num_joints):
+        info = p.getJointInfo(human_model, i)
+        print('info: ', info)
 
     # EXOFORCE SETUP
     initial_cage_conf = CageConfiguration(args.config_path)
 
     rclpy.init()
-    exoforce = ExoForceSim(initial_cage_conf, human_model, args.mode)
+    operator = Operator(human_model)
+    exoforce = ExoForceSim(initial_cage_conf, operator, args.mode)
 
     spin_thread = Thread(target=rclpy.spin, args=(exoforce,))
+    spin_op_thread = Thread(target=rclpy.spin, args=(operator,))
+
     spin_thread.start()
+    spin_op_thread.start()
 
     # RUN SIM
     try:

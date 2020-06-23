@@ -8,7 +8,8 @@ from rclpy.node import Node
 from numpy.linalg import norm
 from termcolor import colored
 from roboy_simulation_msgs.msg import TendonUpdate
-from roboy_simulation_msgs.srv import OperatorHead
+# from roboy_simulation_msgs.srv import OperatorHead
+from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 
 
@@ -23,7 +24,7 @@ class Operator(Node):
 		self.links = self.get_links()
 		self.movements = Movements(self)
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-		self.create_service(OperatorHead, '/roboy/simulation/operator/initial_headpose', self.op_head_callback)
+		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
 		
 
 
@@ -76,22 +77,21 @@ class Operator(Node):
 
 		   self.ef_publisher.publish(msg)
 
-	def op_head_callback(self, resquest, response):
-		print("We got this far")
-
-		head = self.get_link_index('neck')
+	def initial_link_pose_callback(self, request, response):
+		self.get_logger().info("Service Initial Link Pose: request received")
+		head = self.get_link_index(request.link_name)
 		head_info = p.getLinkState(self.body_id, head)[:2]
 		link_pos = head_info[0]
 		link_orn = head_info[1]
 
-		response.data.position.x = link_pos[0]
-		response.data.position.y = link_pos[1]
-		response.data.position.z = link_pos[2]
+		response.pose.position.x = link_pos[0]
+		response.pose.position.y = link_pos[1]
+		response.pose.position.z = link_pos[2]
 
-		response.data.orientation.x = link_orn[0]
-		response.data.orientation.y = link_orn[1]
-		response.data.orientation.z = link_orn[2]
-		response.data.orientation.w = link_orn[3]
+		response.pose.orientation.x = link_orn[0]
+		response.pose.orientation.y = link_orn[1]
+		response.pose.orientation.z = link_orn[2]
+		response.pose.orientation.w = link_orn[3]
 
 		return response
 

@@ -6,10 +6,8 @@ import numpy as np
 
 from rclpy.node import Node
 from numpy.linalg import norm
-from termcolor import colored
 from roboy_simulation_msgs.msg import TendonUpdate
 from geometry_msgs.msg import PoseStamped
-
 
 
 class Operator(Node):
@@ -23,7 +21,32 @@ class Operator(Node):
 		self.movements = Movements(self)
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
 		
+		p.createConstraint(self.body_id, -1, -1, -1, p.JOINT_FIXED, [0,0,0],[0,0,0],[0,0,0],[0,0,0,1])
+		self.init_joint_motors()
+	
+	def init_joint_motors(self):
+		# for j in range(p.getNumJoints(self.body_id)):
+		# 	ji = p.getJointInfo(self.body_id, j)
+		# 	jointType = ji[2]
+		# 	if (jointType == p.JOINT_SPHERICAL):
+		# 		targetPosition = [0, 0, 0, 1]
+		# 		p.setJointMotorControlMultiDof(self.body_id,
+		# 									j,
+		# 									p.POSITION_CONTROL,
+		# 									targetPosition,
+		# 									targetVelocity=[0, 0, 0],
+		# 									positionGain=0.05,
+		# 									velocityGain=1,
+		# 									force=[200])
 
+		# 	if (jointType == p.JOINT_PRISMATIC or jointType == p.JOINT_REVOLUTE):
+		# 		p.setJointMotorControl2(self.body_id, j, p.VELOCITY_CONTROL, targetVelocity=0, force=10)
+
+		# 	#print(ji) 
+		# 	print("joint[", j, "].name=", ji[1])
+		
+		for j in range(p.getNumJoints(self.body_id)):
+			p.setJointMotorControlMultiDof(self.body_id, j, p.POSITION_CONTROL, [0,0,0,1], positionGain=0.1, force=[200])
 
 	def get_links(self):
 		links = []
@@ -133,7 +156,6 @@ class Movements():
 		
 		Raises:
 		   -
-
 		Returns:
 		   -
 		"""
@@ -164,7 +186,6 @@ class Movements():
 		
 		Raises:
 		   -
-
 		Returns:
 		   -
 		"""
@@ -192,13 +213,11 @@ class Movements():
 	def simple_move(self, case):
 		"""
 		Defines a series of hardcoded movements for a direct use. (Movements Library)
-
 		Args:
 		   case (int): the constant corresponding with the movement to be applied
 		
 		Raises:
 		   -
-
 		Returns:
 		   -
 		"""
@@ -247,5 +266,3 @@ class Movements():
 			p.resetJointStateMultiDof(self.body_id, left_shoulder, p.getQuaternionFromEuler([math.pi/2,0,0]))
 			p.resetJointStateMultiDof(self.body_id, right_shoulder, p.getQuaternionFromEuler([-math.pi/2,0,0]))
 			p.resetJointStateMultiDof(self.body_id, chest_link, p.getQuaternionFromEuler([math.sin(t),0,0]))
-
-

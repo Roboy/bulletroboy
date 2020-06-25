@@ -315,9 +315,9 @@ forces = np.array([[100, 0, 0],
                    [0, 0, -100]])
 
 # Get the feasible part of the left workspace and the desired version of the right workspace
-ws_array_feasible_L, ws_feasible_L = workspace_feasible(stepsize=0.1, forces=forces, radius=radius, height=height,
+ws_array_feasible_L, ws_feasible_L = workspace_feasible(step_size=0.1, forces=forces, radius=radius, height=height,
                                                         angles=angles)
-ws_array_desired_R, ws_desired_R = workspace_desired(stepsize=0.1, joint="human/right_wrist")
+ws_array_desired_R, ws_desired_R = workspace_desired(step_size=0.1, joint="human/right_wrist")
 
 
 fig = plt.figure()

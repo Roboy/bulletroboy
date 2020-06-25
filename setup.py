@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'ros2_roboy = bulletroboy.ros2_roboy:main',
+            'roboy_simulation = bulletroboy.roboy_simulation:main',
             'cage_simulation = bulletroboy.cage_simulation:main',
             'test_publisher = bulletroboy.test_publisher:main',
             'forces_mapper = bulletroboy.forces_mapper:main',

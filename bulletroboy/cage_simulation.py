@@ -10,13 +10,14 @@ from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
 from bulletroboy.constants import FOREARM_ROLL
 
+CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../config/cageConfiguration.xml"
+MODEL_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../models/human.urdf"
+
 def is_valid_file(parser, arg):
-    file_path = os.path.dirname(os.path.realpath(__file__))
-    file_path += "/" + arg
-    if not os.path.exists(file_path):
-        parser.error("The file %s does not exist!" % file_path)
+    if not os.path.exists(arg):
+        parser.error("The file %s does not exist!" % arg)
     else:
-        return file_path #return open(arg, 'r')  # return an open file handle
+        return arg #return open(arg, 'r')  # return an open file handle
 
 
 def main():
@@ -24,8 +25,8 @@ def main():
     # PARSING ARGUMENTS
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", dest="mode", default="debug", help="execution mode: [debug]: uses pybullet debug forces [tendon]: uses tendon forces [forces]: uses link forces")
-    parser.add_argument("--config-path", dest="config_path", default="../config/cageConfiguration.xml", metavar="FILE", help="path to the cage configuration XML file", type=lambda x: is_valid_file(parser, x) )
-    parser.add_argument("--model-path", dest="model_path", default="../models/human.urdf", metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
+    parser.add_argument("--config-path", dest="config_path", default=CONFIG_DEFAULT_PATH, metavar="FILE", help="path to the cage configuration XML file", type=lambda x: is_valid_file(parser, x) )
+    parser.add_argument("--model-path", dest="model_path", default=MODEL_DEFAULT_PATH, metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
     args = parser.parse_args()
 
     # SIMULATION SETUP

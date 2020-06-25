@@ -5,10 +5,9 @@ import pybullet_data
 import rclpy
 from threading import Thread
 
-from bulletroboy.operator import Operator
+from bulletroboy.operator import Operator, Moves
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
-from bulletroboy.constants import *
 
 
 def is_valid_file(parser, arg):
@@ -55,7 +54,7 @@ def main():
     try:
         while True:
             exoforce.operator.publish_state()
-            #exoforce.operator.move(SPINE_SWING)
+            exoforce.operator.move(Moves.SIDE_SWING)
             exoforce.update()
             p.stepSimulation()
 

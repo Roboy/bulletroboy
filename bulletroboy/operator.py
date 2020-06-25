@@ -135,6 +135,9 @@ class Operator(Node):
 
 
 class Moves(Enum):
+	"""This enum class handles the posible moves the operator can performe.
+
+	"""
 	SPINE_SWING = 1
 	FOREARM_ROLL = 2
 	ARM_ROLL = 3
@@ -142,15 +145,20 @@ class Moves(Enum):
 
 
 class Movements():
-	def __init__(self, operator, link = b'left_wrist'):
+	"""This class defines 2 types of movements:
+		- Re-definable inverse kinematic ones (one_end_effector(), two_end_effectors())
+		- Harcoded simple ones (simple_move() --> 4 predefined movements)
+
+	"""
+	def __init__(self, operator):
 		"""
-		This class defines 2 types of movements:
-		-  Re-definable inverse kinematic ones (one_end_effector(), two_end_effectors())
-		-  Harcoded simple ones (simple_move() --> 4 predefined movements)
+		Args:
+			operator (Operator): Operator object to which the movements will be applied to.
+
 		"""
 		self.op = operator
-		self.link = link
 
+		self.neck = self.op.get_link_index('neck')
 		self.chest = self.op.get_link_index('chest')
 		self.left_elbow = self.op.get_link_index('left_elbow')
 		self.right_elbow = self.op.get_link_index('right_elbow')
@@ -158,8 +166,14 @@ class Movements():
 		self.right_shoulder = self.op.get_link_index('right_shoulder')
 
 	def get_EF_id(self, link_name):
-		"""
-		Gets the id of the endEffector and the list of free revolute joints 
+		"""Gets the id of the endEffector and the list of free revolute joints.
+
+		Args:
+			link_name (string): Link name to search.
+		
+		Returns:
+		   	-
+
 		"""
 		freeJoints = []
 		numJoints = p.getNumJoints(self.op.body_id)
@@ -174,38 +188,36 @@ class Movements():
 		return endEffectorId, freeJoints
 
 	def apply_chest_and_neck_constraints(self):
-		"""
-		Keeps the chest and neck in a straight position. In speific cases it makes the 			movement more ergonomic and human-like.
-		"""
+		"""Keeps the chest and neck in a straight position. In specific cases it makes the movement more ergonomic and human-like.
 
+		Args:
+			-
+		
+		Returns:
+		   	-
+
+		"""
 		# Constraint on the Chest
-		p.createConstraint(self.op.body_id, self.op.get_link_index('human/spine_1'), -1,
-				   self.op.get_link_index('human/spine_2'), p.JOINT_FIXED,
-				   [0, 0, 0], [0, 0, 0], [0, 0, 1])
+		p.createConstraint(self.op.body_id, self.chest, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
 
 		# Constraint on the Neck
-		p.createConstraint(self.op.body_id, self.op.get_link_index('human/neck'), -1,
-				   self.op.get_link_index('human/spine_2'), p.JOINT_FIXED,
-				   [0, 0, 0], [0, 0, 0], [0, 0, 1])
+		p.createConstraint(self.op.body_id, self.neck, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
 
-	def one_end_effector(self, pos, maxIter = 100, chest_constraint = True):
-		"""
-		Uses Inverse Kinematics to compute the JointPoses for the position of the 
-		End-Effector defined in the Movements class.
+	def one_end_effector(self, pos, maxIter=100, chest_constraint=True):
+		"""Uses Inverse Kinematics to compute the JointPoses for the position of the 
+		   End-Effector defined in the Movements class.
 		
 		Args:
 		   pos (list of 3 floats): x,y,z coordinates of the point that the end_effector is to be positioned at. If the movement is to be dynamic, write the xyz vector in terms of t.
 		   maxIter (int): maximum number of iterations for the inverse kinematic computation.
 		   chest_constraint (bool): chest and neck constraints for a stable and realistic movement.
 		
-		Raises:
-		   -
 		Returns:
-		   -
-		"""
+			-
 
+		"""
 		iter = 0
-		endEffectorId, freeJoints = self.get_EF_id(self.link)
+		endEffectorId, freeJoints = self.get_EF_id(b'left_wrist')
 		
 		# Chest and Neck constraints
 		if chest_constraint == True:
@@ -217,21 +229,18 @@ class Movements():
 				p.resetJointState(self.op.body_id, freeJoints[i], jointPoses[i])
 			iter = iter + 1
 
-	def two_end_effectors(self, positions, maxIter = 100, chest_constraint = True):
-		"""
-		Uses Inverse Kinematics to compute the JointPoses for the position of both hands.
+	def two_end_effectors(self, positions, maxIter=100, chest_constraint=True):
+		"""Uses Inverse Kinematics to compute the JointPoses for the position of both hands.
 		
 		Args:
 		   pos (list of 6 floats): x,y,z coordinates of the desired position of the left_hand followed by the x,y,z coordinates of the desired position of the right_hand.
 		   maxIter (int): maximum number of iterations for the inverse kinematic computation.
 		   chest_constraint (bool): chest and neck constraints for a stable and realistic movement.
 		
-		Raises:
-		   -
 		Returns:
-		   -
-		"""
+			-
 
+		"""
 		iter = 0
 
 		# Gets the hand link ids and the free revolute joints
@@ -253,7 +262,7 @@ class Movements():
 		"""Defines a series of hardcoded movements for a direct use. (Movements Library)
 
 		Args:
-			case (int): The constant corresponding with the movement to be applied.
+			case (Moves): The Moves enum corresponding with the movement to be applied.
 		
 		Returns:
 		   -

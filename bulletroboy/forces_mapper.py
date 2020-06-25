@@ -4,6 +4,9 @@ from rclpy.node import Node
 # from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 import yaml
+from roboy_simulation_msgs.srv import LinkIdFromName
+from roboy_simulation_msgs.srv import LinkNameFromId
+from asgiref.sync import async_to_sync
 
 class ForcesMapper(Node):
     def __init__(self):
@@ -17,6 +20,19 @@ class ForcesMapper(Node):
             self.collision_listener,
             10)
 
+        self.link_names_map = self.load_roboy_to_human_link_name_map()
+
+        # Define clients
+        self.roboy_link_name_from_id_client = self.create_client(LinkNameFromId, 'add_two_ints')
+        self.operator_link_id_from_name_client = self.create_client(LinkIdFromName, '/roboy/simulation/operator/link_id_from_link_name')
+
+        # Connect to services
+        while not self.roboy_link_name_from_id_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        
+        while not self.operator_link_id_from_name_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+
         self.exoforceCollisionPublisher = self.create_publisher(Collision, 'roboy/exoforce/collisions', 10)
         timer_period = 0.005 # seconds
         self.time = self.create_timer(timer_period, self.timer_callback)
@@ -25,7 +41,7 @@ class ForcesMapper(Node):
         """Publishes collision to exoforce if any."""
 
         if not self.result:
-            return;
+            return
         self.exoforceCollisionPublisher.publish(self.result)
         self.result = None
 
@@ -52,7 +68,7 @@ class ForcesMapper(Node):
 
         return 1
     
-    def scaleToOperator(self, collision):
+    def scale_to_operator(self, collision):
         """Scales down the collision from robot to human.
 
         Parameters:
@@ -61,8 +77,28 @@ class ForcesMapper(Node):
         Returns:
             Collision:Collision scaled to human
         """
-
         return collision
+    
+    def map_collision_to_operator(self, roboy_collision):
+        roboy_link_name = self.get_roboy_link_name(roboy_collision.linkid)
+        operator_link_name = self.link_names_map[roboy_link_name]
+        operator_link_id = self.get_operator_link_id(operator_link_name)
+
+        roboy_collision.linkid = operator_link_id
+
+        return roboy_collision
+
+    def get_roboy_link_name(self, roboy_link_id):
+        roboy_link_name_from_id_req = LinkNameFromId.Request()
+        roboy_link_name_from_id_req.link_id = roboy_link_id
+        response = self.roboy_link_name_from_id_client.call(roboy_link_name_from_id_req)
+        return response
+
+    def get_operator_link_id(self, operator_link_name):
+        operator_link_name_from_id_req = LinkIdFromName.Request()
+        operator_link_name_from_id_req.link_name = operator_link_name
+        response = self.roboy_link_name_from_id_client.call(operator_link_name_from_id_req)
+        return response
 
     def transformFromRobotToOperator(self, collision):
         """Calculates the collision on the human and assign it to the 'result' var.
@@ -71,10 +107,13 @@ class ForcesMapper(Node):
             collision (Collision):The collision that happened on the robot side.
         """
 
-        self.result = self.scaleToOperator(collision)
+        scaled_collision = self.scale_to_operator(collision)
+        operator_collision = self.map_collision_to_operator(scaled_collision)
+        self.result = operator_collision
 
     def load_roboy_to_human_link_name_map(self):
-        with open('../resources/roboy_to_human_linknam_map.yaml') as f:
+        """Fetches the link name map"""
+        with open('../resources/roboy_to_human_linkname_map.yaml') as f:
             linkNameMaps = yaml.safe_load(f)
             return linkNameMaps.get("roboyToHumanLinkNameMap")
 

@@ -1,19 +1,21 @@
 import pybullet as p
 import time
 import math
-import rclpy
 import numpy as np
 
 from rclpy.node import Node
-from numpy.linalg import norm
-from roboy_simulation_msgs.msg import TendonUpdate
 from geometry_msgs.msg import PoseStamped
 
 
 class Operator(Node):
+	"""This class handles the operator body and its links in the simulation.
+
+	"""
 	def __init__(self, body_id):
 		"""
-		This class handles the operator body and its links in the simulation.
+		Args:
+			body_id (int): Pybullet body indentifier.
+
 		"""
 		super().__init__("operator_node")		
 		self.body_id = body_id
@@ -25,30 +27,29 @@ class Operator(Node):
 		self.init_joint_motors()
 	
 	def init_joint_motors(self):
-		# for j in range(p.getNumJoints(self.body_id)):
-		# 	ji = p.getJointInfo(self.body_id, j)
-		# 	jointType = ji[2]
-		# 	if (jointType == p.JOINT_SPHERICAL):
-		# 		targetPosition = [0, 0, 0, 1]
-		# 		p.setJointMotorControlMultiDof(self.body_id,
-		# 									j,
-		# 									p.POSITION_CONTROL,
-		# 									targetPosition,
-		# 									targetVelocity=[0, 0, 0],
-		# 									positionGain=0.05,
-		# 									velocityGain=1,
-		# 									force=[200])
+		"""Initializes joint motors.
+		
+		Args:
+			-
 
-		# 	if (jointType == p.JOINT_PRISMATIC or jointType == p.JOINT_REVOLUTE):
-		# 		p.setJointMotorControl2(self.body_id, j, p.VELOCITY_CONTROL, targetVelocity=0, force=10)
+		Returns:
+		   -
 
-		# 	#print(ji) 
-		# 	print("joint[", j, "].name=", ji[1])
+		"""
 		
 		for j in range(p.getNumJoints(self.body_id)):
 			p.setJointMotorControlMultiDof(self.body_id, j, p.POSITION_CONTROL, [0,0,0,1], positionGain=0.1, force=[200])
 
 	def get_links(self):
+		"""Gets pybullet's links in operator body.
+		
+		Args:
+			-
+
+		Returns:
+		   	List[dict]: 'name' and 'id' for each link in the operator's pybullet body.
+
+		"""
 		links = []
 		for i in range(p.getNumJoints(self.body_id)):
 			link = {}
@@ -58,6 +59,15 @@ class Operator(Node):
 		return links
 
 	def get_link_center(self, link_name):
+		"""Gets link's center point in world frame.
+		
+		Args:
+			link_name (string): Name of the link to search.
+
+		Returns:
+		   	List[dict]: 'name' and 'id' for each link in the operator's pybullet body.
+
+		"""
 		center = None
 		index = self.get_link_index(link_name)
 		if index:
@@ -65,6 +75,15 @@ class Operator(Node):
 		return center
 
 	def get_link_index(self, link_name):
+		"""Gets link's index given it's name.
+		
+		Args:
+			link_name (string): Name of the link to search.
+
+		Returns:
+		   	int: Index of the given link.
+
+		"""
 		index = None
 		for i, link in enumerate(self.links):
 			if link['name'] == link_name:
@@ -73,10 +92,27 @@ class Operator(Node):
 		return index
 	
 	def move(self, case):
+		"""Applies a movement to the operator.
+		
+		Args:
+			case (int): Movement to apply.
+
+		Returns:
+		   	-
+
+		"""
 		self.movements.simple_move(case)
 
-	def publish_state(self, ef_names = np.array(['left_wrist','right_wrist'])):
+	def publish_state(self, ef_names=['left_wrist','right_wrist']):
+		"""Publishes the end effectors' state as a ROS message.
+		
+		Args:
+			-
 
+		Returns:
+		   	-
+
+		"""
 		for ef in ef_names:
 		   msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)

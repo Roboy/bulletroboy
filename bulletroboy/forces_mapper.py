@@ -80,6 +80,14 @@ class ForcesMapper(Node):
         return collision
     
     def map_collision_to_operator(self, roboy_collision):
+        """Maps roboy link id in collision to the operator corresponding link id
+
+        Parameters:
+            roboy_collision (Collision): The roboy collision
+
+        Returns:
+            Collision: The collision with mapped linkid
+        """
         roboy_link_name = self.get_roboy_link_name(roboy_collision.linkid)
         operator_link_name = self.link_names_map[roboy_link_name]
         operator_link_id = self.get_operator_link_id(operator_link_name)
@@ -89,12 +97,28 @@ class ForcesMapper(Node):
         return roboy_collision
 
     def get_roboy_link_name(self, roboy_link_id):
+        """Gets the roboy link name from roboy link id by calling the corresponding servicce synchronously
+
+        Parameters:
+            roboy_link_id (uint8): The link id of roboy
+
+        Returns:
+            str: The link name of the passed link id
+        """
         roboy_link_name_from_id_req = LinkNameFromId.Request()
         roboy_link_name_from_id_req.link_id = roboy_link_id
         response = self.roboy_link_name_from_id_client.call(roboy_link_name_from_id_req)
         return response
 
     def get_operator_link_id(self, operator_link_name):
+        """Gets the operator link id from the operator link name by calling the corresponding servicce synchronously
+
+        Parameters:
+            operator_link_name (str): The link name of the operator
+
+        Returns:
+            uint8: The link id of the passed link name
+        """
         operator_link_name_from_id_req = LinkIdFromName.Request()
         operator_link_name_from_id_req.link_name = operator_link_name
         response = self.roboy_link_name_from_id_client.call(operator_link_name_from_id_req)

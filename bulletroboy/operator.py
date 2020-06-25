@@ -36,7 +36,6 @@ class Operator(Node):
 		   -
 
 		"""
-		
 		for j in range(p.getNumJoints(self.body_id)):
 			p.setJointMotorControlMultiDof(self.body_id, j, p.POSITION_CONTROL, [0,0,0,1], positionGain=0.1, force=[200])
 

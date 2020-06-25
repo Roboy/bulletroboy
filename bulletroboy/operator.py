@@ -135,13 +135,13 @@ class Operator(Node):
 
 
 class Moves(Enum):
-	"""This enum class handles the posible moves the operator can performe.
+	"""This enum class handles the posible moves the operator can perform.
 
 	"""
 	SPINE_SWING = 1
-	FOREARM_ROLL = 2
-	ARM_ROLL = 3
-	SIDE_SWING = 4
+	SIDE_SWING = 2
+	FOREARM_ROLL = 3
+	ARM_ROLL = 4
 
 
 class Movements():
@@ -160,10 +160,12 @@ class Movements():
 
 		self.neck = self.op.get_link_index('neck')
 		self.chest = self.op.get_link_index('chest')
-		self.left_elbow = self.op.get_link_index('left_elbow')
-		self.right_elbow = self.op.get_link_index('right_elbow')
 		self.left_shoulder = self.op.get_link_index('left_shoulder')
 		self.right_shoulder = self.op.get_link_index('right_shoulder')
+		self.left_elbow = self.op.get_link_index('left_elbow')
+		self.right_elbow = self.op.get_link_index('right_elbow')
+		self.left_wrist = self.op.get_link_index('left_wrist')
+		self.right_wrist = self.op.get_link_index('right_wrist')
 
 	def get_EF_id(self, link_name):
 		"""Gets the id of the endEffector and the list of free revolute joints.
@@ -199,7 +201,6 @@ class Movements():
 		"""
 		# Constraint on the Chest
 		p.createConstraint(self.op.body_id, self.chest, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
-
 		# Constraint on the Neck
 		p.createConstraint(self.op.body_id, self.neck, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
 
@@ -216,18 +217,17 @@ class Movements():
 			-
 
 		"""
-		iter = 0
-		endEffectorId, freeJoints = self.get_EF_id(b'left_wrist')
+		_, freeJoints = self.get_EF_id(b'left_wrist')
+		endEffectorId = self.left_wrist
 		
 		# Chest and Neck constraints
 		if chest_constraint == True:
 			self.apply_chest_and_neck_constraints()
 		
-		while(iter <= maxIter):
+		for _ in range(maxIter):
 			jointPoses = p.calculateInverseKinematics(self.op.body_id, endEffectorId, pos)
 			for i in range(len(freeJoints)):
 				p.resetJointState(self.op.body_id, freeJoints[i], jointPoses[i])
-			iter = iter + 1
 
 	def two_end_effectors(self, positions, maxIter=100, chest_constraint=True):
 		"""Uses Inverse Kinematics to compute the JointPoses for the position of both hands.
@@ -241,22 +241,18 @@ class Movements():
 			-
 
 		"""
-		iter = 0
-
 		# Gets the hand link ids and the free revolute joints
 		_, freeJoints = self.get_EF_id(b'left_wrist')
-		endEffectorIds = [self.op.get_link_index('left_wrist'),
-                                  self.op.get_link_index('right_wrist')]
+		endEffectorIds = [self.left_wrist, self.right_wrist]
 		
 		# Chest and Neck constraints
 		if chest_constraint == True:
 			self.apply_chest_and_neck_constraints()
 
-		while(iter <= maxIter):
+		for _ in range(maxIter):
 			jointPoses = p.calculateInverseKinematics2(self.op.body_id, endEffectorIds, positions)
 			for i in range(len(freeJoints)):
 				p.resetJointState(self.op.body_id, freeJoints[i], jointPoses[i])
-			iter = iter + 1
 
 	def simple_move(self, case):
 		"""Defines a series of hardcoded movements for a direct use. (Movements Library)
@@ -273,30 +269,30 @@ class Movements():
 		if case == Moves.SPINE_SWING:
 			left_elbow_pos = 0
 			right_elbow_pos = 0
-			left_shoulder_quat = p.getQuaternionFromEuler([math.pi/2,0,0])
-			right_shoulder_quat = p.getQuaternionFromEuler([-math.pi/2,0,0])
-			chest_quat = p.getQuaternionFromEuler([0,math.sin(t),0])
-
-		elif case == Moves.FOREARM_ROLL:
-			left_elbow_pos = -(((math.sin(3*t)+1)/8) + (11/8))*math.pi
-			right_elbow_pos = -(((math.sin(3*t+math.pi)+1)/8) + (11/8))*math.pi
-			left_shoulder_quat = p.getQuaternionFromEuler([0,((-(math.cos(3*t)+1)/8) + (13/8))*math.pi,math.pi/2])
-			right_shoulder_quat = p.getQuaternionFromEuler([0,-(((math.cos(3*t)+1)/8) + (11/8))*math.pi,math.pi/2])
-			chest_quat = p.getQuaternionFromEuler([0,0,0])
-
-		elif case == Moves.ARM_ROLL:
-			left_elbow_pos = 0
-			right_elbow_pos = 0
-			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2,math.sin(t),0])
-			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2,-math.sin(t)-math.pi,0])
-			chest_quat = p.getQuaternionFromEuler([0,0,0])
+			left_shoulder_quat = p.getQuaternionFromEuler([math.pi/2, 0, 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
+			chest_quat = p.getQuaternionFromEuler([0, math.sin(t), 0])
 
 		elif case == Moves.SIDE_SWING:
 			left_elbow_pos = 0
 			right_elbow_pos = 0
-			left_shoulder_quat = p.getQuaternionFromEuler([math.pi/2,0,0])
-			right_shoulder_quat = p.getQuaternionFromEuler([-math.pi/2,0,0])
-			chest_quat = p.getQuaternionFromEuler([math.sin(t),0,0])
+			left_shoulder_quat = p.getQuaternionFromEuler([math.pi/2, 0, 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([-math.pi/2, 0, 0])
+			chest_quat = p.getQuaternionFromEuler([math.sin(t), 0, 0])
+
+		elif case == Moves.FOREARM_ROLL:
+			left_elbow_pos =  math.pi/2 + 2*math.sin(t)/3
+			right_elbow_pos = math.pi/2 - 2*math.sin(t)/3
+			left_shoulder_quat = p.getQuaternionFromEuler([0, -math.pi/2 - 3*math.cos(t)/2, math.pi/2])
+			right_shoulder_quat = p.getQuaternionFromEuler([0, math.pi/2 - 3*math.cos(t)/2, math.pi/2])
+			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
+
+		elif case == Moves.ARM_ROLL:
+			left_elbow_pos = 0
+			right_elbow_pos = 0
+			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2, math.sin(t), 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2, -math.sin(t)-math.pi, 0])
+			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
 	
 		p.setJointMotorControl2(self.op.body_id, self.left_elbow, p.POSITION_CONTROL, left_elbow_pos)
 		p.setJointMotorControl2(self.op.body_id, self.right_elbow, p.POSITION_CONTROL, right_elbow_pos)

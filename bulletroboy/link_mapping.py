@@ -1,6 +1,6 @@
 OPERATOR_TO_ROBOY_NAMES = {
-                    'human/left_hand': 'hand_left', 
-                    'human/right_hand': 'hand_right', 
+                    'left_wrist': 'hand_left', 
+                    'right_wrist': 'hand_right', 
                     }
 
 OPERATOR_TO_ROBOY_IDS = {

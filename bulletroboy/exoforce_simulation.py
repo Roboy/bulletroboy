@@ -2,16 +2,12 @@ import pybullet as p
 import numpy as np
 from numpy.linalg import norm
 
-import rclpy
-
 from roboy_simulation_msgs.msg import TendonUpdate
-from roboy_simulation_msgs.msg import Collision
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
 from bulletroboy.operator import Operator
-from geometry_msgs.msg import Vector3
-from bulletroboy.topics import TENDON_FORCE, COLLISION_EXOFORCE, CAGE_ROTATION
 
 
 class ExoForceSim(ExoForce):
@@ -36,10 +32,11 @@ class ExoForceSim(ExoForce):
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, TENDON_FORCE, self.tendon_update_listener, 10)
+				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
-				self.create_subscription(Collision, COLLISION_EXOFORCE, self.forces_update_listener, 10)
-			self.create_subscription(Float32, CAGE_ROTATION, self.cage_rotation_listener, 10)
+				# TODO: update subscriber with correct msg type
+				self.create_subscription(TendonUpdate, '/roboy/simulation/operator_forces', self.forces_update_listener, 10)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -77,23 +74,8 @@ class ExoForceSim(ExoForce):
 		self.rotate_cage(angle.data)
 
 	def forces_update_listener(self, forces):
-		rclpy.logging._root_logger.info('Updating tendon')
-		force = forces.normalforce
-		vector = forces.contactnormal
-
-		force_vec = [force * vector.x, force * vector.y, force * vector.z]
-		position_vec = [forces.position.x, forces.position.y, forces.position.z]
-
-		self.apply_force_on_op(forces.linkid, force_vec, position_vec)
-
-	def apply_force_on_op(self, linkid, force_vec, position_on_link):
-		body_id = self.operator.body_id
-		link_pos = list(p.getLinkState(body_id, linkid)[0])
-		force_position = [sum(x) for x in zip(link_pos, position_on_link)]
-		print("force_position: ", force_position)
-
-		p.applyExternalForce(body_id, linkid, force_vec, force_position, p.WORLD_FRAME)
-
+        # TODO: implement force update
+		pass
 
 	def update(self):
 		"""Update ExoForce's state after a simulation step.

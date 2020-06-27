@@ -1,7 +1,0 @@
-ROBOY_JOINT_STATE = '/roboy/simulation/joint_state'
-COLLISION_ROBOY = '/roboy/simulation/collision'
-COLLISION_EXOFORCE = '/roboy/simulation/collision'
-TENDON_FORCE = '/roboy/simulation/tendon_force'
-CAGE_STATE = '/roboy/simulation/cage_state'
-CAGE_ROTATION = '/roboy/simulation/cage_rotation'
-ENDEFFECTOR_POSE = '/roboy/simulation/operator/pose/endeffector'

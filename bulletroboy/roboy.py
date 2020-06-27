@@ -9,7 +9,6 @@ from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from bulletroboy.link_mapping import OPERATOR_TO_ROBOY_NAMES
-from bulletroboy.topics import ENDEFFECTOR_POSE, COLLISION_ROBOY, ROBOY_JOINT_STATE
 
 class BulletRoboy(Node):
     """
@@ -51,15 +50,14 @@ class BulletRoboy(Node):
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)
             self.joint_names.append(ji[1].decode("utf-8"))
-        self.joint_publisher = self.create_publisher(JointState, ROBOY_JOINT_STATE, 1)
+        self.joint_publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
         self.timer = self.create_timer(timer_period, self.joint_state_timer_callback)
         
         #Collision publisher
-        self.collision_publisher = self.create_publisher(Collision, COLLISION_ROBOY, 1)
+        self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
 
         #Operator EF pose subscriber
-        self.create_subscription(PoseStamped, ENDEFFECTOR_POSE, self.move, 10)
-
+        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
 
     def move(self, link_info):
         self.get_logger().info('Endeffector pose received: ' + link_info.header.frame_id)

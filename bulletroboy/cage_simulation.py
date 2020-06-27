@@ -39,7 +39,7 @@ def main():
     p.loadURDF("plane.urdf")
     
     human_urdf = args.model_path if args.model_path else "humanoid/humanoid.urdf"
-    human_model = p.loadURDF(human_urdf, [0, 0, 1], p.getQuaternionFromEuler([math.pi/2, 0, 0]), globalScaling=0.284, useFixedBase=True)
+    human_model = p.loadURDF(human_urdf, [0, 0, 1], p.getQuaternionFromEuler([math.pi/2, 0, 0]), globalScaling=0.284, useFixedBase=True, flags=p.URDF_USE_INERTIA_FROM_FILE)
 
     # EXOFORCE SETUP
     initial_cage_conf = CageConfiguration(args.config_path)

@@ -1,10 +1,12 @@
 import pybullet as p
 import time
 import math
+import rclpy
 import numpy as np
 
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
+from roboy_simulation_msgs.msg import TendonUpdate
 
 
 class Operator(Node):

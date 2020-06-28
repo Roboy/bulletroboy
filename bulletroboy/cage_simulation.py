@@ -5,10 +5,9 @@ import pybullet_data
 import rclpy
 from threading import Thread
 
-from bulletroboy.operator import Operator
+from bulletroboy.operator import Operator, Moves
 from bulletroboy.exoforce import CageConfiguration
 from bulletroboy.exoforce_simulation import ExoForceSim
-from bulletroboy.constants import *
 
 CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../config/cageConfiguration.xml"
 
@@ -54,7 +53,7 @@ def main():
     try:
         while True:
             exoforce.operator.publish_state()
-            #exoforce.operator.move(SPINE_SWING)
+            exoforce.operator.move(Moves.FOREARM_ROLL)
             exoforce.update()
             p.stepSimulation()
 

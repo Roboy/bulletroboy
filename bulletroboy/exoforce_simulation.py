@@ -63,7 +63,7 @@ class ExoForceSim(ExoForce):
 
 		"""
 		for tendon_sim in self.sim_tendons:
-			tendon_sim.force_id = p.addUserDebugParameter("Force in " + tendon_sim.name, 0, 500, 0)
+			tendon_sim.force_id = p.addUserDebugParameter("Force in " + tendon_sim.name, 0, 1000, 0)
 		self.cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
 	def tendon_update_listener(self, tendon_force):

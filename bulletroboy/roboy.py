@@ -41,9 +41,21 @@ class BulletRoboy(Node):
             if info[12] == b'hand_right':
                 self.endEffectors['hand_right'] = i
                 self.get_logger().info("EF hand_right id: " + str(i))
+            if info[12] == b'head':
+                self.get_logger().info("EF head id: " + str(i))
 
         #Publishers and subscribers
-
+        # link = p.getLinkState(self.body_id, 7)
+        # jointPoses = p.calculateInverseKinematics(self.body_id, 7, link[0], [0,0,0,1])
+        # for i in range(len(self.freeJoints)):
+        #     p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
+        p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=7)
+        p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=7)
+        p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=7)
+        p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=47)
+        p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=47)
+        p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=47)
+    
         #Joint state publisher
         timer_period = 0.1 # seconds
         self.joint_names = []
@@ -60,7 +72,7 @@ class BulletRoboy(Node):
         self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
 
     def move(self, link_info):
-        self.get_logger().info('Endeffector pose received: ' + link_info.header.frame_id)
+        #self.get_logger().info('Endeffector pose received: ' + link_info.header.frame_id)
 
         #process message
         ef_name = OPERATOR_TO_ROBOY_NAMES[link_info.header.frame_id]
@@ -75,6 +87,7 @@ class BulletRoboy(Node):
         threshold = 0.001
         maxIter = 100
         self.accurateCalculateInverseKinematics(ef_id, link_pos, link_orn, threshold, maxIter)
+        # p.setJointMotorControl2(self.body_id, ef_id, p.POSITION_CONTROL, link_pos)
         if(ef_name == 'hand_right'):
             self.drawDebugLine(ef_id, link_pos)
 
@@ -84,20 +97,34 @@ class BulletRoboy(Node):
         dist2 = 1e30
         # print(targetPos)
         # print(targetOrn)
-
-        while (not closeEnough and iter < maxIter):
-            jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos)#, targetOrn)
+        jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos)#, targetOrn)
             #import pdb; pdb.set_trace() 
-            for i in range(len(self.freeJoints)):
-                p.resetJointState(self.body_id, self.freeJoints[i], jointPoses[i])
-                # p.setJointMotorControlMultiDof(self.body_id, endEffectorId, p.POSITION_CONTROL, targetPosition=targetPos)
-            # p.resetJointStatesMultiDof(self.body_id, self.freeJoints, jointPoses)
-            ls = p.getLinkState(self.body_id, endEffectorId)
-            newPos = ls[4]
-            diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
-            dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
-            closeEnough = (dist2 < threshold)
-            iter = iter + 1
+            
+        for i in range(len(self.freeJoints)):
+            jointInfo = p.getJointInfo(self.body_id, i)
+            #print(jointInfo)
+            qIndex = jointInfo[3]
+            if qIndex > -1:
+                p.setJointMotorControl2(bodyIndex=self.body_id, jointIndex=i, controlMode=p.POSITION_CONTROL,
+                                    targetPosition=jointPoses[qIndex-7])
+            
+        # while (not closeEnough and iter < maxIter):
+        #     jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos)#, targetOrn)
+        #     #import pdb; pdb.set_trace() 
+            
+        #     for i in range(len(self.freeJoints)):
+        #         jointInfo = p.getJointInfo(self.body_id, i)
+        #         #print(jointInfo)
+        #         qIndex = jointInfo[3]
+        #         if qIndex > -1:
+        #             p.setJointMotorControl2(bodyIndex=self.body_id, jointIndex=i, controlMode=p.POSITION_CONTROL,
+        #                             targetPosition=jointPoses[qIndex-7])
+        #     ls = p.getLinkState(self.body_id, endEffectorId)
+        #     newPos = ls[4]
+        #     diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
+        #     dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+        #     closeEnough = (dist2 < threshold)
+        #     iter = iter + 1
         # print("link_info after reset " ,p.getLinkState(self.body_id, endEffectorId)[:2])
         return jointPoses
 
@@ -152,6 +179,7 @@ class BulletRoboy(Node):
         self.prevPose = link_pos
         self.prevPose1 = ls[4]
         self.hasPrevPose = 1  
+
     def joint_state_timer_callback(self):
 
         """Callback function for the timer, publishes joint message every time it gets triggered by timer. 

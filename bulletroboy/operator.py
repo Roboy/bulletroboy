@@ -57,6 +57,14 @@ class Operator(Node):
 		"""
 		links = []
 		for i in range(p.getNumJoints(self.body_id)):
+			name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+			if name == 'left_wrist':
+				self.get_logger().info("EF hand_left id: " + str(i))
+			if name == 'right_wrist':
+				self.get_logger().info("EF hand_right id: " + str(i))
+			if name == 'neck':
+				self.get_logger().info("EF neck id: " + str(i))
+
 			link = {}
 			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
 			link['id'] = i
@@ -113,7 +121,10 @@ class Operator(Node):
 		if(ef == 'left_wrist'):
 			p.addUserDebugLine(self.prevPose, pos_or, [0, 0, 0.3], 1, self.trailDuration)
 			self.prevPose = pos_or
-	
+		ef_id = self.get_link_index(ef)
+		p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],parentObjectUniqueId=self.body_id, parentLinkIndex=ef_id)
+		p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],parentObjectUniqueId=self.body_id, parentLinkIndex=ef_id)
+		p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],parentObjectUniqueId=self.body_id, parentLinkIndex=ef_id)
 	def publish_state(self, ef_names=['left_wrist','right_wrist']):
 		"""Publishes the end effectors' state as a ROS message.
 		
@@ -125,7 +136,7 @@ class Operator(Node):
 
 		"""
 		for ef in ef_names:
-		   self.get_logger().info('Sending Endeffector pose: ' + ef)
+		   #self.get_logger().info('Sending Endeffector pose: ' + ef)
 		   msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)
 		   link_info = p.getLinkState(self.body_id, ef_id)[4:6]

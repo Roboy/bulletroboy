@@ -304,8 +304,8 @@ class Movements():
 		elif case == Moves.ARM_ROLL:
 			left_elbow_pos = 0
 			right_elbow_pos = 0
-			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2, math.sin(t), 0])
-			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/2, -math.sin(t)-math.pi, 0])
+			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, math.sin(t), 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, -math.sin(t)-math.pi, 0])
 			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
 	
 		p.setJointMotorControl2(self.op.body_id, self.left_elbow, p.POSITION_CONTROL, left_elbow_pos)

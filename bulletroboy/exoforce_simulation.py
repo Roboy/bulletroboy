@@ -14,7 +14,7 @@ class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
 
 	"""
-	def __init__(self, cage_conf, human_model, mode):
+	def __init__(self, cage_conf, operator, mode):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
@@ -25,7 +25,7 @@ class ExoForceSim(ExoForce):
 		super().__init__(cage_conf, "exoforce_simulation")
 
 		self.mode = mode
-		self.operator = Operator(human_model)
+		self.operator = operator
 		self.init_sim()
 
 		if self.mode == "debug":

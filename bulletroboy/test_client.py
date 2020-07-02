@@ -1,21 +1,27 @@
 import rclpy
 from roboy_control_msgs.srv import GetCageEndEffectors
+from roboy_simulation_msgs.srv import OperatorHead
 import time
 
 def main():
     rclpy.init()
     node = rclpy.create_node("test_client")
-    cli = node.create_client(GetCageEndEffectors, '/roboy/configuration/end_effectors')
-
+    #cli = node.create_client(OperatorHead, '/roboy/configuration/end_effectors')
+    cli = node.create_client(OperatorHead, '/roboy/simulation/operator/initial_headpose')
     while not cli.wait_for_service(timeout_sec=1.0):
-            node.get_logger().info('service not available, waiting again...')
-
-    req = GetCageEndEffectors.Request()
+        node.get_logger().info('service not available, waiting again...')
+    #req = GetCageEndEffectors.Request()
+    req = OperatorHead.Request()
     res = cli.call_async(req)
+    print("Before rclpy.ok()")
 
     while rclpy.ok():
+        print("Before spin")
         rclpy.spin_once(node)
+        print("Waiting response")
         if res.done():
+            print("inside res.done")
+
             try:
                 response = res.result()
             except Exception as e:

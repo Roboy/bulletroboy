@@ -1,7 +1,6 @@
 
 import rclpy
 import numpy as np
-
 from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from roboy_control_msgs.msg import CageState, MuscleUnit, ViaPoint
 from geometry_msgs.msg import Point, Vector3
@@ -14,8 +13,9 @@ def main():
     node = rclpy.create_node("test_publisher")
     #force_publisher = node.create_publisher(TendonUpdate, '/roboy/simulation/tendon_force', 10)
     #angle_publisher = node.create_publisher(Float32, '/roboy/simulation/cage_rotation', 10)
-    #cage_state_publisher = node.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
+    cage_state_publisher = node.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
     collision_message_publisher = node.create_publisher(Collision, 'roboy/exoforce/collisions', 10)
+    robot_collision_publisher = node.create_publisher(Collision, '/roboy/simulation/collision', 10)
 
     while True:
 
@@ -60,6 +60,15 @@ def main():
 
         collision_message_publisher.publish(contact_info)
         exit()
+
+        robotCollision = Collision()
+        robotCollision.linkid = 1
+        robotCollision.position = Vector3()
+        robotCollision.contactnormal = Vector3()
+        robotCollision.contactdistance = float(5)
+        robotCollision.normalforce = float(3)
+
+        robot_collision_publisher.publish(robotCollision)
 
         time.sleep(0.1)
 

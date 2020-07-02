@@ -44,9 +44,13 @@ def main():
     initial_cage_conf = CageConfiguration(args.config_path)
 
     rclpy.init()
-    exoforce = ExoForceSim(initial_cage_conf, human_model, args.mode)
+    node = rclpy.create_node('exoforce_operator')
 
-    spin_thread = Thread(target=rclpy.spin, args=(exoforce,))
+    operator = Operator(human_model,node=node)
+    exoforce = ExoForceSim(initial_cage_conf, operator, args.mode, node=node)
+
+    spin_thread = Thread(target=rclpy.spin, args=(node,))
+
     spin_thread.start()
 
     # RUN SIM
@@ -58,11 +62,11 @@ def main():
             p.stepSimulation()
 
     except KeyboardInterrupt:
-        exoforce.destroy_node()
+        node.destroy_node()
         rclpy.shutdown()
 
-    exoforce.destroy_node()
-    rclpy.shutdown()
+    # exoforce.destroy_node()
+    # rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

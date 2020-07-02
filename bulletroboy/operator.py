@@ -6,32 +6,41 @@ import numpy as np
 from enum import Enum
 
 from rclpy.node import Node
+from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.msg import TendonUpdate
-
+from roboy_simulation_msgs.srv import LinkInfoFromName
 
 class Operator(Node):
 	"""This class handles the operator body and its links in the simulation.
 
 	"""
-	def __init__(self, body_id):
+	def __init__(self, body_id, node=None):
 		"""
 		Args:
 			body_id (int): Pybullet body indentifier.
 
 		"""
-		super().__init__("operator_node")		
+		if (node==None):
+			super().__init__("operator_node")	
+			self.node = self	
+		else:
+			self.node = node
+
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
-		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
 
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
-		
+
+		self.ef_publisher = self.node.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		self.link_info_service = self.node.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.get_link_info_from_name)
+		self.initial_pose_service = self.node.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
+
 		p.createConstraint(self.body_id, -1, -1, -1, p.JOINT_FIXED, [0,0,0],[0,0,0],[0,0,0],[0,0,0,1])
 		self.init_joint_motors()
-	
+
 	def init_joint_motors(self):
 		"""Initializes joint motors.
 		
@@ -45,6 +54,32 @@ class Operator(Node):
 		for j in range(p.getNumJoints(self.body_id)):
 			p.setJointMotorControlMultiDof(self.body_id, j, p.POSITION_CONTROL, [0,0,0,1], positionGain=0.1, force=[200])
 
+	def get_link_bb_dim(self, link_id):
+		"""Gets link bounding box dimensions.
+		
+		Args:
+			link_id (int): Index of the link to search.
+
+		Returns:
+			3darray[float]: x, y, and z dimensions of the bounding box.
+
+		"""
+		aabb = p.getAABB(self.body_id, link_id)
+		aabb = np.array(aabb)
+		return aabb[1] - aabb[0]
+
+	def get_link_info_from_name(self, request, response):
+		"""ROS service callback to get link info from link name.
+
+		"""
+		#self.node.get_logger().info("received call")
+		link = list(filter(lambda link: link['name'] == request.link_name, self.get_links()))
+		assert len(link) == 1
+		response.link_id = link[0]['id']
+		response.dimensions.x, response.dimensions.y, response.dimensions.z = link[0]['dims']
+		#self.node.get_logger().info("responding")
+		return response 
+
 	def get_links(self):
 		"""Gets pybullet's links in operator body.
 		
@@ -52,7 +87,7 @@ class Operator(Node):
 			-
 
 		Returns:
-		   	List[dict]: 'name' and 'id' for each link in the operator's pybullet body.
+		   	List[dict]: 'name', 'id' and 'dims' for each link in the operator's pybullet body.
 
 		"""
 		links = []
@@ -67,6 +102,7 @@ class Operator(Node):
 
 			link = {}
 			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+			link['dims'] = self.get_link_bb_dim(i)
 			link['id'] = i
 			links.append(link)
 		return links
@@ -157,6 +193,24 @@ class Operator(Node):
 		   msg.pose.orientation.w = link_orn[3]
 
 		   self.ef_publisher.publish(msg)
+
+	def initial_link_pose_callback(self, request, response):
+		self.node.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
+		head = self.get_link_index(request.link_name)
+		head_info = p.getLinkState(self.body_id, head)[:2]
+		link_pos = head_info[0]
+		link_orn = head_info[1]
+
+		response.pose.position.x = link_pos[0]
+		response.pose.position.y = link_pos[1]
+		response.pose.position.z = link_pos[2]
+
+		response.pose.orientation.x = link_orn[0]
+		response.pose.orientation.y = link_orn[1]
+		response.pose.orientation.z = link_orn[2]
+		response.pose.orientation.w = link_orn[3]
+
+		return response
 
 
 class Moves(Enum):

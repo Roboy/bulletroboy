@@ -8,6 +8,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
+from roboy_simulation_msgs.srv import LinkInfoFromId
 from bulletroboy.link_mapping import OPERATOR_TO_ROBOY_NAMES
 
 class BulletRoboy(Node):
@@ -70,6 +71,58 @@ class BulletRoboy(Node):
 
         #Operator EF pose subscriber
         self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
+
+        #Services
+
+        #LinkNameFromId service
+        self.link_info_service = self.create_service(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', self.get_link_info_from_id)
+
+    def get_links(self):
+        """Gets pybullet's links in roboy's body.
+
+        Args:
+            -
+
+        Returns:
+               List[dict]: 'name', 'id' and 'dims' for each link in roboy's pybullet body.
+
+        """
+        links = []
+        for i in range(p.getNumJoints(self.body_id)):
+            link = {}
+            link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+            link['dims'] = self.get_link_bb_dim(i)
+            link['id'] = i
+            links.append(link)
+        return links
+
+    def get_link_bb_dim(self, link_id):
+        """Gets link bounding box dimensions.
+
+        Args:
+            link_id (int): Index of the link to search.
+
+        Returns:
+            3darray[float]: x, y, and z dimensions of the bounding box.
+
+        """
+        aabb = p.getAABB(self.body_id, link_id)
+        aabb = np.array(aabb)
+        return aabb[1] - aabb[0]
+
+    def get_link_info_from_id(self, request, response):
+        """ROS service callback to get link info from link id.
+
+        """
+        #self.get_logger().info("received call")
+        response.link_name = ""
+        for link in self.get_links():
+            if link['id'] == request.link_id:
+                response.link_name = link['name']
+                response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
+                break
+        #self.get_logger().info("responding")
+        return response
 
     def move(self, link_info):
         #self.get_logger().info('Endeffector pose received: ' + link_info.header.frame_id)

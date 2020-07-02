@@ -14,7 +14,7 @@ class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
 
 	"""
-	def __init__(self, cage_conf, human_model, mode):
+	def __init__(self, cage_conf, operator, mode, node=None):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
@@ -22,17 +22,17 @@ class ExoForceSim(ExoForce):
 			mode (string): Mode in which the ExoForceSim will we executed.
 		
 		"""
-		super().__init__(cage_conf, "exoforce_simulation")
-
+		super().__init__(cage_conf, "exoforce_simulation", node=node)
+	
 		self.mode = mode
-		self.operator = Operator(human_model)
+		self.operator = operator
 		self.init_sim()
 
 		if self.mode == "debug":
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
+				self.node.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
 				self.create_subscription(Collision, '/roboy/simulation/collision', self.forces_update_listener, 10)
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)

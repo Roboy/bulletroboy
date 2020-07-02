@@ -77,8 +77,7 @@ class ForcesMapper(Node):
         self.get_logger().info('responses2')
 
         position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
-        self.get_logger().info('responses3')
-        #operator_collision.collision = self.scale_to_operator(operator_collision, position_scale)
+        operator_collision = self.scale_to_operator(operator_collision, position_scale)
         self.get_logger().info("mapping done")
         return operator_collision
 
@@ -95,7 +94,6 @@ class ForcesMapper(Node):
         roboy_link_info_from_id_req = LinkInfoFromId.Request()
         roboy_link_info_from_id_req.link_id = roboy_link_id
         response = self.call_service(self.roboy_link_info_from_id_client, roboy_link_info_from_id_req)
-        self.get_logger().info('Got roboy link info')
         return response
 
     def get_operator_link_info(self, operator_link_name):

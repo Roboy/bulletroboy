@@ -94,11 +94,11 @@ class Operator(Node):
 		for i in range(p.getNumJoints(self.body_id)):
 			name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
 			if name == 'left_wrist':
-				self.get_logger().info("EF hand_left id: " + str(i))
+				self.node.get_logger().info("EF hand_left id: " + str(i))
 			if name == 'right_wrist':
-				self.get_logger().info("EF hand_right id: " + str(i))
+				self.node.get_logger().info("EF hand_right id: " + str(i))
 			if name == 'neck':
-				self.get_logger().info("EF neck id: " + str(i))
+				self.node.get_logger().info("EF neck id: " + str(i))
 
 			link = {}
 			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')

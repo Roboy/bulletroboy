@@ -34,8 +34,9 @@ class ExoForceSim(ExoForce):
 			if self.mode == "tendon":
 				self.node.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
-				self.create_subscription(Collision, '/roboy/simulation/collision', self.forces_update_listener, 10)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+				self.node.get_logger().info('forces')
+				self.node.create_subscription(Collision, '/roboy/exoforce/collisions', self.forces_update_listener, 10)
+			self.node.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -74,12 +75,13 @@ class ExoForceSim(ExoForce):
 	
 
 	def forces_update_listener(self, forces):
+		self.node.get_logger().info('Received collision message in roboy link %i' % forces.linkid)
 		if forces.linkid == 47 or forces.linkid == 7 or forces.linkid == 37 :
-			self.get_logger().info('Received collision message in roboy link %i' % forces.linkid)
+			
 			force = forces.normalforce 
 			vector = forces.contactnormal
 			link_id = ROBOY_TO_OPERATOR_IDS[forces.linkid]
-			self.get_logger().info('Mapped to op link %i' % link_id)
+			self.node.get_logger().info('Mapped to op link %i' % link_id)
 			force_vec = [force * vector.x, force * vector.y, force * vector.z]
 			position_vec = [forces.position.x, forces.position.y, forces.position.z]
 

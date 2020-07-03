@@ -14,6 +14,7 @@ cd roboy_ws/src
 git clone https://github.com/Roboy/roboy3_models.git -b bullet
 git clone https://github.com/Roboy/roboy_communication.git -b dashing
 git clone https://github.com/Roboy/bulletroboy.git
+git checkout retargeting
 
 # Building packages in workspace
 cd roboy_ws

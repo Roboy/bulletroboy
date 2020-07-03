@@ -26,26 +26,5 @@ colcon build --symlink-install --packages-select bulletroboy roboy_simulation_ms
 source /opt/ros/eloquent/setup.bash
 cd roboy_ws
 . install/setup.bash
-```
 
-## Examples
-To be able to run any node after the package is built, you need to source the workspace overlay.
-
-Run the simulation example, where 
-- Roboy draws a predefined circle using inverse kinematics 
-- the joint states are published with ROS2.
-```bash
-# run ros2 node
-ros2 run bulletroboy roboy_simulation
-
-# in a new terminal, to see current joint states
-ros2 topic echo /roboy/simulation/joint_state
-
-# in a new terminal, to see collisions 
-ros2 topic echo /roboy/simulation/collision
-```
-
-Run the cage simulation of a human figure with attached tendons.
-```bash
-ros2 run bulletroboy cage_simulation  # see node help for execution modes
-```
+ros2 run bulletroboy retargeting

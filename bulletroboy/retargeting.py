@@ -7,12 +7,7 @@ import time
 import math
 import numpy as np
 import time
-from threading import Thread
-from operator import add
-from bulletroboy.operator import Operator
-from bulletroboy.exoforce import CageConfiguration
-from bulletroboy.exoforce_simulation import ExoForceSim
-from bulletroboy.ros2_roboy import BulletRoboy
+
 
 
 def is_valid_file(parser, arg):

@@ -1,7 +1,7 @@
 # Roboy in pybullet
 
 ## Setup 
-*Tested on Ubuntu 18.04 and Windows 10*
+*Tested on Ubuntu 18.04*
 - install python>=3.6
 - install [pybullet](https://github.com/bulletphysics/bullet3/blob/master/README.md#pybullet)
 - install [ROS2 Eloquent Elusor](https://index.ros.org/doc/ros2/Installation/Eloquent/)

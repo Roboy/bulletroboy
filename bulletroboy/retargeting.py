@@ -144,6 +144,8 @@ def main():
     for j, joint in enumerate(roboy_joints):
         p.changeVisualShape(roboy_model, joint['id'], rgbaColor=[1,1,0,1])    
 
+    counter = 0
+    distances = []
 
     # RUN SIM    
     try:
@@ -173,6 +175,15 @@ def main():
                 euclidean_distances.append(np.linalg.norm(link_positions[i] - human_link_positions[i]))
             distance = np.linalg.norm(np.array(euclidean_distances))
             print("Sum of distance bewteen feature points " + str(distance))
+            
+            distances.append(distance)
+            counter = counter+1
+            if counter is 99:
+                counter = 0
+                mean = np.mean(distances)
+                print("Mean value over 100 cycles " + str(mean))
+            
+            
                     
 
     except KeyboardInterrupt:

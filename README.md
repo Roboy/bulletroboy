@@ -28,3 +28,4 @@ cd roboy_ws
 . install/setup.bash
 
 ros2 run bulletroboy retargeting
+#Check out the file "retargeting" in roboy_ws/src/bulletroboy/bulletroboy for more insight

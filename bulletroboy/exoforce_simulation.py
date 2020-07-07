@@ -76,16 +76,13 @@ class ExoForceSim(ExoForce):
 
 	def forces_update_listener(self, forces):
 		self.node.get_logger().info('Received collision message in roboy link %i' % forces.linkid)
-		if forces.linkid == 47 or forces.linkid == 7 or forces.linkid == 37 :
 			
-			force = forces.normalforce 
-			vector = forces.contactnormal
-			link_id = ROBOY_TO_OPERATOR_IDS[forces.linkid]
-			self.node.get_logger().info('Mapped to op link %i' % link_id)
-			force_vec = [force * vector.x, force * vector.y, force * vector.z]
-			position_vec = [forces.position.x, forces.position.y, forces.position.z]
+		force = forces.normalforce 
+		vector = forces.contactnormal
+		force_vec = [force * vector.x, force * vector.y, force * vector.z]
+		position_vec = [forces.position.x, forces.position.y, forces.position.z]
 
-			self.apply_force_on_op(link_id, force_vec, position_vec)
+		self.apply_force_on_op(forces.linkid, force_vec, position_vec)
 
 	def apply_force_on_op(self, linkid, force_vec, position_on_link):
 		body_id = self.operator.body_id

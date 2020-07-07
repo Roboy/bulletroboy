@@ -57,7 +57,7 @@ def main():
     try:
         while True:
             exoforce.operator.publish_state()
-            exoforce.operator.move(Moves.ARM_ROLL)
+            #exoforce.operator.move(Moves.ARM_ROLL)
             exoforce.update()
             p.stepSimulation()
 

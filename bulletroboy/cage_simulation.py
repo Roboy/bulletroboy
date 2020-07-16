@@ -4,6 +4,7 @@ import pybullet as p
 import pybullet_data
 import rclpy
 from threading import Thread
+from rclpy.executors import MultiThreadedExecutor
 
 from bulletroboy.operator import Operator, Moves
 from bulletroboy.exoforce import CageConfiguration
@@ -44,12 +45,13 @@ def main():
     initial_cage_conf = CageConfiguration(args.config_path)
 
     rclpy.init()
-    node = rclpy.create_node('exoforce_operator')
+    operator = Operator(human_model)
+    exoforce = ExoForceSim(initial_cage_conf, operator, args.mode)
 
-    operator = Operator(human_model,node=node)
-    exoforce = ExoForceSim(initial_cage_conf, operator, args.mode, node=node)
-
-    spin_thread = Thread(target=rclpy.spin, args=(node,))
+    executor = MultiThreadedExecutor()
+    executor.add_node(operator)
+    executor.add_node(exoforce)
+    spin_thread = Thread(target=executor.spin)
 
     spin_thread.start()
 
@@ -62,11 +64,9 @@ def main():
             p.stepSimulation()
 
     except KeyboardInterrupt:
-        node.destroy_node()
+        operator.destroy_node()
+        exoforce.destroy_node()
         rclpy.shutdown()
-
-    # exoforce.destroy_node()
-    # rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

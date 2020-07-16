@@ -14,7 +14,7 @@ class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
 
 	"""
-	def __init__(self, cage_conf, operator, mode, node=None):
+	def __init__(self, cage_conf, operator, mode):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
@@ -22,7 +22,7 @@ class ExoForceSim(ExoForce):
 			mode (string): Mode in which the ExoForceSim will we executed.
 		
 		"""
-		super().__init__(cage_conf, "exoforce_simulation", node=node)
+		super().__init__(cage_conf, "exoforce_simulation")
 	
 		self.mode = mode
 		self.operator = operator
@@ -34,11 +34,11 @@ class ExoForceSim(ExoForce):
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.node.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
+				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
-				self.node.get_logger().info('forces')
-				self.node.create_subscription(Collision, '/roboy/exoforce/collisions', self.collision_listener, 10)
-			self.node.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+				self.get_logger().info('forces')
+				self.create_subscription(Collision, '/roboy/exoforce/collisions', self.collision_listener, 10)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -77,7 +77,7 @@ class ExoForceSim(ExoForce):
 	
 
 	def collision_listener(self, collision):
-		self.node.get_logger().info('Received collision message in roboy link %i' % collision.linkid)
+		self.get_logger().info('Received collision message in roboy link %i' % collision.linkid)
 			
 		force = collision.normalforce 
 		vector = collision.contactnormal

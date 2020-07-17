@@ -1,6 +1,5 @@
 import pybullet as p
 import time
-import math
 import numpy as np
 
 from rclpy.node import Node
@@ -20,7 +19,7 @@ class BulletRoboy(Node):
         self.body_id = body_id
         self.t = 0.
 
-        # DEBUGGING VARIABLES
+        # VARIABLES FOR DEBUG LINES
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]
         self.hasPrevPose = 0
@@ -70,166 +69,59 @@ class BulletRoboy(Node):
         self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
 
         #Operator EF pose subscriber
-        self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
+        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.ef_pose_callback, 10)
 
-        #Services
-
-        #LinkNameFromId service
-        self.link_info_service = self.create_service(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', self.get_link_info_from_id)
-
-    def get_links(self):
-        """Gets pybullet's links in roboy's body.
+    def ef_pose_callback(self, ef_pose):
+        """Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
 
         Args:
-            -
-
-        Returns:
-               List[dict]: 'name', 'id' and 'dims' for each link in roboy's pybullet body.
-
+            ef_pose: end effector pose received from the operator.
         """
-        links = []
-        for i in range(p.getNumJoints(self.body_id)):
-            link = {}
-            link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
-            link['dims'] = self.get_link_bb_dim(i)
-            link['id'] = i
-            links.append(link)
-        return links
-
-    def get_link_bb_dim(self, link_id):
-        """Gets link bounding box dimensions.
-
-        Args:
-            link_id (int): Index of the link to search.
-
-        Returns:
-            3darray[float]: x, y, and z dimensions of the bounding box.
-
-        """
-        aabb = p.getAABB(self.body_id, link_id)
-        aabb = np.array(aabb)
-        return aabb[1] - aabb[0]
-
-    def get_link_info_from_id(self, request, response):
-        """ROS service callback to get link info from link id.
-
-        """
-        #self.get_logger().info("received call")
-        response.link_name = ""
-        for link in self.get_links():
-            if link['id'] == request.link_id:
-                response.link_name = link['name']
-                response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
-                break
-        #self.get_logger().info("responding")
-        return response
-
-    def move(self, link_info):
-        #self.get_logger().info('Endeffector pose received: ' + link_info.header.frame_id)
+        #self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
 
         #process message
-        ef_name = OPERATOR_TO_ROBOY_NAMES[link_info.header.frame_id]
+        ef_name = OPERATOR_TO_ROBOY_NAMES[ef_pose.header.frame_id]
         ef_id = self.endEffectors[ef_name]
         
-        link_pos = [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
-        link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
-        # link_pos, link_orn = self.adapt_pos_to_roboy(link_pos, link_orn)
-        
+        link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
+        link_orn= [ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w]
 
         #move
-        threshold = 0.001
-        maxIter = 100
-        self.accurateCalculateInverseKinematics(ef_id, link_pos, link_orn, threshold, maxIter)
-        # p.setJointMotorControl2(self.body_id, ef_id, p.POSITION_CONTROL, link_pos)
+        self.move(ef_id, link_pos, link_orn)
+        
         if(ef_name == 'hand_right'):
             self.drawDebugLine(ef_id, link_pos)
 
-    def accurateCalculateInverseKinematics(self, endEffectorId, targetPos, targetOrn, threshold, maxIter):
-        closeEnough = False
-        iter = 0
-        dist2 = 1e30
-        # print(targetPos)
-        # print(targetOrn)
-        jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos)#, targetOrn)
-            #import pdb; pdb.set_trace() 
-            
+    def move(self, ef_id, target_pos, target_orn):
+        """Moves ef given to target pose.
+
+        Args:
+            ef_id: end effector to move.
+            target_pos: position to move ef to.
+            target_orn: orientation to move ef to.
+        """
+        jointPoses = p.calculateInverseKinematics(self.body_id, ef_id, target_pos)#, target_orn)           
         for i in range(len(self.freeJoints)):
             jointInfo = p.getJointInfo(self.body_id, i)
-            #print(jointInfo)
             qIndex = jointInfo[3]
             if qIndex > -1:
                 p.setJointMotorControl2(bodyIndex=self.body_id, jointIndex=i, controlMode=p.POSITION_CONTROL,
                                     targetPosition=jointPoses[qIndex-7])
             
-        # while (not closeEnough and iter < maxIter):
-        #     jointPoses = p.calculateInverseKinematics(self.body_id, endEffectorId, targetPos)#, targetOrn)
-        #     #import pdb; pdb.set_trace() 
-            
-        #     for i in range(len(self.freeJoints)):
-        #         jointInfo = p.getJointInfo(self.body_id, i)
-        #         #print(jointInfo)
-        #         qIndex = jointInfo[3]
-        #         if qIndex > -1:
-        #             p.setJointMotorControl2(bodyIndex=self.body_id, jointIndex=i, controlMode=p.POSITION_CONTROL,
-        #                             targetPosition=jointPoses[qIndex-7])
-        #     ls = p.getLinkState(self.body_id, endEffectorId)
-        #     newPos = ls[4]
-        #     diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
-        #     dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
-        #     closeEnough = (dist2 < threshold)
-        #     iter = iter + 1
-        # print("link_info after reset " ,p.getLinkState(self.body_id, endEffectorId)[:2])
         return jointPoses
 
-    def get_pos_in_world(self, pos, orn):
-        torso_pos, torso_orn = p.getBasePositionAndOrientation(self.body_id)
-        return p.multiplyTransforms(torso_pos, torso_orn, pos, orn)
+    def drawDebugLine(self, link_id, target_pos):
+        """Draws debug lines for target postions and actual positions of the link.
 
-    def adapt_pos_to_roboy(self, pos, orn):
-        new_pos = np.array(pos) - [0,0,0.2]
-        new_orn = orn
-        # pos, orn = self.get_pos_in_world(pos, orn)
-
-        # rotation = np.array([[0,1,0],[-1,0,0],[0,0,1]])
-        # new_pos = rotation.dot(np.array(pos)) - [0,0.05,0.2]
-
-        # _, new_orn = p.multiplyTransforms(new_pos, new_orn, [0,0,0],self.axis_angle_to_quaternion(0, 0, 1, 90))
-        # new_orn = self.quaternion_multiply(orn, self.axis_angle_to_quaternion(0, 0, 1, -90))
-        # new_orn = self.quaternion_multiply(new_orn, p.getQuaternionFromEuler([0, 0, 1.5708]))
-
-        return new_pos, new_orn
-
-    def axis_angle_to_quaternion(self, ax, ay, az, angle):
-        qx = ax * math.sin(angle/2)
-        qy = ay * math.sin(angle/2)
-        qz = az * math.sin(angle/2)
-        qw = math.cos(angle/2)
-        return qx, qy, qz, qw
-    
-    def quaternion_multiply(self, quaternion0, quaternion1):
-        w0, x0, y0, z0 = quaternion0
-        w1, x1, y1, z1 = quaternion1
-        return np.array([-x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
-                     x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
-                     -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
-                     x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0], dtype=np.float64)
-
-    # TODO REMOVE THIS METHOD
-    def debug_orn(self, link_info):
-        link_pos= [link_info.pose.position.x, link_info.pose.position.y, link_info.pose.position.z]
-        link_orn= [link_info.pose.orientation.x, link_info.pose.orientation.y, link_info.pose.orientation.z, link_info.pose.orientation.w]
-        p.resetBasePositionAndOrientation(self.original, link_pos, link_orn)
-
-        targetPos, targetOrn = self.get_pos_in_world(link_pos, link_orn)
-        p.resetBasePositionAndOrientation(self.target, targetPos, targetOrn)
-           
-    def drawDebugLine(self, ef_id, link_pos):
-        # drawing debug lines
-        ls = p.getLinkState(self.body_id, ef_id)
+        Args:
+            link_id: link to track.
+            target_pos: target position of the link.
+        """
+        ls = p.getLinkState(self.body_id, link_id)
         if(self.hasPrevPose):
-            p.addUserDebugLine(self.prevPose, link_pos, [0, 0, 0.3], 1, self.trailDuration)
+            p.addUserDebugLine(self.prevPose, target_pos, [0, 0, 0.3], 1, self.trailDuration)
             p.addUserDebugLine(self.prevPose1, ls[4], [1, 0, 0], 1, self.trailDuration)
-        self.prevPose = link_pos
+        self.prevPose = target_pos
         self.prevPose1 = ls[4]
         self.hasPrevPose = 1  
 

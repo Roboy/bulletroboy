@@ -25,7 +25,6 @@ class Operator(Node):
 		self.body_id = body_id
 		self.links = self.get_links()
 		self.movements = Movements(self)
-
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
 

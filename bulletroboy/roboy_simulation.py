@@ -55,7 +55,6 @@ def main():
             for  point in contactPts:
                 bb.publish_collision(point)
 
-            # bb.drawDebugLines(pos)
         except KeyboardInterrupt:
             env.stop()
             bb.destroy_node()

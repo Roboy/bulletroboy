@@ -1,6 +1,5 @@
 import pybullet as p
 import time
-import math
 import numpy as np
 
 from rclpy.node import Node
@@ -57,7 +56,7 @@ class BulletRoboy(Node):
         self.collision_publisher = self.create_publisher(Collision, '/roboy/simulation/collision', 1)
 
         #Operator EF pose subscriber
-        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.move, 10)
+        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.ef_pose_callback, 10)
 
     def ef_pose_callback(self, ef_pose):
         """Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
@@ -76,6 +75,7 @@ class BulletRoboy(Node):
 
         #move
         self.move(ef_id, link_pos, link_orn)
+        
         if(ef_name == 'hand_right'):
             self.drawDebugLine(ef_id, link_pos)
 
@@ -96,27 +96,6 @@ class BulletRoboy(Node):
                                     targetPosition=jointPoses[qIndex-7])
             
         return jointPoses
-
-
-    def adapt_pos_to_roboy(self, pos, orn):
-        new_pos = np.array(pos)
-        new_orn = orn
-        return new_pos, new_orn
-
-    def axis_angle_to_quaternion(self, ax, ay, az, angle):
-        qx = ax * math.sin(angle/2)
-        qy = ay * math.sin(angle/2)
-        qz = az * math.sin(angle/2)
-        qw = math.cos(angle/2)
-        return qx, qy, qz, qw
-    
-    def quaternion_multiply(self, quaternion0, quaternion1):
-        w0, x0, y0, z0 = quaternion0
-        w1, x1, y1, z1 = quaternion1
-        return np.array([-x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0,
-                     x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
-                     -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
-                     x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0], dtype=np.float64)
 
     def drawDebugLine(self, link_id, target_pos):
         """Draws debug lines for target postions and actual positions of the link.

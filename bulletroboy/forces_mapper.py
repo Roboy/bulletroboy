@@ -2,6 +2,7 @@ import os
 from threading import Event
 
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 import yaml 
 import rclpy
 from rclpy.node import Node
@@ -38,7 +39,7 @@ class ForcesMapper(Node):
         # Define subscriptions
         self.robot_collision_subscription = self.create_subscription(
             Collision,
-            'roboy/simulation/roboy/collisionision',
+            'roboy/simulation/roboy/collision',
             self.collision_listener,
             1)
         # Operator EF pose subscriber
@@ -96,10 +97,11 @@ class ForcesMapper(Node):
     def collision_listener(self, msg):
         """Collision subscriber handler.
         """
+        self.get_logger().info("got collision")
         operator_collision = self.map_collision_to_operator(msg)
-        self.get_logger().debug("publishing")
+        self.get_logger().info("publishing")
         self.exoforce_collision_publisher.publish(operator_collision)
-    
+
     def map_collision_to_operator(self, roboy_collision):
         """Maps roboy link id in collision to the operator corresponding link id
 
@@ -123,6 +125,16 @@ class ForcesMapper(Node):
         position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
         self.get_logger().debug("mapping done")
+
+        # link_orn = self.roboy_to_op_orientation_diff(roboy_collision.linkid)
+        # collision_force = self.rotate_force_with_quaternion(
+        #     operator_collision.contactnormal,
+        #     link_orn
+        # )
+        # operator_collision.contactnormal.x = collision_force[0]
+        # operator_collision.contactnormal.y = collision_force[1]
+        # operator_collision.contactnormal.z = collision_force[2]
+
         return operator_collision
 
     def get_roboy_link_info(self, roboy_link_id):
@@ -222,6 +234,12 @@ class ForcesMapper(Node):
                 self.roboy_to_human_link_names_map[roboy_link_name], self.operator_initial_link_pose_client)[1]         
         op_init_pose = np.array(self.operator_initial_link_poses[self.roboy_to_human_link_names_map[roboy_link_name]])
         return roboy_init_pose - op_init_pose
+
+    def rotate_force_with_quaternion(self, contact_normal, quaternion):  
+        rotation = np.array(R.from_quat(quaternion).as_matrix())
+        contact_normal_vector = np.array([contact_normal.x, contact_normal.y, contact_normal.z])
+        rotated_vector = rotation.dot(contact_normal_vector)
+        return rotated_vector
 
 def main(args=None):
     rclpy.init(args=args)

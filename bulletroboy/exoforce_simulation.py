@@ -37,7 +37,7 @@ class ExoForceSim(ExoForce):
 				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
 				self.get_logger().info('forces')
-				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions/operator/collisions', self.collision_listener, 10)
+				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 10)
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 
 	def init_sim(self):

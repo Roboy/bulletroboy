@@ -48,7 +48,7 @@ class BulletRoboy(Node):
         self.timer = self.create_timer(timer_period, self.joint_state_timer_callback)
         
         #Collision publisher
-        self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collisionision', 1)
+        self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
 
         #Operator EF pose subscriber
         self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector', self.ef_pose_callback, 10)

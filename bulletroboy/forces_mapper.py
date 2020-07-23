@@ -36,19 +36,19 @@ class ForcesMapper(Node):
         self.operator_initial_link_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', callback_group=self.callback_group)
 
         # Define subscriptions
-        self.robotCollisionSubscription = self.create_subscription(
+        self.robot_collision_subscription = self.create_subscription(
             Collision,
-            '/roboy/simulation/collision',
+            'roboy/simulation/roboy/collisionision',
             self.collision_listener,
-            10)
+            1)
         # Operator EF pose subscriber
         self.operator_movement_subscription = self.create_subscription(
             PoseStamped, 
             '/roboy/simulation/operator/pose/endeffector', 
             self.operator_movement_listener, 
-            10)
+            1)
         # Define publishers
-        self.exoforceCollisionPublisher = self.create_publisher(Collision, '/roboy/exoforce/collisions', 10)
+        self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 10)
         self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector', 10)
 
     def operator_movement_listener(self, ef_pose):
@@ -96,18 +96,9 @@ class ForcesMapper(Node):
     def collision_listener(self, msg):
         """Collision subscriber handler.
         """
-        self.get_logger().info('Received collision')
-        self.transform_from_roboy_to_operator(msg)
-
-    def transform_from_roboy_to_operator(self, collision):
-        """Calculates the collision on the human and assign it to the 'result' var.
-
-        Parameters:
-            collision (Collision):The collision that happened on the robot side.
-        """
-        operator_collision = self.map_collision_to_operator(collision)
-        self.get_logger().info("publishing")
-        self.exoforceCollisionPublisher.publish(operator_collision)
+        operator_collision = self.map_collision_to_operator(msg)
+        self.get_logger().debug("publishing")
+        self.exoforce_collision_publisher.publish(operator_collision)
     
     def map_collision_to_operator(self, roboy_collision):
         """Maps roboy link id in collision to the operator corresponding link id
@@ -118,20 +109,20 @@ class ForcesMapper(Node):
         Returns:
             Collision: The collision with mapped linkid
         """
-        self.get_logger().info('mapping start')
+        self.get_logger().debug('mapping start')
         roboy_link_info = self.get_roboy_link_info(roboy_collision.linkid)
         operator_link_name = self.roboy_to_human_link_names_map[roboy_link_info.link_name]
         operator_link_info = self.get_operator_link_info(operator_link_name)
-        self.get_logger().info('responses')
+        self.get_logger().debug('responses')
 
         operator_collision = Collision()
         operator_collision = roboy_collision
         operator_collision.linkid = operator_link_info.link_id
-        self.get_logger().info('responses2')
+        self.get_logger().debug('responses2')
 
         position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
-        self.get_logger().info("mapping done")
+        self.get_logger().debug("mapping done")
         return operator_collision
 
     def get_roboy_link_info(self, roboy_link_id):
@@ -143,7 +134,7 @@ class ForcesMapper(Node):
         Returns:
             LinkInfoFromId: The link info of the passed link id
         """
-        self.get_logger().info('Getting roboy link info')
+        self.get_logger().debug('Getting roboy link info')
         roboy_link_info_from_id_req = LinkInfoFromId.Request()
         roboy_link_info_from_id_req.link_id = roboy_link_id
         response = self.call_service(self.roboy_link_info_from_id_client, roboy_link_info_from_id_req)
@@ -159,11 +150,11 @@ class ForcesMapper(Node):
         Returns:
             LinkInfoFromName: The link info of the passed link name
         """
-        self.get_logger().info('Getting operator link info')
+        self.get_logger().debug('Getting operator link info')
         operator_link_info_from_id_req = LinkInfoFromName.Request()
         operator_link_info_from_id_req.link_name = operator_link_name
         response = self.call_service(self.operator_link_info_from_name_client, operator_link_info_from_id_req)
-        self.get_logger().info('Got operator link info')
+        self.get_logger().debug('Got operator link info')
         return response
 
     def roboy_to_operator_link_ratio(self, roboy_dimensions, operator_dimensions):
@@ -199,11 +190,11 @@ class ForcesMapper(Node):
         return collision
 
     def get_initial_link_pose(self, link_name, client):
-        self.get_logger().info('Getting initial' + link_name + ' link pose')
+        self.get_logger().debug('Getting initial' + link_name + ' link pose')
         initial_link_pose_req = GetLinkPose.Request()
         initial_link_pose_req.link_name = link_name
         response = self.call_service(client, initial_link_pose_req)
-        self.get_logger().info('service called')
+        self.get_logger().debug('service called')
 
         return [[response.pose.position.x, 
             response.pose.position.y, 

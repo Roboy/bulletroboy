@@ -15,7 +15,7 @@ def main():
     #angle_publisher = node.create_publisher(Float32, '/roboy/simulation/cage_rotation', 10)
     cage_state_publisher = node.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
     collision_message_publisher = node.create_publisher(Collision, 'roboy/exoforce/collisions', 10)
-    robot_collision_publisher = node.create_publisher(Collision, '/roboy/simulation/collision', 10)
+    robot_collision_publisher = node.create_publisher(Collision, 'roboy/simulation/roboy/collision', 10)
 
     while True:
 

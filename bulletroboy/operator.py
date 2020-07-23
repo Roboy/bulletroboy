@@ -290,55 +290,6 @@ class Movements():
 		# Constraint on the Neck
 		p.createConstraint(self.op.body_id, self.neck, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
 
-	def one_end_effector(self, pos, maxIter=100, chest_constraint=True):
-		"""Uses Inverse Kinematics to compute the JointPoses for the position of the 
-		   End-Effector defined in the Movements class.
-		
-		Args:
-		   pos (list of 3 floats): x,y,z coordinates of the point that the end_effector is to be positioned at. If the movement is to be dynamic, write the xyz vector in terms of t.
-		   maxIter (int): maximum number of iterations for the inverse kinematic computation.
-		   chest_constraint (bool): chest and neck constraints for a stable and realistic movement.
-		
-		Returns:
-			-
-
-		"""
-		_, freeJoints = self.get_EF_id(b'left_wrist')
-		endEffectorId = self.left_wrist
-		
-		# Chest and Neck constraints
-		if chest_constraint == True:
-			self.apply_chest_and_neck_constraints()
-		
-		for _ in range(maxIter):
-			jointPoses = p.calculateInverseKinematics(self.op.body_id, endEffectorId, pos)
-			for i in range(len(freeJoints)):
-				p.resetJointState(self.op.body_id, freeJoints[i], jointPoses[i])
-
-	def two_end_effectors(self, positions, maxIter=100, chest_constraint=True):
-		"""Uses Inverse Kinematics to compute the JointPoses for the position of both hands.
-		
-		Args:
-		   pos (list of 6 floats): x,y,z coordinates of the desired position of the left_hand followed by the x,y,z coordinates of the desired position of the right_hand.
-		   maxIter (int): maximum number of iterations for the inverse kinematic computation.
-		   chest_constraint (bool): chest and neck constraints for a stable and realistic movement.
-		
-		Returns:
-			-
-
-		"""
-		# Gets the hand link ids and the free revolute joints
-		_, freeJoints = self.get_EF_id(b'left_wrist')
-		endEffectorIds = [self.left_wrist, self.right_wrist]
-		
-		# Chest and Neck constraints
-		if chest_constraint == True:
-			self.apply_chest_and_neck_constraints()
-
-		for _ in range(maxIter):
-			jointPoses = p.calculateInverseKinematics2(self.op.body_id, endEffectorIds, positions)
-			for i in range(len(freeJoints)):
-				p.resetJointState(self.op.body_id, freeJoints[i], jointPoses[i])
 
 	def simple_move(self, case):
 		"""Defines a series of hardcoded movements for a direct use. (Movements Library)

@@ -10,6 +10,7 @@ from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.msg import TendonUpdate
 from roboy_simulation_msgs.srv import LinkInfoFromName
+import bulletroboy.utils as utils
 
 class Operator(Node):
 	"""This class handles the operator body and its links in the simulation.
@@ -28,8 +29,11 @@ class Operator(Node):
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
 
+		self.link_names_map = utils.load_roboy_to_human_link_name_map()
+		self.draw_LF_coordinate_systems()
+
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
-		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.get_link_info_from_name)
+		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
 
 		p.createConstraint(self.body_id, -1, -1, -1, p.JOINT_FIXED, [0,0,0],[0,0,0],[0,0,0],[0,0,0,1])
@@ -62,15 +66,18 @@ class Operator(Node):
 		aabb = np.array(aabb)
 		return aabb[1] - aabb[0]
 
-	def get_link_info_from_name(self, request, response):
-		"""ROS service callback to get link info from link name.
+	def get_link_info_from_name(self, link_name):
+		link = list(filter(lambda link: link['name'] == link_name, self.get_links()))
+		assert len(link) == 1
+		return link[0]
 
+	def link_info_from_name_callback(self, request, response):
+		"""ROS service callback to get link info from link name.
 		"""
 		#self.get_logger().info("received call")
-		link = list(filter(lambda link: link['name'] == request.link_name, self.get_links()))
-		assert len(link) == 1
-		response.link_id = link[0]['id']
-		response.dimensions.x, response.dimensions.y, response.dimensions.z = link[0]['dims']
+		link = self.get_link_info_from_name(request.link_name)
+		response.link_id = link['id']
+		response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
 		#self.get_logger().info("responding")
 		return response 
 
@@ -97,6 +104,7 @@ class Operator(Node):
 			link = {}
 			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
 			link['dims'] = self.get_link_bb_dim(i)
+			link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
 			link['id'] = i
 			links.append(link)
 		return links
@@ -145,16 +153,20 @@ class Operator(Node):
 
 		"""
 		self.movements.simple_move(case)
+	
+	def draw_LF_coordinate_systems(self):
+		for link_name in self.link_names_map.values():
+			link_id = self.get_link_index(link_name)
+			p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+			p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+			p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 
 	def drawDebugLines(self, ef, pos_or):
 		# drawing debug lines
 		if(ef == 'left_wrist'):
 			p.addUserDebugLine(self.prevPose, pos_or, [0, 0, 0.3], 1, self.trailDuration)
 			self.prevPose = pos_or
-		ef_id = self.get_link_index(ef)
-		p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],parentObjectUniqueId=self.body_id, parentLinkIndex=ef_id)
-		p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],parentObjectUniqueId=self.body_id, parentLinkIndex=ef_id)
-		p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],parentObjectUniqueId=self.body_id, parentLinkIndex=ef_id)
+	
 	def publish_state(self, ef_names=['left_wrist','right_wrist']):
 		"""Publishes the end effectors' state as a ROS message.
 		
@@ -190,10 +202,10 @@ class Operator(Node):
 
 	def initial_link_pose_callback(self, request, response):
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
-		head = self.get_link_index(request.link_name)
-		head_info = p.getLinkState(self.body_id, head)[:2]
-		link_pos = head_info[0]
-		link_orn = head_info[1]
+		link = self.get_link_info_from_name(request.link_name)
+
+		link_pos = link[0]['init_pose'][0]
+		link_orn = link[0]['init_pose'][1]
 
 		response.pose.position.x = link_pos[0]
 		response.pose.position.y = link_pos[1]
@@ -203,6 +215,7 @@ class Operator(Node):
 		response.pose.orientation.y = link_orn[1]
 		response.pose.orientation.z = link_orn[2]
 		response.pose.orientation.w = link_orn[3]
+		self.get_logger().info(f"Service Initial Link Pose: sending response for {request.link_name}")
 
 		return response
 

@@ -31,13 +31,10 @@ class BulletRoboy(Node):
         self.roboy_to_human_link_names_map = utils.load_roboy_to_human_link_name_map()
         self.human_to_roboy_link_names_map = {v: k for k, v in self.roboy_to_human_link_names_map.items()}
 
-        numJoints = p.getNumJoints(self.body_id)
         self.links = []
         self.freeJoints = []
         self.endEffectors = {}
-        self.get_urdf_info()
-
-        self.draw_LF_coordinate_systems()
+        self.init_urdf_info()
         
         #Publishers and subscribers
 
@@ -59,12 +56,12 @@ class BulletRoboy(Node):
         #Services and clients
 
         #LinkNameFromId service
-        self.link_info_service = self.create_service(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', self.get_link_info_from_id)
+        self.link_info_service = self.create_service(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', self.link_info_from_id_callback)
         
         #Initial pose service
         self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/roboy/initial_link_pose', self.initial_link_pose_callback)
 
-    def get_urdf_info(self):
+    def init_urdf_info(self):
         """Gets links, free joints, endeffectors and initial link poses in roboy's body.
         Args:
             -
@@ -120,6 +117,7 @@ class BulletRoboy(Node):
     def link_info_from_id_callback(self, request, response):
         """ROS service callback to get link info from link id.
         """
+        self.get_logger().info('Link Info From Id Service: received request for id' + str(request.link_id))
         link = self.get_link_info_from_id(request.link_id)
         response.link_name = link['name']
         response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
@@ -129,7 +127,6 @@ class BulletRoboy(Node):
         #         response.link_name = link['name']
         #         response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
         #         break
-        #self.get_logger().info("responding")
         return response
 
     def get_link_name_from_id(self, link_id):
@@ -153,17 +150,18 @@ class BulletRoboy(Node):
                 break
         return link_id
 
-    def draw_LF_coordinate_systems(self):
-        for link_name in self.human_to_roboy_link_names_map.values():
-            link_id = self.get_link_id_from_name(link_name)
-            p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
-            p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
-            p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+    def draw_LF_coordinate_systems(self, link_name):
+        link_id = self.get_link_id_from_name(link_name)
+        p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+        p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+        p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 
     def initial_link_pose_callback(self, request, response):
         self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
-        link = self.get_link_info_from_name(request.link_name)
         
+        link = self.get_link_info_from_name(request.link_name)
+        self.draw_LF_coordinate_systems(link['name'])
+
         link_pos = link['init_pose'][0]
         link_orn = link['init_pose'][1]
 
@@ -185,10 +183,10 @@ class BulletRoboy(Node):
         Args:
             ef_pose: end effector pose received from the operator.
         """
-        #self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
-
+        self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
+        
         #process message
-        ef_name = self.human_to_roboy_link_names_map[ef_pose.header.frame_id]
+        ef_name = ef_pose.header.frame_id
         ef_id = self.endEffectors[ef_name]
         
         link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
@@ -313,24 +311,3 @@ class BulletRoboy(Node):
         translation = np.array(frame_pos)
 
         return rotation.dot(position) + translation
-
-    # def get_adapted_link_orientation(self, link_id, received_link_orn):
-    #     """Adapts the target orientation to the roboy's link taking into consideration the difference 
-    #     in initial orientations.
-
-    #     Args:
-    #         link_id: roboy link id.
-    #         received_initial_link_orn: initial orientation of the received link.
-    #         received_link_orn: received target orientation.
-    #     Returns:
-    #         The adapted target orientation.
-    #     """
-    #     initial_link_orn = [0.00012690434430253104, 0.00014694453763284594, 0.7071069132088542, 0.7071066225081166]
-    #     req = GetLinkPose.Request()
-    #     req.link_name = self.roboy_to_human_link_names_map.get(self.get_link_name_from_id(link_id))
-
-    #     received_initial_link_orn = [0.7071067811864027, 2.6905248678082063e-12, 2.422615171930684e-12, 0.7071067811866923]
-
-    #     orn_diff = np.array(initial_link_orn) - np.array(received_initial_link_orn)
-
-    #     return orn_diff + received_link_orn

@@ -74,8 +74,10 @@ class ForcesMapper(Node):
         ef_pose.pose.orientation.x = link_orn[0]
         ef_pose.pose.orientation.y = link_orn[1]
         ef_pose.pose.orientation.z = link_orn[2]
-        ef_pose.pose.orientation.w = link_orn[4]
+        ef_pose.pose.orientation.w = link_orn[3]
         
+        self.get_logger().info('Publishing EF-Pose')
+
         self.ef_publisher.publish(ef_pose)
 
             
@@ -145,6 +147,7 @@ class ForcesMapper(Node):
         roboy_link_info_from_id_req = LinkInfoFromId.Request()
         roboy_link_info_from_id_req.link_id = roboy_link_id
         response = self.call_service(self.roboy_link_info_from_id_client, roboy_link_info_from_id_req)
+        self.get_logger().info("received response")
         return response
 
     def get_operator_link_info(self, operator_link_name):
@@ -220,16 +223,13 @@ class ForcesMapper(Node):
         Returns:
             The adapted target orientation.
         """
-        self.get_logger().info('getting diff')
         if self.roboy_initial_link_poses.get(roboy_link_name) == None :
-            self.get_logger().info('initial pose')
             self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)[1]
         roboy_init_pose = np.array(self.roboy_initial_link_poses[roboy_link_name])
         if self.operator_initial_link_poses.get(self.roboy_to_human_link_names_map[roboy_link_name]) == None :
             self.operator_initial_link_poses[self.roboy_to_human_link_names_map[roboy_link_name]] = self.get_initial_link_pose(
                 self.roboy_to_human_link_names_map[roboy_link_name], self.operator_initial_link_pose_client)[1]         
         op_init_pose = np.array(self.operator_initial_link_poses[self.roboy_to_human_link_names_map[roboy_link_name]])
-        self.get_logger().info('got diff')
         return roboy_init_pose - op_init_pose
 
 def main(args=None):

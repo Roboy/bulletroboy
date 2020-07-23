@@ -24,13 +24,12 @@ class Operator(Node):
 		"""
 		super().__init__("operator_node")	
 		self.body_id = body_id
-		self.links = self.get_links()
+		self.links = self.init_links()
 		self.movements = Movements(self)
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
 
 		self.link_names_map = utils.load_roboy_to_human_link_name_map()
-		self.draw_LF_coordinate_systems()
 
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
 		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
@@ -50,7 +49,7 @@ class Operator(Node):
 
 		"""
 		for j in range(p.getNumJoints(self.body_id)):
-			p.setJointMotorControlMultiDof(self.body_id, j, p.POSITION_CONTROL, [0,0,0,1], positionGain=0.1, force=[200])
+			p.setJointMotorControlMultiDof(self.body_id, j, p.POSITION_CONTROL, [0,0,0,1], positionGain=0.1, force=[10])
 
 	def get_link_bb_dim(self, link_id):
 		"""Gets link bounding box dimensions.
@@ -67,7 +66,7 @@ class Operator(Node):
 		return aabb[1] - aabb[0]
 
 	def get_link_info_from_name(self, link_name):
-		link = list(filter(lambda link: link['name'] == link_name, self.get_links()))
+		link = list(filter(lambda link: link['name'] == link_name, self.links))
 		assert len(link) == 1
 		return link[0]
 
@@ -81,7 +80,7 @@ class Operator(Node):
 		#self.get_logger().info("responding")
 		return response 
 
-	def get_links(self):
+	def init_links(self):
 		"""Gets pybullet's links in operator body.
 		
 		Args:
@@ -154,12 +153,11 @@ class Operator(Node):
 		"""
 		self.movements.simple_move(case)
 	
-	def draw_LF_coordinate_systems(self):
-		for link_name in self.link_names_map.values():
-			link_id = self.get_link_index(link_name)
-			p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
-			p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
-			p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+	def draw_LF_coordinate_systems(self, link_name):
+		link_id = self.get_link_index(link_name)
+		p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+		p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
+		p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 
 	def drawDebugLines(self, ef, pos_or):
 		# drawing debug lines
@@ -202,11 +200,12 @@ class Operator(Node):
 
 	def initial_link_pose_callback(self, request, response):
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
+
 		link = self.get_link_info_from_name(request.link_name)
+		self.draw_LF_coordinate_systems(link['name'])
 
-		link_pos = link[0]['init_pose'][0]
-		link_orn = link[0]['init_pose'][1]
-
+		link_pos = link['init_pose'][0]
+		link_orn = link['init_pose'][1]
 		response.pose.position.x = link_pos[0]
 		response.pose.position.y = link_pos[1]
 		response.pose.position.z = link_pos[2]
@@ -215,7 +214,6 @@ class Operator(Node):
 		response.pose.orientation.y = link_orn[1]
 		response.pose.orientation.z = link_orn[2]
 		response.pose.orientation.w = link_orn[3]
-		self.get_logger().info(f"Service Initial Link Pose: sending response for {request.link_name}")
 
 		return response
 

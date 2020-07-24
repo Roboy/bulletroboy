@@ -252,51 +252,69 @@ class BulletRoboy(Node):
         self.joint_publisher.publish(msg)
 
     def publish_collision(self, collision):
-        """Processes the collision message and publishes it.
+        """Publishes collision as a ROS Message.
 
         Args:
-            collision: item of the contact points list output of pybullet getcontactPoints.
-        """
-        msg = Collision()
-
-        #collision[3] == linkIndexA in PyBullet docu
-        msg.linkid = collision[3]
-
-        #collision[5] == positionOnA in PyBullet docu
-        pos_in_lf = self.get_pos_in_link_frame(collision[3], collision[5])
-        msg.position.x = pos_in_lf[0]
-        msg.position.y = pos_in_lf[1]
-        msg.position.z = pos_in_lf[2]
-
-        #collision[7] == contactNormalOnB in PyBullet docu
-        msg.contactnormal.x = collision[7][0]
-        msg.contactnormal.y = collision[7][1]
-        msg.contactnormal.z = collision[7][2]
-
-        #collision[8] == contactDistance in PyBullet docu
-        msg.contactdistance = collision[8]
-
-        #collision[9] == normalForce in PyBullet docu
-        msg.normalforce = collision[9]
-
-        self.get_logger().info("Publishing collision in link %i" % msg.linkid)
-
-        self.collision_publisher.publish(msg)
-    
-    def get_pos_in_link_frame(self, link, position):
-        """Changes the position of the collision from world's coordinates system to link frame.
-
-        Args:
-            link: link id in which a collision happened.
-            position: vector that would be changed.
+            collision (list): item of the contact points list output of pybullet getcontactPoints.
 
         Returns:
-            The position in link frame.
+            -
+
         """
+        if collision[9] > 0:
+            msg = Collision()
 
-        frame_pos = [0,0,0]
-        frame_orn = [0,0,0,0]
+            #collision[3] == linkIndexA in PyBullet docu
+            msg.linkid = collision[3]
 
+            #collision[5] == positionOnA in PyBullet docu
+            pos_in_lf = self.get_vector_in_link_frame(collision[3], collision[5])
+            msg.position.x = pos_in_lf[0]
+            msg.position.y = pos_in_lf[1]
+            msg.position.z = pos_in_lf[2]
+
+            #collision[7] == contactNormalOnB in PyBullet docu
+            normal_in_lf = self.get_vector_in_link_frame(collision[3], collision[7])
+            msg.contactnormal.x = normal_in_lf[0]
+            msg.contactnormal.y = normal_in_lf[1]
+            msg.contactnormal.z = normal_in_lf[2]
+
+            #collision[8] == contactDistance in PyBullet docu
+            msg.contactdistance = collision[8]
+
+            #collision[9] == normalForce in PyBullet docu
+            msg.normalforce = collision[9]
+
+            self.get_logger().info("Publishing collision in link %i" % msg.linkid)
+            self.draw_force(msg)
+
+            self.collision_publisher.publish(msg)
+
+    def draw_force(self, collision):
+        """Draw collision force as a debugLine.
+
+        Args:
+            collision (Collision): Collision to draw.
+
+        Returns:
+            -
+        
+        """
+        pos = np.array([collision.position.x, collision.position.y, collision.position.z])
+        direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
+        p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, self.trailDuration, self.body_id, collision.linkid)
+    
+    def get_vector_in_link_frame(self, link, vector):
+        """Transforms a vector from world's coordinates system to link frame.
+
+        Args:
+            link (int): Link id.
+            vector (array[3]): Vector in world's coordinates system.
+
+        Returns:
+            array[3]: The vector in link frame.
+        
+        """
         if(link == -1):
             frame_pos, frame_orn = (p.getBasePositionAndOrientation(self.body_id))[:2]
         else:
@@ -304,10 +322,10 @@ class BulletRoboy(Node):
             #[1] == linkWorldOrientation in PyBullet docu
             frame_pos, frame_orn = (p.getLinkState(self.body_id, link))[:2]
 
-        _, inv_frame_orn = p.invertTransform(frame_pos, frame_orn)
+        translation, rotation = p.invertTransform(frame_pos, frame_orn)
 
-        rotation = np.array(p.getMatrixFromQuaternion(inv_frame_orn))
+        rotation = np.array(p.getMatrixFromQuaternion(rotation))
         rotation = rotation.reshape(3,3)
-        translation = np.array(frame_pos)
+        translation = np.array(translation)
 
-        return rotation.dot(position) + translation
+        return rotation.dot(vector) + translation

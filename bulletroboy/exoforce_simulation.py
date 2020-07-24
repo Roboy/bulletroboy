@@ -75,9 +75,9 @@ class ExoForceSim(ExoForce):
 	def cage_rotation_listener(self, angle):
 		self.rotate_cage(angle.data)
 	
-
 	def collision_listener(self, collision):
-		self.get_logger().info('Received collision message in roboy link %i' % collision.linkid)
+		self.get_logger().info(f"Received collision: link: {collision.linkid} force: {collision.normalforce}")
+		self.draw_force(collision)
 			
 		force = collision.normalforce 
 		vector = collision.contactnormal
@@ -86,6 +86,20 @@ class ExoForceSim(ExoForce):
 		position_vec = [collision.position.x, collision.position.y, collision.position.z]
 
 		self.apply_force_on_op(collision.linkid, force_vec, position_vec)
+
+	def draw_force(self, collision):
+		"""Draw collision force as a debugLine.
+
+		Args:
+			collision (Collision): Collision to draw.
+
+		Returns:
+			-
+		
+		"""
+		pos = np.array([collision.position.x, collision.position.y, collision.position.z])
+		direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
+		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 5, self.operator.body_id, collision.linkid)
 
 	def apply_force_on_op(self, linkid, force_vec, position_on_link, visualize=False):
 		body_id = self.operator.body_id
@@ -217,10 +231,10 @@ class TendonSim():
 		force_direction /= norm(force_direction)
 
 		p.applyExternalForce(objectUniqueId=self.operator.body_id,
-			     	     linkIndex = self.operator.get_link_index(self.tendon.via_points[-1].link),
-			     	     forceObj = force * force_direction,
-			     	     posObj=self.start_location,
-			     	     flags=p.WORLD_FRAME)
+				 		 linkIndex = self.operator.get_link_index(self.tendon.via_points[-1].link),
+				 		 forceObj = force * force_direction,
+				 		 posObj=self.start_location,
+				 		 flags=p.WORLD_FRAME)
 
 	def update_lines(self):
 		"""Update debug lines position in simulation.

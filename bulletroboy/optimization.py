@@ -1,31 +1,30 @@
 import numpy as np
-from os import path
+import os
+import yaml
 from scipy.optimize import minimize
-from utils import CageConfiguration
 from time import time
-import matplotlib.pyplot as plt
-# This import registers the 3D projection, but is otherwise unused.
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
-def force_decomposition(force_vector, force_point, tendons, attachment_points):
+
+def force_decomposition(force_vector, force_point, attachment_points):
     """ This function decomposes a force vector to different tendon vectors.
 
     Args:
         force_vector (numpy.array):         The force that shall be simulated.
         force_point (numpy.array):          The coordinates where this force vector is attached to.
-        tendons (dict):                     Containing information about the tendons
         attachment_points (numpy.array):    The coordinates of the attachment points of the tendons on the cage.
 
     Example:
         The tendons dictionary contains information about the tendon Id and the max force for each tendon.
 
     Returns:
-        forces (numpy.array):               The force each tendon has to pull in order to simulate the desired force.
-                                            returns None if force decomposition fails.
+        success :                           Returns True if it is possible to decompose the forces.
+                                            Returns False if it is not possible to decompose the forces
+                                            under the given conditions.
     """
     # start = time()
+    min_force = OPTIMIZATION_CONFIG.get('MinForce')
+    max_force = OPTIMIZATION_CONFIG.get('MaxForce')
     force_direction = force_vector / np.linalg.norm(force_vector)
-    max_forces = [int(tendons[id]['max_force']) for id in tendons]
     tendon_vectors = (attachment_points - np.array([force_point]).T).T
     tendon_directions = tendon_vectors / np.linalg.norm(tendon_vectors, axis=1, keepdims=True)
 
@@ -33,180 +32,184 @@ def force_decomposition(force_vector, force_point, tendons, attachment_points):
     # Only the tendons for which a positive value is returned will participate in the division of strength
     projections = tendon_directions.dot(force_direction)
     active_tendons = tendon_directions[projections > 0]
-    active_max_forces = np.asarray(max_forces)[projections > 0]
-
-    forces = None
+    success = False
     if len(active_tendons) > 0:
         # the idea is to distribute the forces onto every tendon equally while the following conditions hold."
         #   1. the sum over all tendon forces and the simulated force must become zero"
         #   2. the force in each tendon may not exceed a maximal force"
         #   3. the force must be non-negative since a tendon is not able to push but only pull"
+        #   4. the force in each tendon shall be bigger then a minimal force
         initial_forces = np.random.rand(len(active_tendons)) * np.mean(force_vector)
         constraints = [{'type': 'eq', 'fun': lambda x: np.sum(active_tendons.T * np.array([x]), axis=1) - force_vector},
-                       {'type': 'ineq', 'fun': lambda x: active_max_forces - x},
-                       {'type': 'ineq', 'fun': lambda x: x}]
-        solution = minimize(lambda x: np.sqrt(np.sum(np.square(x))),
-                            initial_forces,
-                            constraints=constraints,
-                            options={'maxiter': 200})
+                       {'type': 'ineq', 'fun': lambda x: max_force - x},
+                       {'type': 'ineq', 'fun': lambda x: x},
+                       {'type': 'ineq', 'fun': lambda x: x - min_force}]
+        solution = minimize(lambda x: np.sqrt(np.sum(np.square(x))), initial_forces,
+                            constraints=constraints, options={'maxiter': 100})
 
-        if solution.success:
-            forces = {id: force for id, force in zip(tendons, solution.x) if force > MIN_FORCE}
-    # else:
-    #     # print(f"WARNING: Cannot decompose the forces: [ {solution.message} ]")
+        success = solution.success
 
-    #print(f"Time: {time() - start} s")
-    return forces
+    # print(f"force decomposition Time:\t{time() - start} s")
+    # force decomposition Time: 1e-05s - 1s
+    return success
 
-def get_attachment_points(radius, height, angles, joint):
+
+def get_attachment_points(cage, joint_right=True):
+
     """ This function calculates the attachment points for the tendons.
 
     Args:
-        radius (numpy.array):               The radius of the upper part of the cage and the lower part of the cage
-        height (numpy.array):               The height of the cage
-        angles (numpy.array):               Angles of the tendons with respect to the x-axis
-        joint (str):                        Information about the left or right wrist
+        cage (tupel):                       Tupel containing the following parameters (floor_radius, ceiling_radius,
+                                            height, floor_alpha, floor_beta, ceiling_alpha, ceiling_beta)
+            floor_radius (float):           The radius of the lower part of the cage
+            ceiling_radius (float):         The radius of the upper part of the cage
+            height (float):                 The height of the cage.
+            floor_alpha (float):            Angles of the tendons with respect to the x-axis.
+            floor_beta (float):             Angles of the tendons with respect to the x-axis.
+            ceiling_alpha (float):          Angles of the tendons with respect to the x-axis.
+            ceiling_beta (float):           Angles of the tendons with respect to the x-axis.
+
+        joint_right (bool):                 Information about the left or right wrist
 
     Returns:
         attachment_points (numpy.array):    The force each tendon has to pull in order to simulate the desired force.
                                             returns None if force decomposition fails.
         """
 
+    # start = time()
+
+    floor_radius = cage[0]
+    ceiling_radius = cage[1]
+    height = cage[2]
+    floor_alpha = cage[3]
+    floor_beta = cage[4]
+    ceiling_alpha = cage[5]
+    ceiling_beta = cage[6]
+
+    shoulder_left = np.array(OPTIMIZATION_CONFIG.get('ShoulderLeft'))
+    shoulder_right = np.array(OPTIMIZATION_CONFIG.get('ShoulderRight'))
+    hip_left = np.array(OPTIMIZATION_CONFIG.get('HipLeft'))
+    hip_right = np.array(OPTIMIZATION_CONFIG.get('HipRight'))
+
     # The degree of freedom of some points is fixed, assuming that this can prevent the tendons from getting tangled.
     attachment_points = np.zeros((3, 8))
-    attachment_points[0, 0] = radius[0]                     # attached in front of the person
-    attachment_points[0, 1] = radius[0] * np.cos(angles[0])
-    attachment_points[0, 2] = radius[0] * np.cos(angles[1])
-    attachment_points[0, 3] = 0                             # attached on the person
-    attachment_points[0, 4] = radius[1]
-    attachment_points[0, 5] = radius[1] * np.cos(angles[2])
-    attachment_points[0, 6] = radius[1] * np.cos(angles[3])
-    attachment_points[0, 7] = 0                             # attached on the person
-    attachment_points[2, 0:3] = height                      # upper tendons
-    attachment_points[2, 3] = 1.5                           # shoulder tendon
-    attachment_points[2, 4:7] = 0                           # lower tendons
-    attachment_points[2, 7] = 0.75                          # hip tendon
+    attachment_points[0, 0] = floor_radius          # attached in front of the person
+    attachment_points[0, 1] = floor_radius * np.cos(floor_alpha)
+    attachment_points[0, 2] = floor_radius * np.cos(floor_beta)
+    attachment_points[0, 4] = ceiling_radius        # attached in front of the person
+    attachment_points[0, 5] = ceiling_radius * np.cos(ceiling_alpha)
+    attachment_points[0, 6] = ceiling_radius * np.cos(ceiling_beta)
+    attachment_points[2, 0:3] = height              # ceiling tendons
+    attachment_points[2, 4:7] = 0                   # floor tendons
 
-    if joint == "human/left_wrist":
-        attachment_points[1, 0] = 0
-        attachment_points[1, 1] = radius[0] * np.sin(angles[0])
-        attachment_points[1, 2] = radius[0] * np.sin(angles[1])
-        attachment_points[1, 3] = 0
-        attachment_points[1, 4] = 0
-        attachment_points[1, 5] = radius[1] * np.sin(angles[2])
-        attachment_points[1, 6] = radius[1] * np.sin(angles[3])
-        attachment_points[1, 7] = 0
-    elif joint == "human/right_wrist":
-        attachment_points[1, 0] = 0
-        attachment_points[1, 1] = -radius[0] * np.sin(angles[2])
-        attachment_points[1, 2] = -radius[0] * np.sin(angles[3])
-        attachment_points[1, 3] = 0
-        attachment_points[1, 4] = 0
-        attachment_points[1, 5] = -radius[1] * np.sin(angles[2])
-        attachment_points[1, 6] = -radius[1] * np.sin(angles[3])
-        attachment_points[1, 7] = 0
+    if joint_right:
+        attachment_points[:, 3] = shoulder_right    # attached on the person
+        attachment_points[:, 7] = hip_right         # attached on the person
+        attachment_points[1, 1] = floor_radius * np.sin(floor_alpha)
+        attachment_points[1, 2] = floor_radius * np.sin(floor_beta)
+        attachment_points[1, 5] = ceiling_radius * np.sin(ceiling_alpha)
+        attachment_points[1, 6] = ceiling_radius * np.sin(ceiling_beta)
+    elif not joint_right:
+        attachment_points[:, 3] = shoulder_left     # attached on the person
+        attachment_points[:, 7] = hip_left          # attached on the person
+        attachment_points[1, 1] = -floor_radius * np.sin(floor_alpha)
+        attachment_points[1, 2] = -floor_radius * np.sin(floor_beta)
+        attachment_points[1, 5] = -ceiling_radius * np.sin(ceiling_alpha)
+        attachment_points[1, 6] = -ceiling_radius * np.sin(ceiling_beta)
+
+    # print(f"get attachment points Time:\t{time() - start} s")
+    # get attachment points Time:   3e-05 s
+
     return attachment_points
 
-def workspace_desired(step_size=0.2, joint="human/left_wrist"):
+
+def workspace_desired(joint_right=True):
+
     """ This function calculates the ergonomic workspace of the arm of a standing person
 
     Args:
-        step_size (float):                  The size of the iteration steps
-        joint (str):                        Information about the left or right wrist
+        joint_right (bool):                 Information about the left or right wrist
 
     Returns:
-        ws_array_desired (numpy.array):     A binary array where each one indicates that the vector
+        ws_desired_array (numpy.array):     A binary array where each one indicates that the vector
                                             corresponding to this index is inside the workspace.
         ws_desired (numpy.array):           A 3xm matrix where each row corresponds to the x, y or z coordinate
                                             respectively of all vectors inside the workspace.
    """
     # start = time()
-    x, y, z = np.meshgrid(np.arange(-step_size, 1 + step_size, step_size),
-                          np.arange(-1, 1 + step_size, step_size),
-                          np.arange( 0, 2 + step_size, step_size))
 
+    total_height = OPTIMIZATION_CONFIG.get('TotalHeight')  # in m
+    floor_height = OPTIMIZATION_CONFIG.get('FloorHeight')  # in m
+    width = OPTIMIZATION_CONFIG.get('Width')  # in m
+    step_size = OPTIMIZATION_CONFIG.get('StepSize')
+
+    # build mesh grid of the sample space
+    x, y, z = np.meshgrid(np.arange(-step_size, width + step_size, step_size),
+                          np.arange(-width, width + step_size, step_size),
+                          np.arange(floor_height, total_height + step_size, step_size))
+
+    # reshape the mesh grid and rearrange it to a matrix with the xyz coordinates of every sample
     xx = x.reshape(-1)
     yy = y.reshape(-1)
     zz = z.reshape(-1)
-    ws_array_desired = np.array([])
     ws = np.array([xx, yy, zz])
-    for i, (mx, my, mz) in enumerate(zip(xx, yy, zz)):
-        point = np.array([mx, my, mz])
-        if joint == "human/left_wrist":
-            if 0.2 <= np.linalg.norm(point - np.array([0, 0, 1])) <= 0.704 and mx >= 0 and my >= 0:
-                ws_array_desired = np.append(ws_array_desired, 1)
-            else:
-                ws_array_desired = np.append(ws_array_desired, 0)
-        elif joint == "human/right_wrist":
-            if 0.2 <= np.linalg.norm(point - np.array([0, 0, 1])) <= 0.704 and mx >= 0 and my <= 0:
-                ws_array_desired = np.append(ws_array_desired, 1)
-            else:
-                ws_array_desired = np.append(ws_array_desired, 0)
 
-    ii = np.where(ws_array_desired == 1)[0]
+    radius_small_grip_space = OPTIMIZATION_CONFIG.get('RadiusSmallGripSpace')
+    radius_large_grip_space = OPTIMIZATION_CONFIG.get('RadiusLargeGripSpace')
+
+    shoulder_left = np.array(OPTIMIZATION_CONFIG.get('ShoulderLeft'))
+    shoulder_right = np.array(OPTIMIZATION_CONFIG.get('ShoulderRight'))
+
+    ws_desired_array = np.array([])
+
+    # Since the workspace is oriented around the shoulder of the Pilot, the shoulder determines the offset.
+    if joint_right:
+        offset = shoulder_right
+    else:
+        offset = shoulder_left
+
+    for point in ws.T:
+        x = point[0]
+        y = point[1]
+        if radius_small_grip_space <= np.linalg.norm(point - offset) <= radius_large_grip_space and offset[0] <= x:
+            if joint_right and offset[1] <= y:
+                ws_desired_array = np.append(ws_desired_array, 1)
+            elif not joint_right and y <= offset[1]:
+                ws_desired_array = np.append(ws_desired_array, 1)
+            else:
+                ws_desired_array = np.append(ws_desired_array, 0)
+        else:
+            ws_desired_array = np.append(ws_desired_array, 0)
+    ii = np.where(ws_desired_array == 1)[0]
     ws_desired = ws[:, ii]
-    # print(f"Time: {time() - start} s")
-    return ws_array_desired, ws_desired
 
-def workspace_feasible(step_size=0.2, joint="human/left_wrist", radius=np.array([1., 1.]), height=2.,
-                       angles=np.array([np.pi/3, 2*np.pi/3]), forces=np.array([[100., 0., 0.]])):
-    """ This function calculates the feasible workspace of the arm of a standing person
+    # print(f"workspace desired Time:\t{time() - start} s")
+    # workspace desired Time: 0.02 s
 
-    Args:
-        step_size (float):                  The size of the iteration steps
-        joint (str):                        Information about the left or right wrist
-        radius (numpy.array):               The radius of the upper part of the cage and the lower part of the cage
-        height (numpy.array):               The height of the cage
-        angles (numpy.array):               Angles of the tendons with respect to the x-axis
-        forces (numpy.array):               The forces applied to the wrist
+    return ws_desired_array, ws_desired
 
-    Returns:
-        ws_array_feasible (numpy.array):    A binary array where each one indicates that the vector
-                                            corresponding to this index is inside the workspace.
-        ws_feasible (numpy.array):          A 3xm matrix where each row corresponds to the x, y or z coordinate
-                                            respectively of all vectors inside the workspace.
-    """
 
-    # start = time()
-    attachment_point = get_attachment_points(radius, height, angles, joint)
-    x, y, z = np.meshgrid(np.arange(-step_size, 1 + step_size, step_size),
-                          np.arange(-1, 1 + step_size, step_size),
-                          np.arange( 0, 2 + step_size, step_size))
-
-    xx = x.reshape(-1)
-    yy = y.reshape(-1)
-    zz = z.reshape(-1)
-    ws = np.array([xx, yy, zz])
-    ws_array_feasible = np.ones_like(xx)
-
-    # If the workspace for multiple force vectors is calculated, the effort to calculate the ith workspace for the ith
-    # vector can be reduced by only using coordinates for the i-1 th vector where a force decomposition was able.
-    for n, force in enumerate(forces):
-        print(force)
-        for i, (mx, my, mz) in enumerate(zip(xx, yy, zz)):
-            if ws_array_feasible[i] == 1:
-                point = np.array([mx, my, mz])
-                decomposed_forces = force_decomposition(force, point, tendon_groups[joint], attachment_point)
-                if decomposed_forces:
-                    ws_array_feasible[i] = 1
-                else:
-                    ws_array_feasible[i] = 0
-
-    ii = np.where(ws_array_feasible == 1)[0]
-    ws_feasible = ws[:, ii]
-    # print(f"Time: {time() - start} s")
-    return ws_array_feasible, ws_feasible
-
-def cost_function(param):
+def loss_function(x, *params):
     """ This function calculates the L-2 distance loss between a desired and a feasible workspace
 
     Args:
-        param (numpy.array):                Vector containing position parameters for the tendon attachment points
+        x (numpy.array):                    Vector containing position parameters for the tendon attachment points
+        params (tupel):                     Tupel containing the following parameters (ws, ws_desired, forces)
+            ws_desired_array (numpy.array): Binary vector, with ones where the coordinates for the workspace are within
+                                            the desired workspace
+            forces (numpy.array):           Matrix of force vectors, the optimizer is optimizing with
 
     Example:
-        the first two entries in the param vector represent the radius
-        the third value represents the height of the cage
-        the rest of the parameters correspond to the angles of the tendon attachment with respect to the x-axis
+        x[0] = FloorRadius
+        x[1] = CeilingRadius
+        x[2] = Height
+        x[3] = FloorAlpha
+        x[4] = FloorBeta
+        x[5] = CeilingAlpha
+        x[6] = CeilingBeta
+
+        ws_desired_array = 1 for x,y and z within the desired workspace
+        ws_desired_array = 0 for x,y or z outside the desired workspace
 
     Returns:
         loss (float):                       scalar value describing the L-2 distance between a desired and
@@ -217,133 +220,155 @@ def cost_function(param):
     # all matching coordinates are weighted positively.
 
     # start = time()
-    radius = param[0:2]
-    height = param[2]
-    angles = param[3::]
-    forces = np.array([[100, 0, 0],
+
+    floor_radius = x[0]
+    ceiling_radius = x[1]
+    height = x[2]
+    floor_alpha = x[3]
+    floor_beta = x[4]
+    ceiling_alpha = x[5]
+    ceiling_beta = x[6]
+
+    ws_desired_array = params[0]
+    forces = params[1]
+    direction_preference = params[2]
+
+    total_height = OPTIMIZATION_CONFIG.get('TotalHeight')
+    floor_height = OPTIMIZATION_CONFIG.get('FloorHeight')
+    width = OPTIMIZATION_CONFIG.get('Width')
+    step_size = OPTIMIZATION_CONFIG.get('StepSize')
+
+    # build mesh for the sample space
+    x, y, z = np.meshgrid(np.arange(-step_size, width + step_size, step_size),
+                          np.arange(-width, width + step_size, step_size),
+                          np.arange(floor_height, total_height + step_size, step_size))
+
+    xx = x.reshape(-1)
+    yy = y.reshape(-1)
+    zz = z.reshape(-1)
+    ws = np.array([xx, yy, zz]) # change mesch into coordinate vectors.
+
+    cage = (floor_radius, ceiling_radius, height, floor_alpha, floor_beta, ceiling_alpha, ceiling_beta)
+    attachment_point = get_attachment_points(cage)
+    loss = 0
+    ws_feasible = np.ones(ws.shape[1])
+    for force in forces:
+
+        force_norm = force / np.linalg.norm(force)                  # normalized force vector
+        force_direction = np.dot(force_norm, direction_preference)  # projection on the direction preference vector
+        force_direction_positive = np.sqrt(force_direction ** 2)    # eliminate the sign
+
+        for i, point in enumerate(ws.T):
+            if ws_feasible[i] == 1 and force_decomposition(force, point, attachment_point):
+                ws_feasible[i] = 1
+            else:
+                ws_feasible[i] = 0
+        ws_feasible_array = (ws_feasible + (ws_feasible * ws_desired_array * 14)) / 15
+        loss = loss + np.dot((ws_desired_array - ws_feasible_array), (ws_desired_array - ws_feasible_array)) \
+                    + force_direction_positive
+
+    # print(f"loss function time: {time() - start} s")
+    # loss function time: ~67s
+    print(f"Loss:{loss}")
+    # Loss: ~ 20
+    return loss
+
+
+__name__ = "__main__"
+
+if __name__ == "__main__":
+    start = time()
+
+    # initial values
+    with open(r'Optimization_Config.yaml') as File:
+        OPTIMIZATION_CONFIG = yaml.load(File, Loader=yaml.FullLoader)
+    StepSize = OPTIMIZATION_CONFIG.get('StepSize')              # in m
+
+    FloorRadius = OPTIMIZATION_CONFIG.get('FloorRadius')        # in m
+    CeilingRadius = OPTIMIZATION_CONFIG.get('CeilingRadius')    # in m
+    Height = OPTIMIZATION_CONFIG.get('Height')                  # in m
+    FloorAlpha = OPTIMIZATION_CONFIG.get('FloorAlpha')          # in rad
+    FloorBeta = OPTIMIZATION_CONFIG.get('FloorBeta')            # in rad
+    CeilingAlpha = OPTIMIZATION_CONFIG.get('CeilingAlpha')      # in rad
+    CeilingBeta = OPTIMIZATION_CONFIG.get('CeilingBeta')        # in rad
+    MaxForce = OPTIMIZATION_CONFIG.get('MaxForce')              # in N
+    MinForce = OPTIMIZATION_CONFIG.get('MinForce')              # in N
+    TotalHeight = OPTIMIZATION_CONFIG.get('TotalHeight')        # in m
+    FloorHeight = OPTIMIZATION_CONFIG.get('FloorHeight')        # in m
+    Width = OPTIMIZATION_CONFIG.get('Width')                    # in m
+
+    # todo: set Force vectors in N. The optimizer uses these vectors to determine the work space in which these vectors
+    #       can be decomposed into the tendons
+    Forces = np.array([[100, 0, 0],     # in N
                        [0, 100, 0],
                        [0, 0, 100],
                        [-100, 0, 0],
                        [0, -100, 0],
                        [0, 0, -100]])
 
-    ws_array_feasible, _ = workspace_feasible(radius=radius, height=height, angles=angles, forces=forces)
-    ws_array_feasible = (ws_array_feasible + (ws_array_feasible * WS_ARRAY_DESIRED * 9)) / 10
-    loss = np.dot((WS_ARRAY_DESIRED - ws_array_feasible), (WS_ARRAY_DESIRED - ws_array_feasible))
-    # print(f"Time: {time() - start} s")
-    print(loss)
-    print(param)
-    return loss
+    # todo: set the direction preference vector to sport a certain direction in the optimization
+    # note: if the direction vector is set to all zero the optimizer will not value any force direction stronger.
+    DirectionPreference = np.array([0, 0, 1])   # give mor value to a workspace that is able to simulate vertical forces
 
-#__main__
+    WsDesiredArray, _ = workspace_desired()
 
-MIN_FORCE = 0.01
+    # Initial values
+    X0 = np.array([FloorRadius, CeilingRadius, Height, FloorAlpha, FloorBeta, CeilingAlpha, CeilingBeta])
+    Params = (WsDesiredArray, Forces, DirectionPreference)
 
-#   GETTING TENDONS FROM CAGE CONFIGURATION FILE
-cage_conf_file_path = path.dirname(path.realpath(__file__)) + "/cageConfiguration.xml"
-cage_conf = CageConfiguration(cage_conf_file_path)
+    # initializing the simplex
+    Low = -10
+    High = 10
+    Size = [8, 7]
+    Seed = np.random.randint(0, 100)
+    np.random.seed(Seed)
+    Random = np.random.randint(Low, High, Size)
+    InitialSimplex = (np.ones(Size) * X0 + Random * X0 / 100).round(4)
 
-tendon_groups = {}
-for muscle in cage_conf.muscle_units:
-    attachment_point = muscle['viaPoints'][-1]
-    link_name = attachment_point['link']
-    if link_name not in tendon_groups:
-        tendon_groups[link_name] = {}
-    tendon_groups[link_name][muscle['id']] = {}
-    tendon_groups[link_name][muscle['id']]['point'] = muscle['viaPoints'][0]['point']
-    tendon_groups[link_name][muscle['id']]['max_force'] = muscle['parameters']['max_force']
+    Solver = 'Nelder-Mead'
+    Solution = minimize(loss_function, X0, args=Params, method=Solver,
+                        options={'maxiter': 100, 'initial_simplex': InitialSimplex, 'xatol': 0.001, 'fatol': 0.001})
+    Radius = Solution.x[0:2]
+    Height = Solution.x[2]
+    Angles = Solution.x[3::]
 
-# print(f"\n{len(tendon_groups)} joints with tendons attached found in ({cage_conf_file_path}):")
-# for joint in tendon_groups:
-#    print(f"\t- {joint}\t: {len(tendon_groups[joint])} tendons {[id for id in tendon_groups[joint]]}")
-# print("\n")
+    print(Solution)
 
-# Predefining the desired workspace saves allot of computing effort because is doesn't have
-# to be calculated over and over again.
-WS_ARRAY_DESIRED, _ = workspace_desired()
+    k = 0
+    saved = False
+    while not saved:
+        if not any(f"{Solver}_test_{k}.txt" in s for s in os.listdir(os.getcwd())):
+            with open(f"{Solver}_test_{k}.txt", "wt") as text_file:
+                text_file.write(f"loss:\n{Solution.fun}\n"
+                                f"Number of iterations:\n{Solution.nit}\n"
+                                f"radius:\n{Radius}\n"
+                                f"height:\n{Height}\n"
+                                f"angles:\n{Angles}\n"
+                                f"step size:{StepSize}\n"
+                                f"seed:{Seed}\n"
+                                f"Initial simplex:\n{InitialSimplex}")
+            text_file.close()
+            saved = True
+        else:
+            k += 1
+            saved = False
 
-# we might need a constraint on the angles so that they do not enter a unreachable space.
-# The theory says that the Nelder-Mead algorithm moves towards the cheapest solution of a symplex,
-# and since the solution before reaching a colinearity is more likely to be cheaper than
-# reaching colinearity, the occurrence of this solution is very low.
-# for this theory to hold it is very important to initialize al parameters carefully.
-# constraint = [{'type': 'ineq', 'fun': lambda x: x}]
-initial_forces = np.array([1, 1, 2, np.pi/3, 2*np.pi/3, np.pi/3, 2*np.pi/3])
+    AttachmentPointsLeft = get_attachment_points(Solution.x, joint_right=False).tolist()
+    AttachmentPointsRight = get_attachment_points(Solution.x, joint_right=True).tolist()
+    k = 0
+    saved = False
+    while not saved:
+        if not any(f"attachment_points_{Solver}_test_{k}.yaml" in s for s in os.listdir(os.getcwd())):
+            OptimizationSolution = {'AttachmentPointsLeft': AttachmentPointsLeft, 'Seed': Seed, 'StepSize': StepSize,
+                                    'AttachmentPointsRight': AttachmentPointsRight, 'Width': Width,
+                                    'FloorHeight': FloorHeight, 'MaxForce': MaxForce, 'MinForce': MinForce,
+                                    'TotalHeight': TotalHeight}
+            with open(f"attachment_points_{Solver}_test_{k}.yaml", 'w') as file:
+                documents = yaml.dump(OptimizationSolution, file)
+            saved = True
+        else:
+            k += 1
+            saved = False
 
-# Changing the radius and the height might change the most.
-# During the calculations I noticed that the algorithm would not change the angles,
-# so initializing the symplex with differing angles could cause the algorithm to start changing the angles.
-one = np.pi/180
-initial_simplex = np.array([[1.05, 1.05, 2.05, np.pi/3 + one, 2*np.pi/3 + one, np.pi/3 - one, 2*np.pi/3 - one],
-                            [1.05, 1.05, 2.05, np.pi/3 - one, 2*np.pi/3 - one, np.pi/3 + one, 2*np.pi/3 + one],
-                            [0.95, 0.95, 1.95, np.pi/3 + one, 2*np.pi/3 + one, np.pi/3 - one, 2*np.pi/3 - one],
-                            [0.05, 0.95, 1.95, np.pi/3 - one, 2*np.pi/3 - one, np.pi/3 + one, 2*np.pi/3 + one],
-                            [0.95, 1.05, 2.05, np.pi/3, 2*np.pi/3, np.pi/3, 2*np.pi/3],
-                            [0.95, 0.95, 2.05, np.pi/3, 2*np.pi/3, np.pi/3, 2*np.pi/3],
-                            [1.05, 1.05, 1.95, np.pi/3, 2*np.pi/3, np.pi/3, 2*np.pi/3],
-                            [1.05, 0.95, 2.05, np.pi/3, 2*np.pi/3, np.pi/3, 2*np.pi/3]])
-
-# I would use the Nelder-Mead algorithm since it is a very robust algorithm and it
-# dose not relies on the derivative of the function. Since this algorithm is known to
-# converge not so fast, I chose to set the number of maximal iterations to 100
-# solver = 'BFGS'
-solver = 'Nelder-Mead'
-# solver = 'CG'
-# solver = 'Newton-CG'
-# solver = 'L-BFGS-B'
-# solver = 'TNC'
-# solver = 'COBYLA'
-# solver = 'SLSQP'
-# solver = 'trust-constr'
-# xatol (the absolut error in xopt between iterations that is acceptable for convergence is set
-# to 0.001 which is equivalent to 1mm
-solution = minimize(cost_function, initial_forces, method='Nelder-Mead',
-                    options={'maxiter': 100, 'initial_simplex': initial_simplex, 'xatol': 0.001})
-
-# Get the position parameters that minimize the cost function.
-print(solution)
-radius = solution.x[0:2]
-height = solution.x[2]
-angles = solution.x[3::]
-
-# Display workspace under certain conditions
-forces = np.array([[100, 0, 0],
-                   [0, 100, 0],
-                   [0, 0, 100],
-                   [-100, 0, 0],
-                   [0, -100, 0],
-                   [0, 0, -100]])
-
-# Get the feasible part of the left workspace and the desired version of the right workspace
-ws_array_feasible_L, ws_feasible_L = workspace_feasible(step_size=0.1, forces=forces, radius=radius, height=height,
-                                                        angles=angles)
-ws_array_desired_R, ws_desired_R = workspace_desired(step_size=0.1, joint="human/right_wrist")
-
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-data_L = np.array(ax.scatter(ws_feasible_L[0, :], ws_feasible_L[1, :], ws_feasible_L[2, :],
-                             c='c', label='left ws feasible')._offsets3d)
-data_R = np.array(ax.scatter(ws_desired_R[0, :], ws_desired_R[1, :], ws_desired_R[2, :],
-                             c='r', label='right ws desired')._offsets3d)
-ax.legend()
-ax.set_xlabel('X axis')
-ax.set_ylabel('Y axis')
-ax.set_zlabel('Z axis')
-plt.title(f"Workspace {solver}")
-n = 1
-data = {n: [data_L, data_R]}
-
-# Save test data to .txt file
-text_file = open(f"../../Desktop/{solver}_02.txt", "wt")
-n = text_file.write(f"solver:\n{solver}\n"
-                    f"loss:\n{solution.fun}\n"
-                    f"Number of iterations:\n{solution.nit}\n"
-                    f"radius:\n{radius}\n"
-                    f"height:\n{height}\n"
-                    f"angles:\n{angles}\n"
-                    f"Image Data:"
-                    f"\ndata_L\n{data[n][0]}\ndata_R\n{data[n][0]}\n"
-                    f"Initial simplex:\n{initial_simplex}")
-text_file.close()
-plt.show()
+    print(f"main time: {time() - start} s")
+    # main time: 10 000s = 2,77h

@@ -2,7 +2,7 @@ import pybullet as p
 import numpy as np
 from numpy.linalg import norm
 
-from roboy_simulation_msgs.msg import TendonUpdate, Collision
+from roboy_simulation_msgs.msg import Collision as CollisionMsg
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
@@ -31,13 +31,11 @@ class ExoForceSim(ExoForce):
 
 		if self.mode == "debug":
 			self.init_debug_parameters()
-		else:
-			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
-			elif self.mode == "forces":
-				self.get_logger().info('forces')
-				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 10)
+		elif self.mode in ["tendon", "forces"]:
+			self.create_subscription(CollisionMsg, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 10)
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+		else:
+			raise Exception(f"Mode [{mode}] not supported!")
 	
 	def init_movement_params(self):
 		'''Initializes movement buttons of the GUI.
@@ -96,18 +94,6 @@ class ExoForceSim(ExoForce):
 			self.current_move = Moves.CATCH
 		self.operator.move(self.current_move)
 	
-	def tendon_update_listener(self, tendon_force):
-		"""Tendon force uppdate listener.
-
-		Args:
-			tendon_force (TendonUpdate): Tendon update message.
-
-		Returns:
-			-
-		
-		"""
-		self.update_tendon(tendon_force.tendon_id, tendon_force.force)
-
 	def cage_rotation_listener(self, angle):
 		"""Cage rotation listener.
 
@@ -119,27 +105,41 @@ class ExoForceSim(ExoForce):
 		
 		"""
 		self.rotate_cage(angle.data)
-
-	def collision_listener(self, collision):
+	
+	def collision_listener(self, collision_msg):
 		"""Collision listener.
 
 		Args:
-			collision (Collision): Collision message.
+			collision_msg (Collision): Collision message.
 
 		Returns:
 			-
 		
 		"""
-		self.get_logger().info(f"Received collision: link: {collision.linkid} force: {collision.normalforce}", throttle_duration_sec=1)
-		self.draw_force(collision)
+		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
+		
+		self.draw_force(collision_msg)
+		if self.mode == "tendon":
+			collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
+			frame_pos, frame_orn = p.getBasePositionAndOrientation(self.operator.body_id)[:2]
+			translation, rotation = p.invertTransform(frame_pos, frame_orn)
+
+			rotation = np.array(p.getMatrixFromQuaternion(rotation)).reshape(3,3)
+			translation = np.array(translation)
+
+			force_direction = rotation.dot(collision_direction) + translation
+			forces = self.decompose(collision_msg.linkid, collision_msg.normalforce, force_direction)
 			
-		force = collision.normalforce 
-		vector = collision.contactnormal
+			for id in forces:
+				self.update_tendon(id, forces[id])
+		elif self.mode == "forces":
+			force = collision_msg.normalforce
+			vector = collision_msg.contactnormal
 
-		force_vec = [force * vector.x, force * vector.y, force * vector.z]
-		position_vec = [collision.position.x, collision.position.y, collision.position.z]
-
-		p.applyExternalForce(self.operator.body_id, collision.linkid, force_vec, position_vec, p.LINK_FRAME)
+			force_vec = [force * vector.x, force * vector.y, force * vector.z]
+			position_vec = [collision_msg.position.x, collision_msg.position.y, collision_msg.position.z]
+			
+			p.applyExternalForce(self.operator.body_id, collision_msg.linkid, force_vec, position_vec, p.LINK_FRAME)
 
 	def draw_force(self, collision):
 		"""Draw collision force as a debugLine.
@@ -190,7 +190,7 @@ class ExoForceSim(ExoForce):
 		   	-
 
 		"""
-		self.get_muscle_unit(id).force = force
+		self.get_muscle_unit(id).set_motor_force(force)
 		if force > 0: self.get_tendon_sim(id).apply_force(force)
 
 	def get_tendon_sim(self, id):
@@ -224,7 +224,8 @@ class TendonSim():
 		"""
 		self.tendon = tendon
 		self.name = "Tendon " + str(self.tendon.id)
-		self.debug_color = [0,0,255]
+		self.inactive_color = [0,0,255]
+		self.active_color = [255,0,0]
 
 		self.operator = operator
 
@@ -248,10 +249,10 @@ class TendonSim():
 		start = self.start_location
 		for via_point in self.tendon.via_points:
 			point = self.operator.get_link_center(via_point.link) + via_point.link_point
-			segment = p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2)
+			segment = p.addUserDebugLine(start, point, lineColorRGB=self.inactive_color, lineWidth=2)
 			self.segments.append(segment)
 			start = point
-		self.debug_text = p.addUserDebugText(self.name, self.start_location, textColorRGB=self.debug_color, textSize=0.8)
+		self.debug_text = p.addUserDebugText(self.name, self.start_location, textColorRGB=self.inactive_color, textSize=0.8)
 
 	def apply_force(self, force):
 		"""Applies force to the simulated operator.
@@ -264,7 +265,6 @@ class TendonSim():
 
 		Todo:
 			* apply forces to all via points, currently the force is applied to the last via point (end effector)
-			* move method to the Operator class
 
 		"""
 		force_direction = np.asarray(self.start_location) - np.asarray(self.tendon.via_points[-1].world_point)
@@ -289,7 +289,7 @@ class TendonSim():
 		start = self.start_location
 		for segment, via_point in zip(self.segments, self.tendon.via_points):
 			point = via_point.world_point
-			p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2, replaceItemUniqueId=segment)
+			color = self.active_color if self.tendon.motor.force > 0 else self.inactive_color
+			p.addUserDebugLine(start, point, lineColorRGB=color, lineWidth=2, replaceItemUniqueId=segment)
 			start = point
-		p.addUserDebugText(self.name, self.start_location, self.debug_color, textSize=0.8, replaceItemUniqueId=self.debug_text)
-
+		p.addUserDebugText(self.name, self.start_location, color, textSize=0.8, replaceItemUniqueId=self.debug_text)

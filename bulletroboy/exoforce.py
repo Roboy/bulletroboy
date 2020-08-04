@@ -12,6 +12,9 @@ from roboy_control_msgs.msg import CageState, EndEffector, ViaPoint as ViaPointM
 from roboy_control_msgs.srv import GetCageEndEffectors
 from geometry_msgs.msg import Point
 
+from .force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
+
+MAX_COLLISION_FORCE = 100
 
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
@@ -466,3 +469,27 @@ class ExoForce(Node, ABC):
 			response.end_effectors.append(end_effector_msg)
 
 		return response
+
+	def decompose(self, link_id, collision_force, collision_direction):
+		"""Decomposes force applied to link in operator.
+		
+		Args:
+			link_id (int): Link id of the operator where the force is applied.
+			collision_force (float): Value of the applied force.
+			collision_direction array[3]: Force direction in world space coordinates.
+
+		Returns:
+		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
+
+		"""
+		collision_force = np.clip(collision_force, 0 , MAX_COLLISION_FORCE)
+		ef = decompose_force_link_to_ef(link_id)
+		start = p.getLinkState(1,5)[0]
+		p.addUserDebugLine(start, start + collision_direction, [1, 1, 0.3], 2, 5)
+
+		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef)) if link_id is not None else {}
+		
+		if not forces:
+			self.get_logger().warn(f"Force was not dceomposed: force[{collision_force}] ef[{ef}] [{msg}]")
+
+		return forces

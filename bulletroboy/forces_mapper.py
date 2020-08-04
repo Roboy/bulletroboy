@@ -83,12 +83,27 @@ class ForcesMapper(Node):
 
             
     def call_service(self, client, msg):
+        """Calls a client synchnrnously passing a msg and returns the response
+
+        Parameters:
+            client (RosClient): The client used to communicate with the server
+            msg (Object): A server msg to send to the server as a request
+
+        Returns:
+            response (Object): A response msg from the server
+        """
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("service not available, waiting again...")
         response = client.call(msg)
         return response
 
     def call_service_async(self, client, req):
+        """Calls a client asynchnrnously passing a msg and assigns it to the future global var
+
+        Parameters:
+            client (RosClient): The client used to communicate with the server
+            req (Object): A server msg to send to the server as a request
+        """
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("service not available, waiting again...")
         self.future = self.client.call_async(req)
@@ -125,15 +140,6 @@ class ForcesMapper(Node):
         position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
         self.get_logger().debug("mapping done")
-
-        # link_orn = self.roboy_to_op_orientation_diff(roboy_collision.linkid)
-        # collision_force = self.rotate_force_with_quaternion(
-        #     operator_collision.contactnormal,
-        #     link_orn
-        # )
-        # operator_collision.contactnormal.x = collision_force[0]
-        # operator_collision.contactnormal.y = collision_force[1]
-        # operator_collision.contactnormal.z = collision_force[2]
 
         return operator_collision
 
@@ -202,6 +208,15 @@ class ForcesMapper(Node):
         return collision
 
     def get_initial_link_pose(self, link_name, client):
+        """Gets initial link pose for a link using its name
+
+        Parameters: 
+            link_name (String): The name of the link
+            client (RosClient): The client used to pass a request and get a response from service
+
+        Returns:
+            A array containing two vectors, first is position and second is orientations
+        """
         self.get_logger().debug('Getting initial' + link_name + ' link pose')
         initial_link_pose_req = GetLinkPose.Request()
         initial_link_pose_req.link_name = link_name
@@ -234,12 +249,6 @@ class ForcesMapper(Node):
                 self.roboy_to_human_link_names_map[roboy_link_name], self.operator_initial_link_pose_client)[1]         
         op_init_pose = np.array(self.operator_initial_link_poses[self.roboy_to_human_link_names_map[roboy_link_name]])
         return roboy_init_pose - op_init_pose
-
-    def rotate_force_with_quaternion(self, contact_normal, quaternion):  
-        rotation = np.array(R.from_quat(quaternion).as_matrix())
-        contact_normal_vector = np.array([contact_normal.x, contact_normal.y, contact_normal.z])
-        rotated_vector = rotation.dot(contact_normal_vector)
-        return rotated_vector
 
 def main(args=None):
     rclpy.init(args=args)

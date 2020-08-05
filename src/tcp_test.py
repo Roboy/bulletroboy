@@ -6,12 +6,13 @@ rospy.init_node("tcptest")
 joint_cmd = []
 active_joints = []
 
-p.connect(p.TCP, "192.168.2.111",6667)
-p.syncBodyInfo()
-p.syncUserData()
+cl = p.connect(p.TCP, "192.168.2.114",6667)
+p.syncBodyInfo(cl)
+p.resetSimulation()
+# p.syncUserData(cl)
 rospy.loginfo("num bodies: " + str(p.getNumBodies()))
-rospy.loginfo("num joints: " + str(p.getNumJoints(0)))
-roboy = p.loadURDF('C:\\Users\\alion\\Documents\\code\\bullet3\\examples\\pybullet\\gym\\pybullet_data\\upper_body\\model.urdf', basePosition=(0.0,0.7,0.4), useFixedBase=1)
+rospy.loginfo("num joints: " + str(p.getNumJoints(1)))
+roboy = p.loadURDF('C:\\Users\\roboy\\Documents\\code\\roboy3_models\\upper_body\\bullet.urdf', useFixedBase=1)
 joints = []
 for i in range(p.getNumJoints(roboy)):
     print(p.getJointInfo(roboy, i)[1].decode("utf-8"))
@@ -22,11 +23,15 @@ def joint_target_cb(msg):
     global joint_cmd, active_joints
     # rospy.loginfo_throttle(1, msg.name)
     active = []
+    positions = []
     for i in range(len(msg.name)):
         j = msg.name[i]
+        if "head" in j:
+            continue
         try:
             idx = joints.index(j)
             active.append(idx)
+            positions.append(msg.position[i])
             # p.setJointMotorControl2(roboy,
             #                         idx,
             #                         p.POSITION_CONTROL,
@@ -39,7 +44,7 @@ def joint_target_cb(msg):
         # except:
         #     rospy.logwarn("Joint %s was not found in pybullet model"%j)
     active_joints = active
-    joint_cmd = msg.position
+    joint_cmd = positions
     # try:
     #     p.setJointMotorControlArray(roboy,
     #                             active,
@@ -56,8 +61,8 @@ def joint_target_cb(msg):
 
 joint_target_sub = rospy.Subscriber("/cardsflow_joint_states", JointState, joint_target_cb)
 r = rospy.Rate(100)
-p.setGravity(0,0,-10)
-p.setRealTimeSimulation(1)
+#p.setGravity(0,0,-10)
+#p.setRealTimeSimulation(1)
 while not rospy.is_shutdown():
     r.sleep()
     p.setJointMotorControlArray(roboy,

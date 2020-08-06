@@ -39,7 +39,7 @@ class BulletRoboy(Node):
         #Publishers and subscribers
 
         #Joint state publisher
-        timer_period = 0.1 # seconds
+        timer_period = 0.01 # seconds
         self.joint_names = []
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)
@@ -72,26 +72,39 @@ class BulletRoboy(Node):
         link['name'] = 'torso'
         link['dims'] = self.get_link_bb_dim(-1)
         link['init_pose'] = p.getBasePositionAndOrientation(self.body_id)
-        link['id'] = -1
+        link['id'] = -1 
         self.links.append(link)
         for i in range(p.getNumJoints(self.body_id)):
             info = p.getJointInfo(self.body_id,i)
             link = {}
-            link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+            name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+            link['name'] = name
             link['dims'] = self.get_link_bb_dim(i)
             link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
             link['id'] = i
             self.links.append(link)
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
-            if info[12] == b'hand_left':
+            if name == 'hand_left':
                 self.endEffectors['hand_left'] = i
                 self.get_logger().info("EF hand_left id: " + str(i))
-            if info[12] == b'hand_right':
+                self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
+                                                + "   " + str(link['init_pose'][1][1]) 
+                                                + "   " + str(link['init_pose'][1][2]) 
+                                                + "   " + str(link['init_pose'][1][3]))
+                
+            if name == 'hand_right':
                 self.endEffectors['hand_right'] = i
                 self.get_logger().info("EF hand_right id: " + str(i))
-            if info[12] == b'head':
+                self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
+                                                + "   " + str(link['init_pose'][1][1]) 
+                                                + "   " + str(link['init_pose'][1][2]) 
+                                                + "   " + str(link['init_pose'][1][3]))
+            if name == 'head':
                 self.get_logger().info("EF head id: " + str(i))
+
+            if name in self.roboy_to_human_link_names_map.keys():
+                self.draw_LF_coordinate_system(i) 
 
     def get_link_bb_dim(self, link_id):
         """Gets link bounding box dimensions.
@@ -105,11 +118,23 @@ class BulletRoboy(Node):
         return aabb[1] - aabb[0]
 
     def get_link_info_from_name(self, link_name):
+        """Returns the item in the links list that contains information about the link with the name given.
+        Args:
+            link_name: name of link
+        Returns:
+            link from links list
+        """
         link = list(filter(lambda link: link['name'] == link_name, self.links))
         assert len(link) == 1
         return link[0]
 
     def get_link_info_from_id(self, link_id):
+        """Returns the item in the links list that contains information about the link with the id given.
+        Args:
+            link_id: id of link
+        Returns:
+            link from links list
+        """
         link = list(filter(lambda link: link['id'] == link_id, self.links))
         assert len(link) == 1
         return link[0]
@@ -122,11 +147,6 @@ class BulletRoboy(Node):
         response.link_name = link['name']
         response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
                 
-        # for link in self.links:
-        #     if link['id'] == request.link_id:
-        #         response.link_name = link['name']
-        #         response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
-        #         break
         return response
 
     def get_link_name_from_id(self, link_id):
@@ -138,6 +158,7 @@ class BulletRoboy(Node):
                 link_name = link['name']
                 break
         return link_name
+
     def get_link_id_from_name(self, link_name):
         """Returns link id from link name.
         """
@@ -150,18 +171,28 @@ class BulletRoboy(Node):
                 break
         return link_id
 
-    def draw_LF_coordinate_systems(self, link_name):
-        link_id = self.get_link_id_from_name(link_name)
+    def draw_LF_coordinate_system(self, link_id):
+        """Draws the coordinate system of the link.
+        Args: 
+            link_id : id of the link.
+        """
         p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
         p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
         p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 
     def initial_link_pose_callback(self, request, response):
+        """Callback function of the initial link pose service.
+
+        Args:
+            request: name of the link.
+            response: pose of the link (position and orientation).
+        Returns:
+            the response
+        """
         self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
         
         link = self.get_link_info_from_name(request.link_name)
-        self.draw_LF_coordinate_systems(link['name'])
-
+        
         link_pos = link['init_pose'][0]
         link_orn = link['init_pose'][1]
 
@@ -302,7 +333,7 @@ class BulletRoboy(Node):
         """
         pos = np.array([collision.position.x, collision.position.y, collision.position.z])
         direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
-        p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, self.trailDuration, self.body_id, collision.linkid)
+        p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 2, self.body_id, collision.linkid)
     
     def get_vector_in_link_frame(self, link, vector):
         """Transforms a vector from world's coordinates system to link frame.

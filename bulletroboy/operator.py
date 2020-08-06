@@ -24,18 +24,18 @@ class Operator(Node):
 		"""
 		super().__init__("operator_node")	
 		self.body_id = body_id
+		self.link_names_map = utils.load_roboy_to_human_link_name_map()
 		self.links = self.init_links()
 		self.movements = Movements(self)
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
-
-		self.link_names_map = utils.load_roboy_to_human_link_name_map()
 
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
 		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
 
 		p.createConstraint(self.body_id, -1, -1, -1, p.JOINT_FIXED, [0,0,0],[0,0,0],[0,0,0],[0,0,0,1])
+		p.createConstraint(self.body_id, self.get_link_index('chest'), self.body_id, -1, p.JOINT_FIXED, [0, 0, 90], [0, 0, 1], [0, 0, 1])
 		self.init_joint_motors()
 
 	def init_joint_motors(self):
@@ -93,19 +93,28 @@ class Operator(Node):
 		links = []
 		for i in range(p.getNumJoints(self.body_id)):
 			name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
-			if name == 'left_wrist':
-				self.get_logger().info("EF hand_left id: " + str(i))
-			if name == 'right_wrist':
-				self.get_logger().info("EF hand_right id: " + str(i))
-			if name == 'neck':
-				self.get_logger().info("EF neck id: " + str(i))
-
 			link = {}
-			link['name'] = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+			link['name'] = name
 			link['dims'] = self.get_link_bb_dim(i)
 			link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
 			link['id'] = i
 			links.append(link)
+			if name == 'left_wrist':
+				self.get_logger().info("EF hand_left id: " + str(i))
+				self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
+												+ "   " + str(link['init_pose'][1][1]) 
+												+ "   " + str(link['init_pose'][1][2]) 
+												+ "   " + str(link['init_pose'][1][3]))
+			if name == 'right_wrist':
+				self.get_logger().info("EF hand_right id: " + str(i))
+				self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
+												+ "   " + str(link['init_pose'][1][1]) 
+												+ "   " + str(link['init_pose'][1][2]) 
+												+ "   " + str(link['init_pose'][1][3]))
+			if name == 'neck':
+				self.get_logger().info("Neck id: " + str(i))
+			if name in self.link_names_map.values():
+				self.draw_LF_coordinate_systems(i) 
 		return links
 
 	def get_link_center(self, link_name):
@@ -153,8 +162,11 @@ class Operator(Node):
 		"""
 		self.movements.simple_move(case)
 	
-	def draw_LF_coordinate_systems(self, link_name):
-		link_id = self.get_link_index(link_name)
+	def draw_LF_coordinate_systems(self, link_id):
+		"""Draws the coordinate system of the link.
+		Args: 
+			link_id : id of the link.
+		"""
 		p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 		p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 		p.addUserDebugLine([0,0,0],[0,0,0.3],[0,0,1],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
@@ -202,7 +214,6 @@ class Operator(Node):
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
 
 		link = self.get_link_info_from_name(request.link_name)
-		self.draw_LF_coordinate_systems(link['name'])
 
 		link_pos = link['init_pose'][0]
 		link_orn = link['init_pose'][1]
@@ -265,11 +276,11 @@ class Movements():
 		numJoints = p.getNumJoints(self.op.body_id)
 
 		for i in range(numJoints):
-		    info = p.getJointInfo(self.op.body_id,i)
-		    if info[2] == p.JOINT_REVOLUTE:
-		        freeJoints.append(i)
-		    if info[12] == link_name:
-		        endEffectorId = i
+			info = p.getJointInfo(self.op.body_id,i)
+			if info[2] == p.JOINT_REVOLUTE:
+				freeJoints.append(i)
+			if info[12] == link_name:
+				endEffectorId = i
 
 		return endEffectorId, freeJoints
 
@@ -328,7 +339,7 @@ class Movements():
 			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, math.sin(t), 0])
 			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, -math.sin(t)-math.pi, 0])
 			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
-	
+
 		p.setJointMotorControl2(self.op.body_id, self.left_elbow, p.POSITION_CONTROL, left_elbow_pos)
 		p.setJointMotorControl2(self.op.body_id, self.right_elbow, p.POSITION_CONTROL, right_elbow_pos)
 		p.setJointMotorControlMultiDof(self.op.body_id, self.left_shoulder, p.POSITION_CONTROL, left_shoulder_quat)

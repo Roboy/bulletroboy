@@ -64,14 +64,13 @@ class ForcesMapper(Node):
         self.get_logger().info('got frame-id' + ef_pose.header.frame_id)
 
         ef_pose.header.frame_id = self.human_to_roboy_link_names_map[ef_pose.header.frame_id]
-
-        link_orn = self.roboy_to_op_orientation_diff(
-                            ef_pose.header.frame_id) + np.array([
-                                ef_pose.pose.orientation.x, 
-                                ef_pose.pose.orientation.y, 
-                                ef_pose.pose.orientation.z, 
-                                ef_pose.pose.orientation.w])
-
+        
+        orn = [ef_pose.pose.orientation.x, 
+                ef_pose.pose.orientation.y, 
+                ef_pose.pose.orientation.z, 
+                ef_pose.pose.orientation.w]
+        
+        link_orn = self.adapt_orientation_to_roboy(ef_pose.header.frame_id, orn)
         ef_pose.pose.orientation.x = link_orn[0]
         ef_pose.pose.orientation.y = link_orn[1]
         ef_pose.pose.orientation.z = link_orn[2]
@@ -80,19 +79,19 @@ class ForcesMapper(Node):
         self.get_logger().info('Publishing EF-Pose')
 
         self.ef_publisher.publish(ef_pose)
-
-            
+          
     def call_service(self, client, msg):
+        """Wait for service until it is available then call it synchronously.
+        Args:
+            client: the client created for this purpose
+            msg: request for the service
+        Returns: 
+            the response of the service.
+        """
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("service not available, waiting again...")
         response = client.call(msg)
         return response
-
-    def call_service_async(self, client, req):
-        while not client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("service not available, waiting again...")
-        self.future = self.client.call_async(req)
-
 
     def collision_listener(self, msg):
         """Collision subscriber handler.
@@ -125,15 +124,6 @@ class ForcesMapper(Node):
         position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
         self.get_logger().debug("mapping done")
-
-        # link_orn = self.roboy_to_op_orientation_diff(roboy_collision.linkid)
-        # collision_force = self.rotate_force_with_quaternion(
-        #     operator_collision.contactnormal,
-        #     link_orn
-        # )
-        # operator_collision.contactnormal.x = collision_force[0]
-        # operator_collision.contactnormal.y = collision_force[1]
-        # operator_collision.contactnormal.z = collision_force[2]
 
         return operator_collision
 
@@ -202,6 +192,13 @@ class ForcesMapper(Node):
         return collision
 
     def get_initial_link_pose(self, link_name, client):
+        """Processes request and response of initial link pose service.
+        Args:
+            link_name: name of link 
+            client: client to use to call service (roboy side/operator side)
+        Returns:
+            processed response in a list containing position vector and orientaion quaternion
+        """
         self.get_logger().debug('Getting initial' + link_name + ' link pose')
         initial_link_pose_req = GetLinkPose.Request()
         initial_link_pose_req.link_name = link_name
@@ -216,30 +213,18 @@ class ForcesMapper(Node):
             response.pose.orientation.z, 
             response.pose.orientation.w]]
 
-    def roboy_to_op_orientation_diff(self, roboy_link_name):
-        """Adapts the target orientation to the roboy's link taking into consideration the difference 
-        in initial orientations.
+    def adapt_orientation_to_roboy(self, roboy_link_name, orientation):
+        """adapts the orientation received to roboy's link according to roboy's and operators initial links.
 
         Args:
-            link_id: target link id.
-            received_link_orn: received target orientation.
+            roboy_link_name: link name according to roboy's urfd.
+            orientation: received target orientation from operator.
         Returns:
             The adapted target orientation.
         """
-        if self.roboy_initial_link_poses.get(roboy_link_name) == None :
-            self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)[1]
-        roboy_init_pose = np.array(self.roboy_initial_link_poses[roboy_link_name])
-        if self.operator_initial_link_poses.get(self.roboy_to_human_link_names_map[roboy_link_name]) == None :
-            self.operator_initial_link_poses[self.roboy_to_human_link_names_map[roboy_link_name]] = self.get_initial_link_pose(
-                self.roboy_to_human_link_names_map[roboy_link_name], self.operator_initial_link_pose_client)[1]         
-        op_init_pose = np.array(self.operator_initial_link_poses[self.roboy_to_human_link_names_map[roboy_link_name]])
-        return roboy_init_pose - op_init_pose
+        # TODO: fix orientaion problem
+        return orientation
 
-    def rotate_force_with_quaternion(self, contact_normal, quaternion):  
-        rotation = np.array(R.from_quat(quaternion).as_matrix())
-        contact_normal_vector = np.array([contact_normal.x, contact_normal.y, contact_normal.z])
-        rotated_vector = rotation.dot(contact_normal_vector)
-        return rotated_vector
 
 def main(args=None):
     rclpy.init(args=args)

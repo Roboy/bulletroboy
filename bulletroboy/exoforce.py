@@ -318,26 +318,22 @@ class ExoForce(Node, ABC):
 	"""Main ExoForce class. It handles the muscle units and the cage itself.
 	
 	"""
-	def __init__(self, cage_conf, node_name, node=None):
+	def __init__(self, cage_conf, node_name):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
 			node_name (string): Node name for ROS node's initialization.
 		
 		"""
-		if node is None:
-			super().__init__(node_name)
-			self.node = self
-		else:
-			self.node = node	
+		super().__init__(node_name)
 		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'])
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
 		self.init_end_effectors()
 
-		self.cage_state_publisher = self.node.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
-		self.initial_conf_service = self.node.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
+		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
+		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
 	
 	def init_end_effectors(self):
 		"""Initializes end effectors list.

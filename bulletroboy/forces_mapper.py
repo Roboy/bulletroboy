@@ -81,12 +81,14 @@ class ForcesMapper(Node):
         self.ef_publisher.publish(ef_pose)
           
     def call_service(self, client, msg):
-        """Wait for service until it is available then call it synchronously.
-        Args:
-            client: the client created for this purpose
-            msg: request for the service
-        Returns: 
-            the response of the service.
+        """Calls a client synchnrnously passing a msg and returns the response
+
+        Parameters:
+            client (RosClient): The client used to communicate with the server
+            msg (Object): A server msg to send to the server as a request
+
+        Returns:
+            response (Object): A response msg from the server
         """
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info("service not available, waiting again...")
@@ -192,12 +194,14 @@ class ForcesMapper(Node):
         return collision
 
     def get_initial_link_pose(self, link_name, client):
-        """Processes request and response of initial link pose service.
-        Args:
-            link_name: name of link 
-            client: client to use to call service (roboy side/operator side)
+        """Gets initial link pose for a link using its name
+
+        Parameters: 
+            link_name (String): The name of the link
+            client (RosClient): The client used to pass a request and get a response from service
+
         Returns:
-            processed response in a list containing position vector and orientaion quaternion
+            A array containing two vectors, first is position and second is orientations
         """
         self.get_logger().debug('Getting initial' + link_name + ' link pose')
         initial_link_pose_req = GetLinkPose.Request()

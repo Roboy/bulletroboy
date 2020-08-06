@@ -149,7 +149,7 @@ class ExoForceSim(ExoForce):
 		"""
 		pos = np.array([collision.position.x, collision.position.y, collision.position.z])
 		direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
-		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 2, self.operator.body_id, collision.linkid)
+		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 10, self.operator.body_id, collision.linkid)
 
 	def update(self):
 		"""Update ExoForce's state after a simulation step.

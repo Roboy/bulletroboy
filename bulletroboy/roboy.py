@@ -4,6 +4,8 @@ import numpy as np
 
 from rclpy.node import Node
 
+from pyquaternion import Quaternion
+
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
@@ -51,7 +53,7 @@ class BulletRoboy(Node):
         self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
 
         #Operator EF pose subscriber
-        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector', self.ef_pose_callback, 10)
+        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector', self.ef_pose_callback, 100)
 
         #Services and clients
 
@@ -282,6 +284,45 @@ class BulletRoboy(Node):
             msg.name.append(self.joint_names[i])
         self.joint_publisher.publish(msg)
 
+    def call_service(self, client, msg):
+        """Calls a client synchnrnously passing a msg and returns the response
+
+        Parameters:
+            client (RosClient): The client used to communicate with the server
+            msg (Object): A server msg to send to the server as a request
+
+        Returns:
+            response (Object): A response msg from the server
+        """
+        while not client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("service not available, waiting again...")
+        response = client.call(msg)
+        return response
+
+    def get_initial_link_pose(self, link_name, client):
+        """Gets initial link pose for a link using its name
+
+        Parameters: 
+            link_name (String): The name of the link
+            client (RosClient): The client used to pass a request and get a response from service
+
+        Returns:
+            A array containing two vectors, first is position and second is orientations
+        """
+        self.get_logger().debug('Getting initial' + link_name + ' link pose')
+        initial_link_pose_req = GetLinkPose.Request()
+        initial_link_pose_req.link_name = link_name
+        response = self.call_service(client, initial_link_pose_req)
+        self.get_logger().debug('service called')
+
+        return [[response.pose.position.x, 
+            response.pose.position.y, 
+            response.pose.position.z], 
+            [response.pose.orientation.x, 
+            response.pose.orientation.y, 
+            response.pose.orientation.z, 
+            response.pose.orientation.w]]
+
     def publish_collision(self, collision):
         """Publishes collision as a ROS Message.
 
@@ -306,6 +347,32 @@ class BulletRoboy(Node):
 
             #collision[7] == contactNormalOnB in PyBullet docu
             normal_in_lf = self.get_vector_in_link_frame(collision[3], collision[7])
+
+            msg.contactnormal.x = normal_in_lf[0]
+            msg.contactnormal.y = normal_in_lf[1]
+            msg.contactnormal.z = normal_in_lf[2]
+
+            self.draw_force(msg.linkid, msg.position, msg.contactnormal, collision[9])
+
+            rob_link_name = self.get_link_name_from_id(msg.linkid)
+            if(rob_link_name in self.roboy_to_human_link_names_map.keys()):
+                operator_link_name = self.roboy_to_human_link_names_map[rob_link_name]
+            else:
+                return
+            self.operator_initial_link_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/operator/initial_link_pose')
+            op_init_orn = Quaternion(self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)[1])
+
+            link = self.get_link_info_from_name(rob_link_name)
+            rob_init_link_orn = Quaternion(link['init_pose'][1])
+            
+            diff = rob_init_link_orn / op_init_orn
+
+            diff = self.get_orn_in_LF(msg.linkid, diff)
+
+            R = diff.rotation_matrix
+
+            normal_in_lf = R.dot(normal_in_lf)
+
             msg.contactnormal.x = normal_in_lf[0]
             msg.contactnormal.y = normal_in_lf[1]
             msg.contactnormal.z = normal_in_lf[2]
@@ -317,11 +384,27 @@ class BulletRoboy(Node):
             msg.normalforce = collision[9]
 
             self.get_logger().info("Publishing collision in link %i" % msg.linkid)
-            self.draw_force(msg)
 
             self.collision_publisher.publish(msg)
 
-    def draw_force(self, collision):
+    def get_orn_in_LF(self, link, quat):
+        if (link == -1):
+            return
+        quat = Quaternion(quat)
+        
+        frame_orn = (p.getLinkState(self.body_id, link))[1]
+        
+        rotation = Quaternion(frame_orn).inverse
+
+        # translation, rotation = p.invertTransform(frame_pos, frame_orn)
+
+        # rotation = np.array(p.getMatrixFromQuaternion(rotation))
+        # rotation = rotation.reshape(3,3)
+        # translation = np.array(translation)
+
+        return quat * rotation
+
+    def draw_force(self, linkid, position, contactnormal, normalforce):
         """Draw collision force as a debugLine.
 
         Args:
@@ -331,9 +414,10 @@ class BulletRoboy(Node):
             -
         
         """
-        pos = np.array([collision.position.x, collision.position.y, collision.position.z])
-        direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
-        p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 2, self.body_id, collision.linkid)
+        if(self.get_link_name_from_id(linkid) in self.roboy_to_human_link_names_map.keys()):
+            pos = np.array([position.x, position.y, position.z])
+            direction = np.array([contactnormal.x,contactnormal.y,contactnormal.z]) * normalforce
+            p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 10, self.body_id, linkid)
     
     def get_vector_in_link_frame(self, link, vector):
         """Transforms a vector from world's coordinates system to link frame.

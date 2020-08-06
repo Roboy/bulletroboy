@@ -233,11 +233,12 @@ class Moves(Enum):
 	"""This enum class handles the posible moves the operator can perform.
 
 	"""
-	SPINE_SWING = 1
-	SIDE_SWING = 2
-	FOREARM_ROLL = 3
-	ARM_ROLL = 4
-
+	STAND_STILL = 1
+	SPINE_SWING = 2
+	SIDE_SWING = 3
+	FOREARM_ROLL = 4
+	ARM_ROLL = 5
+	CATCH = 6
 
 class Movements():
 	"""This class defines 2 types of movements:
@@ -261,6 +262,7 @@ class Movements():
 		self.right_elbow = self.op.get_link_index('right_elbow')
 		self.left_wrist = self.op.get_link_index('left_wrist')
 		self.right_wrist = self.op.get_link_index('right_wrist')
+
 
 	def get_EF_id(self, link_name):
 		"""Gets the id of the endEffector and the list of free revolute joints.
@@ -312,6 +314,13 @@ class Movements():
 		"""
 		t = time.time()
 
+		if case == Moves.STAND_STILL:
+			left_elbow_pos = 0
+			right_elbow_pos = 0
+			left_shoulder_quat = p.getQuaternionFromEuler([0, 0, 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([0, 0, 0])
+			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
+
 		if case == Moves.SPINE_SWING:
 			left_elbow_pos = 0
 			right_elbow_pos = 0
@@ -338,6 +347,13 @@ class Movements():
 			right_elbow_pos = 0
 			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, math.sin(t), 0])
 			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, -math.sin(t)-math.pi, 0])
+			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
+
+		elif case == Moves.CATCH:
+			left_elbow_pos = 0
+			right_elbow_pos = 0
+			left_shoulder_quat = p.getQuaternionFromEuler([0, 0, math.pi/2])
+			right_shoulder_quat = p.getQuaternionFromEuler([0, 0, math.pi/2])
 			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
 
 		p.setJointMotorControl2(self.op.body_id, self.left_elbow, p.POSITION_CONTROL, left_elbow_pos)

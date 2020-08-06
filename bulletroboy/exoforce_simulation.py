@@ -6,6 +6,8 @@ from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
+from bulletroboy.operator import Operator, Moves
+from bulletroboy.link_mapping import ROBOY_TO_OPERATOR_IDS
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
@@ -25,15 +27,26 @@ class ExoForceSim(ExoForce):
 		self.operator = operator
 		self.init_sim()
 
+		self.init_movement_params()
+
 		if self.mode == "debug":
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 1)
+				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
 			elif self.mode == "forces":
 				self.get_logger().info('forces')
-				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
+				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 10)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+	
+	def init_movement_params(self):
+		self.current_move = Moves.STAND_STILL
+		self.stand = 0
+		self.stand_id = p.addUserDebugParameter("Stand still", 1, 0, 0)
+		self.arm_roll = 0 
+		self.arm_roll_id = p.addUserDebugParameter("Arm roll", 1, 0, 0)
+		self.catch = 0 
+		self.catch_id = p.addUserDebugParameter("Catch", 1, 0, 0)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -64,6 +77,21 @@ class ExoForceSim(ExoForce):
 			tendon_sim.force_id = p.addUserDebugParameter("Force in " + tendon_sim.name, 0, 1000, 0)
 		self.cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
+	def move_operator(self):
+		count = p.readUserDebugParameter(self.stand_id)
+		if(count > self.stand):
+			self.stand = count
+			self.current_move = Moves.STAND_STILL
+		count = p.readUserDebugParameter(self.arm_roll_id)
+		if(count > self.arm_roll):
+			self.arm_roll = count
+			self.current_move = Moves.ARM_ROLL
+		count = p.readUserDebugParameter(self.catch_id)
+		if(count > self.catch):
+			self.catch = count
+			self.current_move = Moves.CATCH
+		self.operator.move(self.current_move)
+	
 	def tendon_update_listener(self, tendon_force):
 		"""Tendon force uppdate listener.
 
@@ -87,7 +115,7 @@ class ExoForceSim(ExoForce):
 		
 		"""
 		self.rotate_cage(angle.data)
-	
+
 	def collision_listener(self, collision):
 		"""Collision listener.
 
@@ -121,7 +149,7 @@ class ExoForceSim(ExoForce):
 		"""
 		pos = np.array([collision.position.x, collision.position.y, collision.position.z])
 		direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
-		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 5, self.operator.body_id, collision.linkid)
+		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 2, self.operator.body_id, collision.linkid)
 
 	def update(self):
 		"""Update ExoForce's state after a simulation step.

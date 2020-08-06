@@ -39,7 +39,7 @@ class BulletRoboy(Node):
         #Publishers and subscribers
 
         #Joint state publisher
-        timer_period = 0.01 # seconds
+        timer_period = 0.1 # seconds
         self.joint_names = []
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)

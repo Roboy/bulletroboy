@@ -3,6 +3,9 @@ from threading import Event
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+
+from pyquaternion import Quaternion
+
 import yaml 
 import rclpy
 from rclpy.node import Node
@@ -127,6 +130,15 @@ class ForcesMapper(Node):
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
         self.get_logger().debug("mapping done")
 
+        # link_orn = self.adapt_orientation_to_roboy(roboy_collision.linkid)
+        # collision_force = self.rotate_force_with_quaternion(
+        #     operator_collision.contactnormal,
+        #     link_orn
+        # )
+        # operator_collision.contactnormal.x = collision_force[0]
+        # operator_collision.contactnormal.y = collision_force[1]
+        # operator_collision.contactnormal.z = collision_force[2]
+
         return operator_collision
 
     def get_roboy_link_info(self, roboy_link_id):
@@ -226,9 +238,30 @@ class ForcesMapper(Node):
         Returns:
             The adapted target orientation.
         """
-        # TODO: fix orientaion problem
-        return orientation
 
+        orientation = Quaternion(np.array(orientation))
+        if self.roboy_initial_link_poses.get(roboy_link_name) == None :
+            self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)
+            self.get_logger().info("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
+        roboy_init_orn = Quaternion(np.array(self.roboy_initial_link_poses[roboy_link_name][1]))
+        operator_link_name = self.roboy_to_human_link_names_map[roboy_link_name]
+        if self.operator_initial_link_poses.get(operator_link_name) == None :
+            self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
+            self.get_logger().info("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
+        op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
+
+        diff = roboy_init_orn / op_init_orn
+        quat = diff * orientation 
+
+        return [quat[0], quat[1], quat[2], quat[3]]
+
+    def rotate_force_with_quaternion(self, contact_normal, quaternion): 
+        """rotates the force vector according to quaternion given.
+        """
+        rotation = np.array(R.from_quat(quaternion).as_matrix())
+        contact_normal_vector = np.array([contact_normal.x, contact_normal.y, contact_normal.z])
+        rotated_vector = rotation.dot(contact_normal_vector)
+        return rotated_vector
 
 def main(args=None):
     rclpy.init(args=args)

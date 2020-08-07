@@ -126,18 +126,17 @@ class ForcesMapper(Node):
         operator_collision.linkid = operator_link_info.link_id
         self.get_logger().debug('responses2')
 
-        position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
+        diff = self.roboy_to_operator_orientation_diff(roboy_link_info.link_name)
+        operator_link_dimensions = diff.rotation_matrix.dot(np.array([operator_link_info.dimensions.x, operator_link_info.dimensions.y, operator_link_info.dimensions.z]))
+        position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
         self.get_logger().debug("mapping done")
 
-        # link_orn = self.adapt_orientation_to_roboy(roboy_collision.linkid)
-        # new_normal = self.adapt_orientation_to_op(roboy_link_info.link_name, [roboy_collision.contactnormal.x, roboy_collision.contactnormal.y, roboy_collision.contactnormal.z])
-        # operator_collision.contactnormal.x = new_normal[0]
-        # operator_collision.contactnormal.y = new_normal[1]
-        # operator_collision.contactnormal.z = new_normal[2]
-        operator_collision.contactnormal.x = roboy_collision.contactnormal.x
-        operator_collision.contactnormal.y = roboy_collision.contactnormal.y
-        operator_collision.contactnormal.z = roboy_collision.contactnormal.z
+        new_contact_normal = self.adapt_vector_to_orientation(roboy_link_info.link_name, [roboy_collision.contactnormal.x, roboy_collision.contactnormal.y, roboy_collision.contactnormal.z])
+        operator_collision.contactnormal.x = new_contact_normal[0]
+        operator_collision.contactnormal.y = new_contact_normal[1]
+        operator_collision.contactnormal.z = new_contact_normal[2]
+
         return operator_collision
 
     def get_roboy_link_info(self, roboy_link_id):
@@ -176,15 +175,15 @@ class ForcesMapper(Node):
         """Calculates the ratio between robot link and human link.
 
         Parameters:
-            roboy_dimensions(Vector3):The bounding box of the link whose ratio needs to be calculated.
+            roboy_dimensions(Position):The bounding box of the link whose ratio needs to be calculated.
             operator_dimensions(Vector3): The bounding box of the link whose ratio is needed
         Returns:
             Vector3:ratio on the three dimensions
         """
 
-        x_scale = roboy_dimensions.x / operator_dimensions.x
-        y_scale = roboy_dimensions.y / operator_dimensions.y
-        z_scale = roboy_dimensions.z / operator_dimensions.z
+        x_scale = roboy_dimensions.x / operator_dimensions[0]
+        y_scale = roboy_dimensions.y / operator_dimensions[1]
+        z_scale = roboy_dimensions.z / operator_dimensions[2]
 
         return [x_scale, y_scale, z_scale]
     
@@ -229,32 +228,46 @@ class ForcesMapper(Node):
             response.pose.orientation.w]]
 
     def adapt_orientation_to_roboy(self, roboy_link_name, orientation):
-        """adapts the orientation received to roboy's link according to roboy's and operators initial links.
+        """Adapts the orientation received to roboy's link according to roboy's and operators initial links.
 
-        Args:
-            roboy_link_name: link name according to roboy's urfd.
-            orientation: received target orientation from operator.
+        Parameters:
+            roboy_link_name (str): link name according to roboy's urfd.
+            orientation (Vector4): received target orientation from operator.
+        
         Returns:
-            The adapted target orientation.
+            Vector4: The adapted target orientation.
         """
-
-        orientation = Quaternion(np.array(orientation))
-        if self.roboy_initial_link_poses.get(roboy_link_name) == None :
-            self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)
-            self.get_logger().info("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
-        roboy_init_orn = Quaternion(np.array(self.roboy_initial_link_poses[roboy_link_name][1]))
-        operator_link_name = self.roboy_to_human_link_names_map[roboy_link_name]
-        if self.operator_initial_link_poses.get(operator_link_name) == None :
-            self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
-            self.get_logger().info("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
-        op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
-
-        diff = roboy_init_orn / op_init_orn
+        
+        diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
         quat = diff * orientation 
 
         return [quat[0], quat[1], quat[2], quat[3]]
 
-    def adapt_orientation_to_op(self, roboy_link_name, contact_normal):
+    def adapt_vector_to_orientation(self, roboy_link_name, contact_normal):
+        """Adapts the vector's direction received to roboy's link according to roboy's and operators initial links.
+
+        Parameters:
+            roboy_link_name (str): link name according to roboy's urfd.
+            contact_normal (Vector3): received target orientation from operator.
+
+        Returns:
+            Vector4: The adapted target orientation.
+        """
+
+        diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
+        R = diff.rotation_matrix
+
+        return R.dot(contact_normal)
+
+    def roboy_to_operator_orientation_diff(self, roboy_link_name):
+        """Calculated the orientation difference between the roboy link frame and the operator link frame
+
+        Parameters:
+            roboy_link_name (str): The name of the roboy link
+
+        Returns:
+            diff (Quaternion): The difference of quaternions between roboy and operator links
+        """
         if self.roboy_initial_link_poses.get(roboy_link_name) == None :
             self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)
             self.get_logger().info("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
@@ -266,19 +279,8 @@ class ForcesMapper(Node):
         op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
 
         diff = roboy_init_orn / op_init_orn
-        R = diff.rotation_matrix
 
-        return R.dot(contact_normal)
-
-
-
-    # def rotate_force_with_quaternion(self, contact_normal, quaternion): 
-    #     """rotates the force vector according to quaternion given.
-    #     """
-    #     rotation = np.array(R.from_quat(quaternion).as_matrix())
-    #     contact_normal_vector = np.array([contact_normal.x, contact_normal.y, contact_normal.z])
-    #     rotated_vector = rotation.dot(contact_normal_vector)
-    #     return rotated_vector
+        return diff
 
 def main(args=None):
     rclpy.init(args=args)

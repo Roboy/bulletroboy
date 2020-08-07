@@ -354,29 +354,6 @@ class BulletRoboy(Node):
 
             self.draw_force(msg.linkid, msg.position, msg.contactnormal, collision[9])
 
-            rob_link_name = self.get_link_name_from_id(msg.linkid)
-            if(rob_link_name in self.roboy_to_human_link_names_map.keys()):
-                operator_link_name = self.roboy_to_human_link_names_map[rob_link_name]
-            else:
-                return
-            self.operator_initial_link_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/operator/initial_link_pose')
-            op_init_orn = Quaternion(self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)[1])
-
-            link = self.get_link_info_from_name(rob_link_name)
-            rob_init_link_orn = Quaternion(link['init_pose'][1])
-            
-            diff = rob_init_link_orn / op_init_orn
-
-            diff = self.get_orn_in_LF(msg.linkid, diff)
-
-            R = diff.rotation_matrix
-
-            normal_in_lf = R.dot(normal_in_lf)
-
-            msg.contactnormal.x = normal_in_lf[0]
-            msg.contactnormal.y = normal_in_lf[1]
-            msg.contactnormal.z = normal_in_lf[2]
-
             #collision[8] == contactDistance in PyBullet docu
             msg.contactdistance = collision[8]
 
@@ -386,23 +363,6 @@ class BulletRoboy(Node):
             self.get_logger().info("Publishing collision in link %i" % msg.linkid)
 
             self.collision_publisher.publish(msg)
-
-    def get_orn_in_LF(self, link, quat):
-        if (link == -1):
-            return
-        quat = Quaternion(quat)
-        
-        frame_orn = (p.getLinkState(self.body_id, link))[1]
-        
-        rotation = Quaternion(frame_orn).inverse
-
-        # translation, rotation = p.invertTransform(frame_pos, frame_orn)
-
-        # rotation = np.array(p.getMatrixFromQuaternion(rotation))
-        # rotation = rotation.reshape(3,3)
-        # translation = np.array(translation)
-
-        return quat * rotation
 
     def draw_force(self, linkid, position, contactnormal, normalforce):
         """Draw collision force as a debugLine.

@@ -50,7 +50,7 @@ class ForcesMapper(Node):
             PoseStamped, 
             '/roboy/simulation/operator/pose/endeffector', 
             self.operator_movement_listener, 
-            1)
+            10)
         # Define publishers
         self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 10)
         self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector', 10)
@@ -126,10 +126,12 @@ class ForcesMapper(Node):
         operator_collision.linkid = operator_link_info.link_id
         self.get_logger().debug('responses2')
 
-        diff = self.roboy_to_operator_orientation_diff(roboy_link_info.link_name)
-        operator_link_dimensions = diff.rotation_matrix.dot(np.array([operator_link_info.dimensions.x, operator_link_info.dimensions.y, operator_link_info.dimensions.z]))
-        position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_dimensions)
+        position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
+        new_position = self.adapt_vector_to_orientation(roboy_link_info.link_name, [operator_collision.position.x, operator_collision.position.y, operator_collision.position.z])
+        operator_collision.position.x = new_position[0]
+        operator_collision.position.y = new_position[1]
+        operator_collision.position.z = new_position[2]
         self.get_logger().debug("mapping done")
 
         new_contact_normal = self.adapt_vector_to_orientation(roboy_link_info.link_name, [roboy_collision.contactnormal.x, roboy_collision.contactnormal.y, roboy_collision.contactnormal.z])
@@ -176,14 +178,13 @@ class ForcesMapper(Node):
 
         Parameters:
             roboy_dimensions(Position):The bounding box of the link whose ratio needs to be calculated.
-            operator_dimensions(Vector3): The bounding box of the link whose ratio is needed
+            operator_dimensions(Position): The bounding box of the link whose ratio is needed
         Returns:
             Vector3:ratio on the three dimensions
         """
-
-        x_scale = roboy_dimensions.x / operator_dimensions[0]
-        y_scale = roboy_dimensions.y / operator_dimensions[1]
-        z_scale = roboy_dimensions.z / operator_dimensions[2]
+        x_scale = roboy_dimensions.x / operator_dimensions.x
+        y_scale = roboy_dimensions.y / operator_dimensions.y
+        z_scale = roboy_dimensions.z / operator_dimensions.z
 
         return [x_scale, y_scale, z_scale]
     

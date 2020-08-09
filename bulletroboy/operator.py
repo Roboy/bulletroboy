@@ -96,6 +96,7 @@ class Operator(Node):
 			link = {}
 			link['name'] = name
 			link['dims'] = self.get_link_bb_dim(i)
+			# utils.draw_AABB(p,p.getAABB(self.body_id, i))
 			link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
 			link['id'] = i
 			links.append(link)
@@ -188,7 +189,7 @@ class Operator(Node):
 
 		"""
 		for ef in ef_names:
-		   #self.get_logger().info('Sending Endeffector pose: ' + ef)
+		   self.get_logger().info('Sending Endeffector pose: ' + ef)
 		   msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)
 		   link_info = p.getLinkState(self.body_id, ef_id)[4:6]
@@ -346,7 +347,7 @@ class Movements():
 			left_elbow_pos = 0
 			right_elbow_pos = 0
 			left_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, math.sin(t), 0])
-			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)+math.pi/3, -math.sin(t)-math.pi, 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([math.sin(t+math.pi/2)-math.pi/3, math.sin(t), 0])
 			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
 
 		elif case == Moves.CATCH:

@@ -82,6 +82,7 @@ class BulletRoboy(Node):
             name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
             link['name'] = name
             link['dims'] = self.get_link_bb_dim(i)
+            # utils.draw_AABB(p,p.getAABB(self.body_id, i))
             link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
             link['id'] = i
             self.links.append(link)

@@ -77,7 +77,7 @@ class ExoForceSim(ExoForce):
 			tendon_sim.force_id = p.addUserDebugParameter("Force in " + tendon_sim.name, 0, 1000, 0)
 		self.cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
-	def move_operator(self):
+	def move_operator_sim(self):
 		count = p.readUserDebugParameter(self.stand_id)
 		if(count > self.stand):
 			self.stand = count

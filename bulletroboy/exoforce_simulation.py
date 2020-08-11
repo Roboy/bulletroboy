@@ -40,6 +40,8 @@ class ExoForceSim(ExoForce):
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
 	
 	def init_movement_params(self):
+		'''Initializes movement buttons of the GUI.
+		'''
 		self.current_move = Moves.STAND_STILL
 		self.stand = 0
 		self.stand_id = p.addUserDebugParameter("Stand still", 1, 0, 0)
@@ -78,6 +80,8 @@ class ExoForceSim(ExoForce):
 		self.cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
 	def move_operator_sim(self):
+		'''Moves the operator according to GUI buttons.
+		'''
 		count = p.readUserDebugParameter(self.stand_id)
 		if(count > self.stand):
 			self.stand = count

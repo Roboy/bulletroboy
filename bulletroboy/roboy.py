@@ -9,7 +9,6 @@ from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-from bulletroboy.link_mapping import OPERATOR_TO_ROBOY_NAMES
 import bulletroboy.utils as utils
 
 class BulletRoboy(Node):

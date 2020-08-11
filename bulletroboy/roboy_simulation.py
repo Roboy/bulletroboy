@@ -3,7 +3,6 @@ import os
 
 import pybullet as p
 import math
-import time
 
 import rclpy
 
@@ -30,11 +29,12 @@ def main():
     
     # SETTING UP WORLD
     p.connect(p.GUI)
-    body = p.loadURDF(args.filename, [0, 0, 0.2], useFixedBase=1)
+    flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+    body = p.loadURDF(args.filename, [0, 0, 0.8], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1, flags=flags)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)
-    p.setRealTimeSimulation(1)
+    p.setRealTimeSimulation(0)
 
     #INITIALISING ROS AND NODE
     rclpy.init()
@@ -49,18 +49,12 @@ def main():
         try:
             #update the environement parameters with each step
             env.update()
-            t = time.time()
-            pos = [0.2 * math.cos(t)+0.2, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
-            threshold = 0.001
-            maxIter = 100
-            bb.accurateCalculateInverseKinematics(pos, threshold, maxIter)
-
+            p.stepSimulation()
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:
                 bb.publish_collision(point)
 
-            bb.drawDebugLines(pos)
         except KeyboardInterrupt:
             env.stop()
             bb.destroy_node()

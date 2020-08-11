@@ -40,7 +40,7 @@ ros2 run bulletroboy roboy_simulation
 ros2 topic echo /roboy/simulation/joint_state
 
 # in a new terminal, to see collisions 
-ros2 topic echo /roboy/simulation/collision
+ros2 topic echo roboy/simulation/roboy/collision
 ```
 
 Run the cage simulation of a human figure with attached tendons.

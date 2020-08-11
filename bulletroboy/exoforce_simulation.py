@@ -2,19 +2,16 @@ import pybullet as p
 import numpy as np
 from numpy.linalg import norm
 
-from roboy_simulation_msgs.msg import TendonUpdate
-from geometry_msgs.msg import PoseStamped
+from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
-from bulletroboy.operator import Operator
-
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
 
 	"""
-	def __init__(self, cage_conf, human_model, mode):
+	def __init__(self, cage_conf, operator, mode):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
@@ -23,20 +20,20 @@ class ExoForceSim(ExoForce):
 		
 		"""
 		super().__init__(cage_conf, "exoforce_simulation")
-
+	
 		self.mode = mode
-		self.operator = Operator(human_model)
+		self.operator = operator
 		self.init_sim()
 
 		if self.mode == "debug":
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
+				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 1)
 			elif self.mode == "forces":
-				# TODO: update subscriber with correct msg type
-				self.create_subscription(TendonUpdate, '/roboy/simulation/operator_forces', self.forces_update_listener, 10)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+				self.get_logger().info('forces')
+				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -64,18 +61,67 @@ class ExoForceSim(ExoForce):
 
 		"""
 		for tendon_sim in self.sim_tendons:
-			tendon_sim.force_id = p.addUserDebugParameter("Force in " + tendon_sim.name, 0, 200, 0)
+			tendon_sim.force_id = p.addUserDebugParameter("Force in " + tendon_sim.name, 0, 1000, 0)
 		self.cage_angle_id = p.addUserDebugParameter("Cage Angle", -180, 180, 0)
 
 	def tendon_update_listener(self, tendon_force):
+		"""Tendon force uppdate listener.
+
+		Args:
+			tendon_force (TendonUpdate): Tendon update message.
+
+		Returns:
+			-
+		
+		"""
 		self.update_tendon(tendon_force.tendon_id, tendon_force.force)
 
 	def cage_rotation_listener(self, angle):
-		self.rotate_cage(angle.data)
+		"""Cage rotation listener.
 
-	def forces_update_listener(self, forces):
-        # TODO: implement force update
-		pass
+		Args:
+			angle (Float32): Angle message message.
+
+		Returns:
+			-
+		
+		"""
+		self.rotate_cage(angle.data)
+	
+	def collision_listener(self, collision):
+		"""Collision listener.
+
+		Args:
+			collision (Collision): Collision message.
+
+		Returns:
+			-
+		
+		"""
+		self.get_logger().info(f"Received collision: link: {collision.linkid} force: {collision.normalforce}", throttle_duration_sec=1)
+		self.draw_force(collision)
+			
+		force = collision.normalforce 
+		vector = collision.contactnormal
+
+		force_vec = [force * vector.x, force * vector.y, force * vector.z]
+		position_vec = [collision.position.x, collision.position.y, collision.position.z]
+
+		p.applyExternalForce(self.operator.body_id, collision.linkid, force_vec, position_vec, p.LINK_FRAME)
+
+	def draw_force(self, collision):
+		"""Draw collision force as a debugLine.
+
+		Args:
+			collision (Collision): Collision to draw.
+
+		Returns:
+			-
+		
+		"""
+		pos = np.array([collision.position.x, collision.position.y, collision.position.z])
+		direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
+		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 5, self.operator.body_id, collision.linkid)
 
 	def update(self):
 		"""Update ExoForce's state after a simulation step.
@@ -100,7 +146,6 @@ class ExoForceSim(ExoForce):
 				self.update_tendon(tendon_sim.tendon.id, force)
 
 		super().publish_state()
-
 
 	def update_tendon(self, id, force):
 		"""Applies a force to a tendon in the simulation.
@@ -190,14 +235,14 @@ class TendonSim():
 			* move method to the Operator class
 
 		"""
-		force_direction = np.asarray(self.start_location) - np.asarray(self.tendon.attachtment_points[-1])
+		force_direction = np.asarray(self.start_location) - np.asarray(self.tendon.via_points[-1].world_point)
 		force_direction /= norm(force_direction)
 
 		p.applyExternalForce(objectUniqueId=self.operator.body_id,
-			     	     linkIndex = self.operator.get_link_index(self.tendon.via_points[-1].link),
-			     	     forceObj = force * force_direction,
-			     	     posObj=self.start_location,
-			     	     flags=p.WORLD_FRAME)
+				 		 linkIndex = self.operator.get_link_index(self.tendon.via_points[-1].link),
+				 		 forceObj = force * force_direction,
+				 		 posObj=self.start_location,
+				 		 flags=p.WORLD_FRAME)
 
 	def update_lines(self):
 		"""Update debug lines position in simulation.

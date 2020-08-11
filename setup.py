@@ -23,6 +23,7 @@ setup(
             'roboy_simulation = bulletroboy.roboy_simulation:main',
             'cage_simulation = bulletroboy.cage_simulation:main',
             'test_publisher = bulletroboy.test_publisher:main',
+            'forces_mapper = bulletroboy.forces_mapper:main',
             'test_client = bulletroboy.test_client:main'
         ],
     },

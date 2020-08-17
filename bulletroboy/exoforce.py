@@ -484,7 +484,7 @@ class ExoForce(Node, ABC):
 		"""
 		collision_force = np.clip(collision_force, 0 , MAX_COLLISION_FORCE)
 		ef = decompose_force_link_to_ef(link_id)
-		start = p.getLinkState(1,5)[0]
+		start = p.getLinkState(1,link_id)[0]
 		p.addUserDebugLine(start, start + collision_direction, [1, 1, 0.3], 2, 5)
 
 		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef)) if link_id is not None else {}

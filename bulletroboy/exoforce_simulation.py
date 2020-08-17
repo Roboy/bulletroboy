@@ -121,13 +121,15 @@ class ExoForceSim(ExoForce):
 		self.draw_force(collision_msg)
 		if self.mode == "tendon":
 			collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
-			frame_pos, frame_orn = p.getBasePositionAndOrientation(self.operator.body_id)[:2]
-			translation, rotation = p.invertTransform(frame_pos, frame_orn)
+			#frame_pos, frame_orn = p.getBasePositionAndOrientation(self.operator.body_id)[:2]
+			#translation, rotation = p.invertTransform(frame_pos, frame_orn)
+			translation, rotation = p.getLinkState(self.operator.body_id, collision_msg.linkid)[:2]
+			#translation, rotation = p.invertTransform(translation, rotation)
 
 			rotation = np.array(p.getMatrixFromQuaternion(rotation)).reshape(3,3)
-			translation = np.array(translation)
+			#translation = np.array(translation)
 
-			force_direction = rotation.dot(collision_direction) + translation
+			force_direction = rotation.dot(collision_direction)
 			forces = self.decompose(collision_msg.linkid, collision_msg.normalforce, force_direction)
 			
 			for id in forces:
@@ -152,6 +154,7 @@ class ExoForceSim(ExoForce):
 		
 		"""
 		pos = np.array([collision.position.x, collision.position.y, collision.position.z])
+		pos = [0,0,0]
 		direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
 		p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 10, self.operator.body_id, collision.linkid)
 

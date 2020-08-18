@@ -30,7 +30,7 @@ class Operator(Node):
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
 
-		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 10)
+		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
 
@@ -189,7 +189,7 @@ class Operator(Node):
 
 		"""
 		for ef in ef_names:
-		   self.get_logger().info('Sending Endeffector pose: ' + ef)
+		   self.get_logger().debug('Sending Endeffector pose: ' + ef)
 		   msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)
 		   link_info = p.getLinkState(self.body_id, ef_id)[4:6]

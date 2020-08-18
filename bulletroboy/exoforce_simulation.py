@@ -33,11 +33,11 @@ class ExoForceSim(ExoForce):
 			self.init_debug_parameters()
 		else:
 			if self.mode == "tendon":
-				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 10)
+				self.create_subscription(TendonUpdate, '/roboy/simulation/tendon_force', self.tendon_update_listener, 1)
 			elif self.mode == "forces":
 				self.get_logger().info('forces')
-				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 10)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+				self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
 	
 	def init_movement_params(self):
 		'''Initializes movement buttons of the GUI.

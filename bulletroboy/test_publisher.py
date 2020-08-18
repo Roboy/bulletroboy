@@ -11,11 +11,11 @@ import time
 def main():
     rclpy.init()
     node = rclpy.create_node("test_publisher")
-    #force_publisher = node.create_publisher(TendonUpdate, '/roboy/simulation/tendon_force', 10)
-    #angle_publisher = node.create_publisher(Float32, '/roboy/simulation/cage_rotation', 10)
-    cage_state_publisher = node.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
-    collision_message_publisher = node.create_publisher(Collision, 'roboy/exoforce/collisions', 10)
-    robot_collision_publisher = node.create_publisher(Collision, 'roboy/simulation/roboy/collision', 10)
+    #force_publisher = node.create_publisher(TendonUpdate, '/roboy/simulation/tendon_force', 1)
+    #angle_publisher = node.create_publisher(Float32, '/roboy/simulation/cage_rotation', 1)
+    cage_state_publisher = node.create_publisher(CageState, '/roboy/simulation/cage_state', 1)
+    collision_message_publisher = node.create_publisher(Collision, 'roboy/exoforce/collisions', 1)
+    robot_collision_publisher = node.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
 
     while True:
 

@@ -50,10 +50,11 @@ class ForcesMapper(Node):
             PoseStamped, 
             '/roboy/simulation/operator/pose/endeffector', 
             self.operator_movement_listener, 
-            10)
+            1)
         # Define publishers
-        self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 10)
-        self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector', 10)
+        self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 1)
+        self.right_ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector/right', 1)
+        self.left_ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector/left', 1)
 
     def operator_movement_listener(self, ef_pose):
         """Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
@@ -61,10 +62,10 @@ class ForcesMapper(Node):
         Args:
             ef_pose: end effector pose received from the operator.
         """
-        self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
+        self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
 
         #process message
-        self.get_logger().info('got frame-id' + ef_pose.header.frame_id)
+        self.get_logger().debug('got frame-id' + ef_pose.header.frame_id)
 
         ef_pose.header.frame_id = self.human_to_roboy_link_names_map[ef_pose.header.frame_id]
         
@@ -79,9 +80,12 @@ class ForcesMapper(Node):
         ef_pose.pose.orientation.z = link_orn[2]
         ef_pose.pose.orientation.w = link_orn[3]
         
-        self.get_logger().info('Publishing EF-Pose')
+        self.get_logger().debug('Publishing EF-Pose')
 
-        self.ef_publisher.publish(ef_pose)
+        if ef_pose.header.frame_id.find("right") != -1:
+            self.right_ef_publisher.publish(ef_pose)
+        else:
+            self.left_ef_publisher.publish(ef_pose)
           
     def call_service(self, client, msg):
         """Calls a client synchnrnously passing a msg and returns the response

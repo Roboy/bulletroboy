@@ -9,6 +9,8 @@ import rclpy
 from threading import Thread
 from bulletroboy.roboy import BulletRoboy
 from bulletroboy.environment_control import EnvironmentCtrl
+from roboy_control_msgs.srv import GetLinkPose
+import bulletroboy.utils as utils
 
 MODEL_DEFAULT_PATH =  os.path.dirname(os.path.realpath(__file__)) + "/" + "../../roboy3_models/upper_body/bullet.urdf"
 
@@ -30,20 +32,30 @@ def main():
     # SETTING UP WORLD
     p.connect(p.GUI)
     flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
-    body = p.loadURDF(args.filename, [0, 0, 0.8], p.getQuaternionFromEuler([0, 0, 1.5708]), useFixedBase=1, flags=flags)
+    body = p.loadURDF(args.filename, useFixedBase=1, flags=flags)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)
     p.setRealTimeSimulation(0)
-
+    
     #INITIALISING ROS AND NODE
     rclpy.init()
-    rclpy.logging._root_logger.info("Starting Bullet Roboy node ")
+    rclpy.logging._root_logger.info("Starting Bullet Roboy node for pose service.")
 
     bb = BulletRoboy(body)
 
     spin_thread = Thread(target=rclpy.spin, args=(bb,))
     spin_thread.start()
+
+    # resp = utils.call_service(bb, bb.operator_initial_head_pose_client, GetLinkPose.Request())
+    bb.init_roboy_pose()
+
+    # p.resetBasePositionAndOrientation(body, [resp.pose.position.x, resp.pose.position.y, resp.pose.position.z],
+    #                                         [resp.pose.orientation.x,resp.pose.orientation.y, resp.pose.orientation.z, resp.pose.orientation.w])    
+    
+    rclpy.logging._root_logger.info("Initializing Bullet roboy node after reseting roboy pose.")
+
+    bb.initialize()
 
     while rclpy.ok():
         try:

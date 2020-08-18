@@ -33,6 +33,9 @@ class ForcesMapper(Node):
         self.roboy_initial_link_poses = {}
         self.operator_initial_link_poses = {}
         
+        #to avoid deadlocks in services
+        self.roboy_is_ready = False
+
         # Define clients
         self.roboy_link_info_from_id_client = self.create_client(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', callback_group=self.callback_group)
         self.operator_link_info_from_name_client = self.create_client(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', callback_group=self.callback_group)
@@ -55,6 +58,28 @@ class ForcesMapper(Node):
         self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 10)
         self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector', 10)
 
+        # Define service
+        self.operator_initial_head_pose = self.create_service(GetLinkPose, '/roboy/simulation/exoforce/operator_initial_head_pose', self.operator_initial_head_pose_callback)
+    
+    def operator_initial_head_pose_callback(self, request, response, link_name = "neck"):
+        self.get_logger().info("Service operator initial head pose: request received")
+
+        head_pos, head_orn = self.get_initial_link_pose(link_name, self.operator_initial_link_pose_client)[:2]
+
+        response.pose.position.x = head_pos[0]
+        response.pose.position.y = head_pos[1]
+        response.pose.position.z = head_pos[2]
+
+        response.pose.orientation.x = head_orn[0]
+        response.pose.orientation.y = head_orn[1]
+        response.pose.orientation.z = head_orn[2]
+        response.pose.orientation.w = head_orn[3]
+        self.get_logger().info("Responding")
+
+        self.roboy_is_ready = True
+
+        return response
+
     def operator_movement_listener(self, ef_pose):
         """Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
 
@@ -62,6 +87,11 @@ class ForcesMapper(Node):
             ef_pose: end effector pose received from the operator.
         """
         self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
+
+        if not self.roboy_is_ready:
+            self.get_logger().info('Roboy simulation is not ready.')
+
+            return
 
         #process message
         self.get_logger().info('got frame-id' + ef_pose.header.frame_id)
@@ -214,11 +244,11 @@ class ForcesMapper(Node):
         Returns:
             A array containing two vectors, first is position and second is orientations
         """
-        self.get_logger().debug('Getting initial' + link_name + ' link pose')
+        self.get_logger().info('Getting initial' + link_name + ' link pose')
         initial_link_pose_req = GetLinkPose.Request()
         initial_link_pose_req.link_name = link_name
         response = self.call_service(client, initial_link_pose_req)
-        self.get_logger().debug('service called')
+        self.get_logger().info('service called')
 
         return [[response.pose.position.x, 
             response.pose.position.y, 

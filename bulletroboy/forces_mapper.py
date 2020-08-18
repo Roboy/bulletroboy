@@ -105,9 +105,11 @@ class ForcesMapper(Node):
     def collision_listener(self, msg):
         """Collision subscriber handler.
         """
-        self.get_logger().info("got collision")
+        self.get_logger().debug("got collision")
         operator_collision = self.map_collision_to_operator(msg)
-        self.get_logger().info("publishing")
+        if operator_collision is None:
+            return
+        self.get_logger().debug("publishing")
         self.exoforce_collision_publisher.publish(operator_collision)
 
     def map_collision_to_operator(self, roboy_collision):
@@ -122,6 +124,8 @@ class ForcesMapper(Node):
         self.get_logger().debug('mapping start')
         roboy_link_info = self.get_roboy_link_info(roboy_collision.linkid)
         operator_link_name = self.roboy_to_human_link_names_map[roboy_link_info.link_name]
+        if operator_link_name is None:
+            return None
         operator_link_info = self.get_operator_link_info(operator_link_name)
         self.get_logger().debug('responses')
 
@@ -158,7 +162,7 @@ class ForcesMapper(Node):
         roboy_link_info_from_id_req = LinkInfoFromId.Request()
         roboy_link_info_from_id_req.link_id = roboy_link_id
         response = self.call_service(self.roboy_link_info_from_id_client, roboy_link_info_from_id_req)
-        self.get_logger().info("received response")
+        self.get_logger().debug("received response")
         return response
 
     def get_operator_link_info(self, operator_link_name):

@@ -11,13 +11,8 @@ def decompose_force_link_to_ef(link_id):
         end_effector = "right_wrist"
     return end_effector
 
-def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, contact_point=np.array([0, 0, 0])):
+def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units):
     
-    # print("Got:")
-    # print(force_value)
-    # print(force_direction)
-    # print(len(muscle_units))
-
     max_forces = [muscle.max_force for muscle in muscle_units]
     motor_attachments = np.array([muscle.motor.via_point.world_point for muscle in muscle_units])
     tendon_attachments = np.array([muscle.end_effector.world_point for muscle in muscle_units])
@@ -43,9 +38,10 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, co
                             initial_forces,
                             constraints=constraints, options={'maxiter': 100}
                             )
-
         if solution.success:
-            forces = {muscle.id: force for muscle, force in zip(muscle_units, solution.x)}
+            final_forces = np.zeros(len(tendon_vectors))
+            final_forces[active_mask] = solution.x
+            forces = {muscle.id: force for muscle, force in zip(muscle_units, final_forces)}
         else:
             message = solution.message
     

@@ -189,7 +189,7 @@ class Operator(Node):
 
 		"""
 		for ef in ef_names:
-		   self.get_logger().info('Sending Endeffector pose: ' + ef)
+		   #self.get_logger().info('Sending Endeffector pose: ' + ef)
 		   msg = PoseStamped()
 		   ef_id = self.get_link_index(ef)
 		   link_info = p.getLinkState(self.body_id, ef_id)[4:6]

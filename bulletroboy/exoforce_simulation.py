@@ -32,8 +32,8 @@ class ExoForceSim(ExoForce):
 		if self.mode == "debug":
 			self.init_debug_parameters()
 		elif self.mode in ["tendon", "forces"]:
-			self.create_subscription(CollisionMsg, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 10)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 10)
+			self.create_subscription(CollisionMsg, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
 		else:
 			raise Exception(f"Mode [{mode}] not supported!")
 	

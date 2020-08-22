@@ -59,7 +59,7 @@ def main():
     try:
         while True:
             exoforce.operator.publish_state()
-            exoforce.move_operator_sim()
+            #exoforce.move_operator_sim()
             exoforce.update()
             p.stepSimulation()
 

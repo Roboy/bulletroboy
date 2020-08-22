@@ -2,8 +2,18 @@ import numpy as np
 from scipy.optimize import minimize
 
 MIN_TENDON_FORCE = 0.01
+MAX_COLLISION_FORCE = 100
 
 def decompose_force_link_to_ef(link_id):
+    """Gets link bounding box dimensions.
+    
+    Args:
+        link_id (int): Index of the link to search.
+
+    Returns:
+        3darray[float]: x, y, and z dimensions of the bounding box.
+
+    """
     end_effector = None
     if link_id in [7, 8]:
         end_effector = "left_wrist"
@@ -12,7 +22,20 @@ def decompose_force_link_to_ef(link_id):
     return end_effector
 
 def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units):
+    """Decomposes force applied to end effector to the tendons connected to it.
     
+    Args:
+        force_value (float): Value of the applied force.
+		force_direction array[3]: Force direction in world space coordinates.
+        muscle_units (list[MuscleUnit]): List of the muscle units conected to the end effector.
+
+    Returns:
+		dict: Dictionary with the decomposed forces, the key is the tendon id.
+        string: Decomposition error message, will be empty if the decomposition was performed succesfully.
+
+    """
+    force_value = np.clip(force_value, 0 , MAX_COLLISION_FORCE)
+
     max_forces = [muscle.max_force for muscle in muscle_units]
     motor_attachments = np.array([muscle.motor.via_point.world_point for muscle in muscle_units])
     tendon_attachments = np.array([muscle.end_effector.world_point for muscle in muscle_units])

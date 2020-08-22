@@ -118,7 +118,7 @@ class ExoForceSim(ExoForce):
 		"""
 		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
 		
-		#self.draw_force(collision_msg)
+		self.draw_force(collision_msg)
 		if self.mode == "tendon":
 			collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
 			
@@ -134,8 +134,6 @@ class ExoForceSim(ExoForce):
 				else:
 					force = 0
 				self.update_tendon(tendon.tendon.id, force)
-			# for id in forces:
-			# 	self.update_tendon(id, forces[id])
 		elif self.mode == "forces":
 			force = collision_msg.normalforce
 			vector = collision_msg.contactnormal

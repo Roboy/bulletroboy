@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import pybullet as p
 import time
 import math
 import numpy as np
@@ -13,8 +12,6 @@ from roboy_control_msgs.srv import GetCageEndEffectors
 from geometry_msgs.msg import Point
 
 from .force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
-
-MAX_COLLISION_FORCE = 100
 
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
@@ -482,14 +479,11 @@ class ExoForce(Node, ABC):
 		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
 
 		"""
-		collision_force = np.clip(collision_force, 0 , MAX_COLLISION_FORCE)
-		ef = decompose_force_link_to_ef(5)
-		start = p.getLinkState(1,5)[0]
-		p.addUserDebugLine(start, start + collision_direction, [1, 1, 0.3], 2, 5)
+		ef = decompose_force_link_to_ef(link_id)
 
 		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef)) if link_id is not None else {}
 		
 		if not forces:
-			self.get_logger().warn(f"Force was not dceomposed: force[{collision_force}] ef[{ef}] [{msg}]")
+			self.get_logger().warn(f"Force was not decomposed: force[{collision_force}] ef[{ef}] [{msg}]")
 
 		return forces

@@ -57,11 +57,9 @@ def main():
 
     # RUN SIM
     try:
-        # while exoforce.operator.init_phase:
-        #     p.stepSimulation()
         while True:
             exoforce.operator.publish_state()
-            exoforce.operator.move(Moves.ARM_ROLL)
+            exoforce.move_operator_sim()
             exoforce.update()
             p.stepSimulation()
 

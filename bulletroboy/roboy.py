@@ -4,6 +4,8 @@ import numpy as np
 
 from rclpy.node import Node
 
+from pyquaternion import Quaternion
+
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
@@ -38,7 +40,7 @@ class BulletRoboy(Node):
         #Publishers and subscribers
 
         #Joint state publisher
-        timer_period = 0.01 # seconds
+        timer_period = 0.1 # seconds
         self.joint_names = []
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)
@@ -50,7 +52,8 @@ class BulletRoboy(Node):
         self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
 
         #Operator EF pose subscriber
-        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector', self.ef_pose_callback, 10)
+        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/right', self.ef_pose_callback, 1)
+        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/left', self.ef_pose_callback, 1)
 
         #Services and clients
 
@@ -79,6 +82,7 @@ class BulletRoboy(Node):
             name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
             link['name'] = name
             link['dims'] = self.get_link_bb_dim(i)
+            # utils.draw_AABB(p,p.getAABB(self.body_id, i))
             link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
             link['id'] = i
             self.links.append(link)
@@ -203,7 +207,7 @@ class BulletRoboy(Node):
         response.pose.orientation.y = link_orn[1]
         response.pose.orientation.z = link_orn[2]
         response.pose.orientation.w = link_orn[3]
-        self.get_logger().info(f"Service Initial Link Pose: sending response")
+        self.get_logger().debug(f"Service Initial Link Pose: sending response")
 
         return response
 
@@ -213,7 +217,7 @@ class BulletRoboy(Node):
         Args:
             ef_pose: end effector pose received from the operator.
         """
-        self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
+        self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
         
         #process message
         ef_name = ef_pose.header.frame_id
@@ -230,12 +234,13 @@ class BulletRoboy(Node):
         #                                                 ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
         
         #move
-        self.move(ef_id, link_pos, link_orn)
+        is_right = ef_name.find("right") != -1
+        self.move(ef_id, link_pos, link_orn, is_right)
         
-        if(ef_name == 'hand_right'):
+        if(is_right):
             self.drawDebugLine(ef_id, link_pos)
 
-    def move(self, ef_id, target_pos, target_orn):
+    def move(self, ef_id, target_pos, target_orn, is_right):
         """Moves ef given to target pose.
 
         Args:
@@ -247,7 +252,9 @@ class BulletRoboy(Node):
         for i in range(len(self.freeJoints)):
             jointInfo = p.getJointInfo(self.body_id, i)
             qIndex = jointInfo[3]
-            if qIndex > -1:
+            link_name = jointInfo[12]
+            if qIndex > -1 and (is_right == (link_name.find(b"right") != -1)):
+                # self.get_logger().info(link_name)
                 p.setJointMotorControl2(bodyIndex=self.body_id, jointIndex=i, controlMode=p.POSITION_CONTROL,
                                     targetPosition=jointPoses[qIndex-7])
             
@@ -281,6 +288,45 @@ class BulletRoboy(Node):
             msg.name.append(self.joint_names[i])
         self.joint_publisher.publish(msg)
 
+    def call_service(self, client, msg):
+        """Calls a client synchnrnously passing a msg and returns the response
+
+        Parameters:
+            client (RosClient): The client used to communicate with the server
+            msg (Object): A server msg to send to the server as a request
+
+        Returns:
+            response (Object): A response msg from the server
+        """
+        while not client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("service not available, waiting again...")
+        response = client.call(msg)
+        return response
+
+    def get_initial_link_pose(self, link_name, client):
+        """Gets initial link pose for a link using its name
+
+        Parameters: 
+            link_name (String): The name of the link
+            client (RosClient): The client used to pass a request and get a response from service
+
+        Returns:
+            A array containing two vectors, first is position and second is orientations
+        """
+        self.get_logger().debug('Getting initial' + link_name + ' link pose')
+        initial_link_pose_req = GetLinkPose.Request()
+        initial_link_pose_req.link_name = link_name
+        response = self.call_service(client, initial_link_pose_req)
+        self.get_logger().debug('service called')
+
+        return [[response.pose.position.x, 
+            response.pose.position.y, 
+            response.pose.position.z], 
+            [response.pose.orientation.x, 
+            response.pose.orientation.y, 
+            response.pose.orientation.z, 
+            response.pose.orientation.w]]
+
     def publish_collision(self, collision):
         """Publishes collision as a ROS Message.
 
@@ -305,9 +351,12 @@ class BulletRoboy(Node):
 
             #collision[7] == contactNormalOnB in PyBullet docu
             normal_in_lf = self.get_vector_in_link_frame(collision[3], collision[7])
+
             msg.contactnormal.x = normal_in_lf[0]
             msg.contactnormal.y = normal_in_lf[1]
             msg.contactnormal.z = normal_in_lf[2]
+
+            self.draw_force(msg.linkid, msg.position, msg.contactnormal, collision[9])
 
             #collision[8] == contactDistance in PyBullet docu
             msg.contactdistance = collision[8]
@@ -316,11 +365,10 @@ class BulletRoboy(Node):
             msg.normalforce = collision[9]
 
             self.get_logger().info("Publishing collision in link %i" % msg.linkid)
-            self.draw_force(msg)
 
             self.collision_publisher.publish(msg)
 
-    def draw_force(self, collision):
+    def draw_force(self, linkid, position, contactnormal, normalforce):
         """Draw collision force as a debugLine.
 
         Args:
@@ -330,9 +378,10 @@ class BulletRoboy(Node):
             -
         
         """
-        pos = np.array([collision.position.x, collision.position.y, collision.position.z])
-        direction = np.array([collision.contactnormal.x,collision.contactnormal.y,collision.contactnormal.z]) * collision.normalforce
-        p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 2, self.body_id, collision.linkid)
+        if(self.get_link_name_from_id(linkid) in self.roboy_to_human_link_names_map.keys()):
+            pos = np.array([position.x, position.y, position.z])
+            direction = np.array([contactnormal.x,contactnormal.y,contactnormal.z]) * normalforce
+            p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 10, self.body_id, linkid)
     
     def get_vector_in_link_frame(self, link, vector):
         """Transforms a vector from world's coordinates system to link frame.

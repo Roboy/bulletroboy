@@ -3,6 +3,9 @@ from threading import Event
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+
+from pyquaternion import Quaternion
+
 import yaml 
 import rclpy
 from rclpy.node import Node
@@ -49,8 +52,9 @@ class ForcesMapper(Node):
             self.operator_movement_listener, 
             1)
         # Define publishers
-        self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 10)
-        self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector', 10)
+        self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 1)
+        self.right_ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector/right', 1)
+        self.left_ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector/left', 1)
 
     def operator_movement_listener(self, ef_pose):
         """Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
@@ -58,10 +62,10 @@ class ForcesMapper(Node):
         Args:
             ef_pose: end effector pose received from the operator.
         """
-        self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
+        self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
 
         #process message
-        self.get_logger().info('got frame-id' + ef_pose.header.frame_id)
+        self.get_logger().debug('got frame-id' + ef_pose.header.frame_id)
 
         ef_pose.header.frame_id = self.human_to_roboy_link_names_map[ef_pose.header.frame_id]
         
@@ -76,9 +80,12 @@ class ForcesMapper(Node):
         ef_pose.pose.orientation.z = link_orn[2]
         ef_pose.pose.orientation.w = link_orn[3]
         
-        self.get_logger().info('Publishing EF-Pose')
+        self.get_logger().debug('Publishing EF-Pose')
 
-        self.ef_publisher.publish(ef_pose)
+        if ef_pose.header.frame_id.find("right") != -1:
+            self.right_ef_publisher.publish(ef_pose)
+        else:
+            self.left_ef_publisher.publish(ef_pose)
           
     def call_service(self, client, msg):
         """Calls a client synchnrnously passing a msg and returns the response
@@ -98,9 +105,11 @@ class ForcesMapper(Node):
     def collision_listener(self, msg):
         """Collision subscriber handler.
         """
-        self.get_logger().info("got collision")
+        self.get_logger().debug("got collision")
         operator_collision = self.map_collision_to_operator(msg)
-        self.get_logger().info("publishing")
+        if operator_collision is None:
+            return
+        self.get_logger().debug("publishing")
         self.exoforce_collision_publisher.publish(operator_collision)
 
     def map_collision_to_operator(self, roboy_collision):
@@ -115,6 +124,8 @@ class ForcesMapper(Node):
         self.get_logger().debug('mapping start')
         roboy_link_info = self.get_roboy_link_info(roboy_collision.linkid)
         operator_link_name = self.roboy_to_human_link_names_map[roboy_link_info.link_name]
+        if operator_link_name is None:
+            return None
         operator_link_info = self.get_operator_link_info(operator_link_name)
         self.get_logger().debug('responses')
 
@@ -125,7 +136,16 @@ class ForcesMapper(Node):
 
         position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
         operator_collision = self.scale_to_operator(operator_collision, position_scale)
+        new_position = self.adapt_vector_to_orientation(roboy_link_info.link_name, [operator_collision.position.x, operator_collision.position.y, operator_collision.position.z])
+        operator_collision.position.x = new_position[0]
+        operator_collision.position.y = new_position[1]
+        operator_collision.position.z = new_position[2]
         self.get_logger().debug("mapping done")
+
+        new_contact_normal = self.adapt_vector_to_orientation(roboy_link_info.link_name, [roboy_collision.contactnormal.x, roboy_collision.contactnormal.y, roboy_collision.contactnormal.z])
+        operator_collision.contactnormal.x = new_contact_normal[0]
+        operator_collision.contactnormal.y = new_contact_normal[1]
+        operator_collision.contactnormal.z = new_contact_normal[2]
 
         return operator_collision
 
@@ -142,7 +162,7 @@ class ForcesMapper(Node):
         roboy_link_info_from_id_req = LinkInfoFromId.Request()
         roboy_link_info_from_id_req.link_id = roboy_link_id
         response = self.call_service(self.roboy_link_info_from_id_client, roboy_link_info_from_id_req)
-        self.get_logger().info("received response")
+        self.get_logger().debug("received response")
         return response
 
     def get_operator_link_info(self, operator_link_name):
@@ -165,12 +185,11 @@ class ForcesMapper(Node):
         """Calculates the ratio between robot link and human link.
 
         Parameters:
-            roboy_dimensions(Vector3):The bounding box of the link whose ratio needs to be calculated.
-            operator_dimensions(Vector3): The bounding box of the link whose ratio is needed
+            roboy_dimensions(Position):The bounding box of the link whose ratio needs to be calculated.
+            operator_dimensions(Position): The bounding box of the link whose ratio is needed
         Returns:
             Vector3:ratio on the three dimensions
         """
-
         x_scale = roboy_dimensions.x / operator_dimensions.x
         y_scale = roboy_dimensions.y / operator_dimensions.y
         z_scale = roboy_dimensions.z / operator_dimensions.z
@@ -218,17 +237,59 @@ class ForcesMapper(Node):
             response.pose.orientation.w]]
 
     def adapt_orientation_to_roboy(self, roboy_link_name, orientation):
-        """adapts the orientation received to roboy's link according to roboy's and operators initial links.
+        """Adapts the orientation received to roboy's link according to roboy's and operators initial links.
 
-        Args:
-            roboy_link_name: link name according to roboy's urfd.
-            orientation: received target orientation from operator.
+        Parameters:
+            roboy_link_name (str): link name according to roboy's urfd.
+            orientation (Vector4): received target orientation from operator.
+        
         Returns:
-            The adapted target orientation.
+            Vector4: The adapted target orientation.
         """
-        # TODO: fix orientaion problem
-        return orientation
+        
+        diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
+        quat = diff * orientation 
 
+        return [quat[0], quat[1], quat[2], quat[3]]
+
+    def adapt_vector_to_orientation(self, roboy_link_name, contact_normal):
+        """Adapts the vector's direction received to roboy's link according to roboy's and operators initial links.
+
+        Parameters:
+            roboy_link_name (str): link name according to roboy's urfd.
+            contact_normal (Vector3): received target orientation from operator.
+
+        Returns:
+            Vector4: The adapted target orientation.
+        """
+
+        diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
+        R = diff.rotation_matrix
+
+        return R.dot(contact_normal)
+
+    def roboy_to_operator_orientation_diff(self, roboy_link_name):
+        """Calculated the orientation difference between the roboy link frame and the operator link frame
+
+        Parameters:
+            roboy_link_name (str): The name of the roboy link
+
+        Returns:
+            diff (Quaternion): The difference of quaternions between roboy and operator links
+        """
+        if self.roboy_initial_link_poses.get(roboy_link_name) == None :
+            self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)
+            self.get_logger().info("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
+        roboy_init_orn = Quaternion(np.array(self.roboy_initial_link_poses[roboy_link_name][1]))
+        operator_link_name = self.roboy_to_human_link_names_map[roboy_link_name]
+        if self.operator_initial_link_poses.get(operator_link_name) == None :
+            self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
+            self.get_logger().info("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
+        op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
+
+        diff = roboy_init_orn / op_init_orn
+
+        return diff
 
 def main(args=None):
     rclpy.init(args=args)

@@ -332,7 +332,7 @@ class ExoForce(Node, ABC):
 
 		self.init_end_effectors()
 
-		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 10)
+		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
 	
 	def init_end_effectors(self):

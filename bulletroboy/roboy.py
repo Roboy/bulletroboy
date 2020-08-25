@@ -11,7 +11,6 @@ from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-from bulletroboy.link_mapping import OPERATOR_TO_ROBOY_NAMES
 import bulletroboy.utils as utils
 
 class BulletRoboy(Node):
@@ -53,7 +52,8 @@ class BulletRoboy(Node):
         self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
 
         #Operator EF pose subscriber
-        self.ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector', self.ef_pose_callback, 100)
+        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/right', self.ef_pose_callback, 1)
+        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/left', self.ef_pose_callback, 1)
 
         #Services and clients
 
@@ -207,7 +207,7 @@ class BulletRoboy(Node):
         response.pose.orientation.y = link_orn[1]
         response.pose.orientation.z = link_orn[2]
         response.pose.orientation.w = link_orn[3]
-        self.get_logger().info(f"Service Initial Link Pose: sending response")
+        self.get_logger().debug(f"Service Initial Link Pose: sending response")
 
         return response
 
@@ -217,7 +217,7 @@ class BulletRoboy(Node):
         Args:
             ef_pose: end effector pose received from the operator.
         """
-        self.get_logger().info('Endeffector pose received: ' + ef_pose.header.frame_id)
+        self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
         
         #process message
         ef_name = ef_pose.header.frame_id
@@ -234,12 +234,13 @@ class BulletRoboy(Node):
         #                                                 ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
         
         #move
-        self.move(ef_id, link_pos, link_orn)
+        is_right = ef_name.find("right") != -1
+        self.move(ef_id, link_pos, link_orn, is_right)
         
-        if(ef_name == 'hand_right'):
+        if(is_right):
             self.drawDebugLine(ef_id, link_pos)
 
-    def move(self, ef_id, target_pos, target_orn):
+    def move(self, ef_id, target_pos, target_orn, is_right):
         """Moves ef given to target pose.
 
         Args:
@@ -251,7 +252,9 @@ class BulletRoboy(Node):
         for i in range(len(self.freeJoints)):
             jointInfo = p.getJointInfo(self.body_id, i)
             qIndex = jointInfo[3]
-            if qIndex > -1:
+            link_name = jointInfo[12]
+            if qIndex > -1 and (is_right == (link_name.find(b"right") != -1)):
+                # self.get_logger().info(link_name)
                 p.setJointMotorControl2(bodyIndex=self.body_id, jointIndex=i, controlMode=p.POSITION_CONTROL,
                                     targetPosition=jointPoses[qIndex-7])
             

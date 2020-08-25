@@ -50,11 +50,21 @@ markerVisualId["hand_left"] = p.addUserDebugText("hand_left", [0,0,0])
 markerVisualId["hand_right"] = p.addUserDebugText("hand_right", [0,0,0])
 markerVisualId["head"] = p.addUserDebugText("head", [0,0,0])
 
+
+global freeJoints, numJoints, init_orn,  head_initialized, right_initialized, right_orn_offset
 numJoints = p.getNumJoints(ob)
-global freeJoints, init_orn,  head_initialized, right_initialized, right_orn_offset
+rospy.logwarn("Using hardcoded orientation correction quterions for controllers!")
 right_initialized = True
+left_initialized = True
 head_initialized = False
-right_orn_offset = [-0.5839645865280022, -0.6905731440685547, 0.2882076733510812, 0.3146909727401144] #[0,0,0,1]
+orn_offset = {}
+orn_offset["hand_right"] = [-0.5839645865280022, -0.6905731440685547, 0.2882076733510812, 0.3146909727401144] #[0,0,0,1]
+orn_offset["hand_left"] = orn_offset["hand_right"]
+
+if not rospy.has_param('publish_cardsflow'):
+    rospy.logwarn("Set param /publish_cardsflow true to forward joint poses")
+    rospy.set_param('publish_cardsflow', False)
+
 init_orn = (0,0,0,1)
 freeJoints = []
 joint_names = {}
@@ -62,10 +72,11 @@ efs = {}
 for i in range(numJoints):
     info = p.getJointInfo(ob,i)
     if info[2] == p.JOINT_REVOLUTE:
-        if info[1] == b'head_axis0' or info[1] == b'head_axis1' or info[1] == b'head_axis2':
-            continue
+        # if info[1] == b'head_axis0' or info[1] == b'head_axis1' or info[1] == b'head_axis2':
+        #     continue
         freeJoints.append(i)
         joint_names[i] = (p.getJointInfo(0, i)[1].decode("utf-8"))
+        rospy.loginfo("Added joint %s to freeJoints"%joint_names[i])
     if info[12] == b'hand_right':
         endEffectorId = i
         print("EF id: " + str(i))
@@ -85,12 +96,12 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
         else:
             jointPoses = p.calculateInverseKinematics(ob, endEffectorId, targetPos, targetOrientation=targetOrn)
         #import pdb; pdb.set_trace()
-        for i in range(len(freeJoints)):
+        for idx,pos in zip(freeJoints,jointPoses): #range(len(freeJoints)):#p.getNumJoints(ob)):#
             # p.resetJointState(ob, freeJoints[i], jointPoses[i])
-            p.setJointMotorControl2(bodyIndex=0,
-                                        jointIndex=freeJoints[i],
+            p.setJointMotorControl2(bodyIndex=ob,
+                                        jointIndex=idx,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
-                                        targetPosition=jointPoses[i])
+                                        targetPosition=pos)#jointPoses[i])
                                         # targetVelocity=0,
                                         # force=1,
                                         # positionGain=5,
@@ -106,7 +117,7 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
 
 def ik(msg):
 
-    global freeJoints, markerVisualId, head_initialized, right_initialized, right_orn_offset
+    global freeJoints, markerVisualId, head_initialized, right_initialized, orn_offset, left_initialized
     pos = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
     orn = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
 
@@ -119,24 +130,35 @@ def ik(msg):
             p.resetBasePositionAndOrientation(0, pos, (0,0,0.7071,0.7071))  
             head_initialized = True
 
-    elif msg.header.frame_id == "hand_right":
-        if not right_initialized:
+    else:#if msg.header.frame_id == "hand_left":
+        if not right_initialized and msg.header.frame_id == "hand_right":
             orn = list(orn)
             ctlr_orn = Quaternion(orn[3], orn[0], orn[1], orn[2])
             ctlr_orn = ctlr_orn.inverse
-            right_orn_offset = [ctlr_orn[1], ctlr_orn[2], ctlr_orn[3], ctlr_orn[0]]
-            rospy.logwarn_throttle(1,right_orn_offset)
+            orn_offset["hand_right"] = [ctlr_orn[1], ctlr_orn[2], ctlr_orn[3], ctlr_orn[0]]
+            rospy.logwarn("Right controller orientation offset: " + str(orn_offset["hand_right"]))
+            # rospy.logwarn_throttle(1,right_orn_offset)
             right_initialized = True
+
+        if not left_initialized and msg.header.frame_id == "hand_left":
+            orn = list(orn)
+            ctlr_orn = Quaternion(orn[3], orn[0], orn[1], orn[2])
+            ctlr_orn = ctlr_orn.inverse
+            orn_offset["hand_left"] = [ctlr_orn[1], ctlr_orn[2], ctlr_orn[3], ctlr_orn[0]]
+            rospy.logwarn("Left controller orientation offset: " + str(orn_offset["hand_left"]))
+            # rospy.logwarn_throttle(1,left_orn_offset)
+            left_initialized = True
+        
         else:
             endEffectorId = efs[msg.header.frame_id]
-            threshold = 0.2
+            threshold = 0.05
             maxIter = 30
             
             # if first:
             #     init_orn = orn
             # else:           
             rospy.loginfo_throttle(1, orn)
-            corrected_orn = quaternion_multiply(orn, right_orn_offset) #(0,0,0.7071,0.7071))
+            corrected_orn = quaternion_multiply(orn, orn_offset[msg.header.frame_id]) #(0,0,0.7071,0.7071))
             # corrected_orn = quaternion_multiply(corrected_orn, (0,0,-0.7071,0.7071))
                
             # jointPoses = p.calculateInverseKinematics(0, endEffectorId, pos, corrected_orn)#(0,0,0,1)) #orn)  #accurateCalculateInverseKinematics(0, endEffectorId, pos,
@@ -193,12 +215,14 @@ while not rospy.is_shutdown():
     msg.effort = []
     msg.name = []
     for i in freeJoints:
-        js = p.getJointState(0, i)
-        msg.position.append(js[0])
-        msg.velocity.append(0)
-        msg.effort.append(0)
-        msg.name.append(joint_names[i])
-    joint_target_pub.publish(msg)
+        if "head" not in joint_names[i]:
+            js = p.getJointState(0, i)
+            msg.position.append(js[0])
+            msg.velocity.append(0)
+            msg.effort.append(0)
+            msg.name.append(joint_names[i])
+    if rospy.get_param('publish_cardsflow'):        
+        joint_target_pub.publish(msg)
     rate.sleep()
 p.disconnect()
 

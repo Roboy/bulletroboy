@@ -63,6 +63,16 @@ class ForcesMapper(Node):
         self.operator_initial_head_pose = self.create_service(GetLinkPose, '/roboy/simulation/exoforce/operator_initial_head_pose', self.operator_initial_head_pose_callback)
     
     def operator_initial_head_pose_callback(self, request, response, link_name = "neck"):
+        """Callback for ROS service for initial head pose of the operator.
+        Args:
+            request: the GetLinkPose service request contains a link name,
+                    but we do not need it for this service.
+            response: the response that would be sent back.
+                    link_name: name of the head link for the current operator.
+        Returns:
+            the response.
+
+        """
         self.get_logger().info("Service operator initial head pose: request received")
 
         head_pos, head_orn = self.get_initial_link_pose(link_name, self.operator_initial_link_pose_client)[:2]

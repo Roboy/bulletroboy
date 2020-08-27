@@ -47,14 +47,11 @@ def main():
     spin_thread = Thread(target=rclpy.spin, args=(bb,))
     spin_thread.start()
 
-    # resp = utils.call_service(bb, bb.operator_initial_head_pose_client, GetLinkPose.Request())
     bb.init_roboy_pose()
-
-    # p.resetBasePositionAndOrientation(body, [resp.pose.position.x, resp.pose.position.y, resp.pose.position.z],
-    #                                         [resp.pose.orientation.x,resp.pose.orientation.y, resp.pose.orientation.z, resp.pose.orientation.w])    
+  
     
     rclpy.logging._root_logger.info("Initializing Bullet roboy node after reseting roboy pose.")
-
+    
     bb.initialize()
 
     while rclpy.ok():

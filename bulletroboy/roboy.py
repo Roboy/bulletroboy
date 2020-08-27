@@ -12,7 +12,6 @@ from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-from bulletroboy.link_mapping import OPERATOR_TO_ROBOY_NAMES
 import bulletroboy.utils as utils
 
 class BulletRoboy(Node):
@@ -25,6 +24,9 @@ class BulletRoboy(Node):
         self.operator_initial_head_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/exoforce/operator_initial_head_pose')
         
     def initialize(self):
+        """This method is called after changing Roboy Pose to finish initializing BulletRoboy's attributes.
+        It was split from __init__ as the service is synchronous and we need BulletRoboy object initialized.
+        """
         # VARIABLES FOR DEBUG LINES
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]

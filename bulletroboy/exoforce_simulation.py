@@ -6,8 +6,7 @@ from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
-from bulletroboy.operator import Operator, Moves
-from bulletroboy.link_mapping import ROBOY_TO_OPERATOR_IDS
+from bulletroboy.operator_simulation import OperatorSim, Moves
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.

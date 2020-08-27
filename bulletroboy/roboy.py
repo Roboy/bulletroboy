@@ -119,7 +119,7 @@ class BulletRoboy(Node):
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if name == 'hand_left':
-                self.endEffectors['hand_left'] = i
+                self.endEffectors[name] = i
                 self.get_logger().info("EF hand_left id: " + str(i))
                 self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 
@@ -127,7 +127,7 @@ class BulletRoboy(Node):
                                                 + "   " + str(link['init_pose'][1][3]))
                 
             if name == 'hand_right':
-                self.endEffectors['hand_right'] = i
+                self.endEffectors[name] = i
                 self.get_logger().info("EF hand_right id: " + str(i))
                 self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 

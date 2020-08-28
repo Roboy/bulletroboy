@@ -1,5 +1,6 @@
 import os
 import yaml
+import io
 
 def call_service(node, client, msg):
     while not client.wait_for_service(timeout_sec=1.0):
@@ -21,6 +22,23 @@ def load_roboy_to_human_link_name_map():
     with open(abs_file_path) as f:
         linkNameMaps = yaml.safe_load(f)
         return linkNameMaps.get("roboyToHumanLinkNameMap")
+
+def dump_op_link_dims(dims_dict):
+    """Saves the link dims dict"""
+    script_dir = os.path.dirname(__file__)
+    rel_path = "../resource/operator_link_standard_dimentions.yaml"
+    abs_file_path = os.path.join(script_dir, rel_path)
+    with io.open(abs_file_path, 'w') as f:
+        yaml.dump({'operatorLinkDimentions':dims_dict}, f)
+
+def load_op_link_dims():
+    """Fetches the link dims dict"""
+    script_dir = os.path.dirname(__file__)
+    rel_path = "../resource/operator_link_standard_dimentions.yaml"
+    abs_file_path = os.path.join(script_dir, rel_path)
+    with open(abs_file_path) as f:
+        dims_dict = yaml.safe_load(f)
+        return dims_dict.get("operatorLinkDimentions")
 
 def draw_AABB(pybullet, aabb):
 	aabbMin = aabb[0]

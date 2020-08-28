@@ -70,11 +70,13 @@ class OperatorSim(Operator):
 		   	-
 
 		"""
+		dims_dict = {}
 		for i in range(p.getNumJoints(self.body_id)):
 			name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
 			link = {}
 			link['name'] = name
 			link['dims'] = self.get_link_bb_dim(i)
+			dims_dict[name] = link['dims']
 			# utils.draw_AABB(p,p.getAABB(self.body_id, i))
 			link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
 			link['id'] = i
@@ -97,6 +99,9 @@ class OperatorSim(Operator):
 				self.get_logger().info("Neck id: " + str(i))
 			if name in self.link_names_map.values():
 				self.draw_LF_coordinate_systems(i) 
+		print(dims_dict['neck'])
+		utils.dump_op_link_dims(dims_dict)
+		print(utils.load_op_link_dims())
 
 	
 

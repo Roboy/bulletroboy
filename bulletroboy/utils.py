@@ -37,7 +37,7 @@ def load_op_link_dims():
     rel_path = "../resource/operator_link_standard_dimentions.yaml"
     abs_file_path = os.path.join(script_dir, rel_path)
     with open(abs_file_path) as f:
-        dims_dict = yaml.safe_load(f)
+        dims_dict = yaml.load(f)
         return dims_dict.get("operatorLinkDimentions")
 
 def draw_AABB(pybullet, aabb):

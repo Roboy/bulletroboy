@@ -99,9 +99,7 @@ class OperatorSim(Operator):
 				self.get_logger().info("Neck id: " + str(i))
 			if name in self.link_names_map.values():
 				self.draw_LF_coordinate_systems(i) 
-		print(dims_dict['neck'])
 		utils.dump_op_link_dims(dims_dict)
-		print(utils.load_op_link_dims())
 
 	
 

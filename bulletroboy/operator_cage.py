@@ -3,7 +3,7 @@ from bulletroboy.operator import Operator
 from geometry_msgs.msg import PoseStamped
 import bulletroboy.utils as utils
 
-class Operator_Cage(Operator):
+class OperatorCage(Operator):
 	"""This class represents the "real" Operator and communicates directly with the animus_server.
 
 	"""
@@ -22,13 +22,28 @@ class Operator_Cage(Operator):
 		Args:
 			-
 		Returns:
-		   	-
+			-
 		"""
-		link = None
-		for i, link_name in link_names_map.keys():
+		dims_dict = utils.load_op_link_dims()
+		for link_name in self.link_names_map.values():
+			link = {}
 			link['name'] = link_name
-			link['id'] = i
-			link['dims'] = utils.load_op_link_dims
+			# link['id'] = i
+			link['id'] = 0
+			link['dims'] = dims_dict[link_name]
+			link['init_pose'] = None
+			self.links.append(link)
+			if link_name == 'left_wrist':
+				# self.end_effectors[link_name] = i
+				self.end_effectors[link_name] = 0
+				# self.get_logger().info("EF hand_left id: " + str(i))
+			if link_name == 'right_wrist':
+				# self.end_effectors[link_name] = i
+				self.end_effectors[link_name] = 0
+				# self.get_logger().info("EF hand_right id: " + str(i))
+			# if link_name == 'neck':
+				# self.get_logger().info("Neck id: " + str(i))
+
 	def get_link_pose(self, link_id):
 		"""Gets the pose with the given id.
 
@@ -38,16 +53,33 @@ class Operator_Cage(Operator):
 		Returns:
 			An array containig the position vector and orientation quaternion.
 		"""
-		pass
+		link = list(filter(lambda link: link['id'] == link_id, self.links))
+		assert len(link) == 1
+		if link[0]['pose']:
+			return link[0]['pose']
 
-	def set_link_pose_cb(self, msg):
+
+	def set_link_pose_cb(self, ef_pose):
 		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.
 
 		Args:
-			msg: received PoseStamped msg.
+			ef_pose: received PoseStamped msg.
 		
 		Returns:
 			-
 		"""
-		pass
+		op_link_name = self.link_names_map[ef_pose.header.frame_id] 
+		link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
+		link_orn = [ef_pose.pose.orientation.x, 
+						ef_pose.pose.orientation.y, 
+						ef_pose.pose.orientation.z, 
+						ef_pose.pose.orientation.w]
+		link = list(filter(lambda link: link['name'] == op_link_name, self.links))
+		if len(link) == 1:
+			if not link[0]['init_pose']:
+				link[0]['init_pose'] = [link_pos, link_orn]
+			link[0]['pose'] = [link_pos, link_orn]
+			self.publish_ef_state()
+		
+		
 

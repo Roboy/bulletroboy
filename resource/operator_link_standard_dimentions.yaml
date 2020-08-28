@@ -2,42 +2,27 @@ operatorLinkDimentions:
   chest: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - &id001 !!python/name:numpy.ndarray ''
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - &id002 !!python/object/apply:numpy.dtype
-      args:
-      - f8
-      - false
-      - true
-      state: !!python/tuple
-      - 3
-      - <
-      - null
-      - null
-      - null
-      - -1
-      - -1
-      - 0
+      args: [f8, false, true]
+      state: !!python/tuple [3, <, null, null, null, -1, -1, 0]
     - false
     - !!binary |
       kuNO6WD9zz+S407pYP3PP5DjTulg/c8/
   left_ankle: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -45,14 +30,12 @@ operatorLinkDimentions:
   left_elbow: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -60,14 +43,12 @@ operatorLinkDimentions:
   left_hip: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -75,14 +56,12 @@ operatorLinkDimentions:
   left_knee: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -90,14 +69,12 @@ operatorLinkDimentions:
   left_shoulder: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -105,14 +82,12 @@ operatorLinkDimentions:
   left_wrist: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -120,14 +95,12 @@ operatorLinkDimentions:
   neck: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -135,14 +108,12 @@ operatorLinkDimentions:
   right_ankle: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -150,14 +121,12 @@ operatorLinkDimentions:
   right_elbow: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -165,14 +134,12 @@ operatorLinkDimentions:
   right_hip: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -180,14 +147,12 @@ operatorLinkDimentions:
   right_knee: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -195,14 +160,12 @@ operatorLinkDimentions:
   right_shoulder: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -210,14 +173,12 @@ operatorLinkDimentions:
   right_wrist: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |
@@ -225,14 +186,12 @@ operatorLinkDimentions:
   root: !!python/object/apply:numpy.core.multiarray._reconstruct
     args:
     - *id001
-    - !!python/tuple
-      - 0
+    - !!python/tuple [0]
     - !!binary |
       Yg==
     state: !!python/tuple
     - 1
-    - !!python/tuple
-      - 3
+    - !!python/tuple [3]
     - *id002
     - false
     - !!binary |

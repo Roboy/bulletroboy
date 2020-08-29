@@ -1,7 +1,8 @@
 import pybullet as p
 import numpy as np
 from numpy.linalg import norm
-
+import time 
+import rclpy
 from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from std_msgs.msg import Float32
 
@@ -246,6 +247,9 @@ class TendonSim():
 		"""
 		start = self.start_location
 		for via_point in self.tendon.via_points:
+			while not self.operator.get_link_center(via_point.link):
+				time.sleep(0.2)
+				    rclpy.logging._root_logger.info("Operator not ready")
 			point = self.operator.get_link_center(via_point.link) + via_point.link_point
 			segment = p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2)
 			self.segments.append(segment)

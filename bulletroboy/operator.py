@@ -39,7 +39,9 @@ class Operator(Node, ABC):
 		center = None
 		link = self.get_link_info_from_name(link_name)
 		if link:
-			center = np.asarray(self.get_link_pose(link['id'])[0])
+			pose = self.get_link_pose(link['id'])
+			if pose: 
+				center = np.asarray(pose)[0]
 		return center
 		
 	@abstractmethod
@@ -120,7 +122,7 @@ class Operator(Node, ABC):
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
 
 		link = self.get_link_info_from_name(request.link_name)
-
+		
 		link_pos = link['init_pose'][0]
 		link_orn = link['init_pose'][1]
 		response.pose.position.x = link_pos[0]
@@ -131,6 +133,7 @@ class Operator(Node, ABC):
 		response.pose.orientation.y = link_orn[1]
 		response.pose.orientation.z = link_orn[2]
 		response.pose.orientation.w = link_orn[3]
+		self.get_logger().info(f"Responding")
 
 		return response
 

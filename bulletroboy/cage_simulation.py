@@ -46,16 +46,17 @@ def main():
     initial_cage_conf = CageConfiguration(args.config_path)
 
     rclpy.init()
+    # operator = OperatorSim(human_model)
     operator = OperatorCage()
-    exoforce = ExoForceSim(initial_cage_conf, operator, args.mode)
 
     executor = MultiThreadedExecutor()
     executor.add_node(operator)
-    executor.add_node(exoforce)
+
     spin_thread = Thread(target=executor.spin)
 
     spin_thread.start()
-
+    exoforce = ExoForceSim(initial_cage_conf, operator, args.mode)
+    executor.add_node(exoforce)
     # RUN SIM
     try:
         while True:

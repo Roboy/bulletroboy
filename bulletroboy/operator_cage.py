@@ -25,24 +25,25 @@ class OperatorCage(Operator):
 			-
 		"""
 		dims_dict = utils.load_op_link_dims()
+		id = 0
 		for link_name in self.link_names_map.values():
 			link = {}
 			link['name'] = link_name
 			# link['id'] = i
-			link['id'] = 0
+			link['id'] = id
 			link['dims'] = dims_dict[link_name]
 			link['init_pose'] = None
+			link['pose'] = None
 			self.links.append(link)
 			if link_name == 'left_wrist':
-				# self.end_effectors[link_name] = i
-				self.end_effectors[link_name] = 0
-				# self.get_logger().info("EF hand_left id: " + str(i))
+				self.end_effectors[link_name] = id
+				self.get_logger().info("EF hand_left id: " + str(id))
 			if link_name == 'right_wrist':
-				# self.end_effectors[link_name] = i
-				self.end_effectors[link_name] = 0
-				# self.get_logger().info("EF hand_right id: " + str(i))
-			# if link_name == 'neck':
-				# self.get_logger().info("Neck id: " + str(i))
+				self.end_effectors[link_name] = id
+				self.get_logger().info("EF hand_right id: " + str(id))
+			if link_name == 'neck':
+				self.get_logger().info("Neck id: " + str(id))
+			id += 1
 
 	def get_link_pose(self, link_id):
 		"""Gets the pose with the given id.
@@ -68,6 +69,7 @@ class OperatorCage(Operator):
 		Returns:
 			-
 		"""
+		self.get_logger().info("Received pose for " + ef_pose.header.frame_id)
 		op_link_name = self.link_names_map[ef_pose.header.frame_id] 
 		link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
 		link_orn = [ef_pose.pose.orientation.x, 
@@ -77,6 +79,7 @@ class OperatorCage(Operator):
 		link = list(filter(lambda link: link['name'] == op_link_name, self.links))
 		if len(link) == 1:
 			if not link[0]['init_pose']:
+				self.get_logger().info('not initialized')
 				link[0]['init_pose'] = [link_pos, link_orn]
 			link[0]['pose'] = [link_pos, link_orn]
 			self.publish_ef_state()

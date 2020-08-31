@@ -24,7 +24,8 @@ setup(
             'cage_simulation = bulletroboy.cage_simulation:main',
             'test_publisher = bulletroboy.test_publisher:main',
             'forces_mapper = bulletroboy.forces_mapper:main',
-            'test_client = bulletroboy.test_client:main'
+            'test_client = bulletroboy.test_client:main',
+            'operator = bulletroboy.operator_cage:main'
         ],
     },
 )

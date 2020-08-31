@@ -7,6 +7,25 @@ from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromName
 
+from .utils import load_roboy_to_human_link_name_map
+
+class Link():
+	def __init__(self, human_name, roboy_name, dims, id):
+		self.human_name = human_name
+		self.roboy_name = roboy_name
+		self.id = id
+		self.dims = dims
+		self.init_pose = None
+		self.pose = None
+
+	def set_pose(self, pos, orn):
+		if self.init_pose is None:
+			self.init_pose = [pos, orn]
+		self.pose = [pos, orn]
+	
+	def get_center(self):
+		return np.array(self.pose[0])
+
 class Operator(Node, ABC):
 	"""This class handles the operator's ROS node.
 
@@ -14,36 +33,38 @@ class Operator(Node, ABC):
 	def __init__(self):
 		"""
 		Args:
-			body_id (int): Pybullet body indentifier.
+			-
 
 		"""
 		super().__init__("operator_node")
-		# TODO delete from moves and add to init_links 
-		self.links = []
-		self.end_effectors = {}
+		# TODO delete from moves and add to init_links
+		self.link_map = load_roboy_to_human_link_name_map()
 		self.init_links()
+		self.init_end_effectors(["left_wrist", "right_wrist", "neck"])
+
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
 
-	def get_link_center(self, link_name):
-		"""Gets link's center point in world frame.
+	def init_end_effectors(self, efs):
+		self.end_effectors = []
+		for link in self.links:
+			if link.human_name in efs:
+				self.end_effectors.append(link)
+				self.get_logger().info("EF " + link.human_name + ": " + str(link.id))
 		
-		Args:
-			link_name (string): Name of the link to search.
+	def get_human_link(self, roboy_link_name):
+		for link in self.links:
+			if link.roboy_name == roboy_link_name:
+				return link
+		return None
 
-		Returns:
-		   	List[dict]: 'name' and 'id' for each link in the operator's pybullet body.
+	def get_link(self, human_link_name):
+		for link in self.links:
+			if link.human_name == human_link_name:
+				return link
+		return None
 
-		"""
-		center = None
-		link = self.get_link_info_from_name(link_name)
-		if link:
-			pose = self.get_link_pose(link['id'])
-			if pose: 
-				center = np.asarray(pose)[0]
-		return center
-		
 	@abstractmethod
 	def init_links(self):
 		"""Initiates the links in operator body.
@@ -57,28 +78,6 @@ class Operator(Node, ABC):
 		"""
 		pass
 
-	@abstractmethod
-	def get_link_pose(self, link_id):
-		"""Gets the pose with the given id.
-
-		Args:
-			link_id: id of the link wanted.
-		
-		Returns:
-			An array containig the position vector and orientation quaternion.
-		"""
-		pass
-
-	def get_link_info_from_name(self, link_name):
-		"""Gets the information about the link with the given name from the links dictionary.
-
-		Args:
-			link_name: name of the link wanted.
-		"""
-		link = list(filter(lambda link: link['name'] == link_name, self.links))
-		assert len(link) == 1
-		return link[0]
-
 	def publish_ef_state(self):
 		"""Publishes the end effectors' state as a ROS message.
 		
@@ -89,11 +88,13 @@ class Operator(Node, ABC):
 		   	-
 
 		"""
-		for ef in self.end_effectors.keys():
-		   self.get_logger().debug('Sending Endeffector pose: ' + ef)
-		   ef_pos,ef_orn = self.get_link_pose(self.end_effectors[ef])
+		for ef_link in self.end_effectors:
+		   if ef_link.pose is None:
+			   continue
+		   self.get_logger().info('Sending Endeffector pose: ' + ef_link.human_name)
+		   ef_pos, ef_orn = ef_link.pose
 		   msg = PoseStamped()
-		   msg.header.frame_id = ef
+		   msg.header.frame_id = ef_link.human_name
 
 		   msg.pose.position.x = ef_pos[0]
 		   msg.pose.position.y = ef_pos[1]
@@ -111,8 +112,9 @@ class Operator(Node, ABC):
 		"""
 		#self.get_logger().info("received call")
 		link = self.get_link_info_from_name(request.link_name)
-		response.link_id = link['id']
-		response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
+		link = self.get_link(request.link_name)
+		response.link_id = link.id
+		response.dimensions.x, response.dimensions.y, response.dimensions.z = link.dims
 		#self.get_logger().info("responding")
 		return response 
 
@@ -121,10 +123,10 @@ class Operator(Node, ABC):
 		'''
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
 
-		link = self.get_link_info_from_name(request.link_name)
+		link = self.get_link(request.link_name)
 		
-		link_pos = link['init_pose'][0]
-		link_orn = link['init_pose'][1]
+		link_pos = link.init_pose[0]
+		link_orn = link.init_pose[1]
 		response.pose.position.x = link_pos[0]
 		response.pose.position.y = link_pos[1]
 		response.pose.position.z = link_pos[2]
@@ -136,4 +138,3 @@ class Operator(Node, ABC):
 		self.get_logger().info(f"Responding")
 
 		return response
-

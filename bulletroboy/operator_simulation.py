@@ -101,7 +101,6 @@ class OperatorSim(Operator):
 				self.draw_LF_coordinate_systems(i) 
 		utils.dump_op_link_dims(dims_dict)
 
-	
 
 	def get_link_index(self, link_name):
 		"""Gets link's index given it's name.

@@ -9,7 +9,6 @@ class OperatorCage(Operator):
 	def __init__(self):
 		super().__init__()
 		self.pose_subscriber = self.create_subscription(PoseStamped, '/bullet_ik', self.vr_pose_listener, 1)
-		self.timer = self.create_timer(0.1, self.publish_ef_state)
 
 	def init_links(self):
 		"""Initiates the links in operator class.
@@ -25,7 +24,7 @@ class OperatorCage(Operator):
 			human_name = self.link_map[key]
 			roboy_name = key
 			dims = dims_dict[human_name]
-			self.links.append(Link(human_name, roboy_name, dims, i))
+			self.links.append(Link(i, human_name, roboy_name, dims))
 
 	def vr_pose_listener(self, ef_pose):
 		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.

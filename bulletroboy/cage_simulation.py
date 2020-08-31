@@ -6,8 +6,7 @@ import rclpy
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 
-from .operator import Moves
-from .operator_simulation import OperatorSim
+from .operator_simulation import OperatorSim, Moves
 from .exoforce import CageConfiguration
 from .exoforce_simulation import ExoForceSim
 

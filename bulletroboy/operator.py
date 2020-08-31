@@ -10,13 +10,13 @@ from roboy_simulation_msgs.srv import LinkInfoFromName
 from .utils import load_roboy_to_human_link_name_map
 
 class Link():
-	def __init__(self, human_name, roboy_name, dims, id):
+	def __init__(self, id, human_name, roboy_name, dims, init_pose=None):
 		self.human_name = human_name
 		self.roboy_name = roboy_name
 		self.id = id
 		self.dims = dims
-		self.init_pose = None
-		self.pose = None
+		self.init_pose = init_pose
+		self.pose = init_pose
 
 	def set_pose(self, pos, orn):
 		if self.init_pose is None:
@@ -24,7 +24,7 @@ class Link():
 		self.pose = [pos, orn]
 	
 	def get_center(self):
-		return np.array(self.pose[0])
+		return np.array(self.pose[0]) if self.pose is not None else None
 
 class Operator(Node, ABC):
 	"""This class handles the operator's ROS node.
@@ -40,11 +40,13 @@ class Operator(Node, ABC):
 		# TODO delete from moves and add to init_links
 		self.link_map = load_roboy_to_human_link_name_map()
 		self.init_links()
-		self.init_end_effectors(["left_wrist", "right_wrist", "neck"])
+		self.init_end_effectors(["left_wrist", "right_wrist"])
 
 		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
+
+		self.timer = self.create_timer(0.1, self.publish_ef_state)
 
 	def init_end_effectors(self, efs):
 		self.end_effectors = []

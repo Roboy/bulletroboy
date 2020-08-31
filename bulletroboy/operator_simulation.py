@@ -1,12 +1,11 @@
 import pybullet as p
 import time
 import math
-import rclpy
 import numpy as np
 from enum import Enum
 
-import bulletroboy.utils as utils
-from bulletroboy.operator import Operator
+from .utils import draw_AABB, dump_op_link_dims
+from .operator import Operator, Link
 
 class OperatorSim(Operator):
 	"""This class handles the operator body and its links in the simulation.
@@ -19,7 +18,6 @@ class OperatorSim(Operator):
 
 		"""
 		self.body_id = body_id
-		self.link_names_map = utils.load_roboy_to_human_link_name_map()
 		super().__init__()
 		self.movements = Movements(self)
 		self.prevPose = [0, 0, 0]
@@ -28,9 +26,6 @@ class OperatorSim(Operator):
 		p.createConstraint(self.body_id, -1, -1, -1, p.JOINT_FIXED, [0,0,0],[0,0,0],[0,0,0],[0,0,0,1])
 		p.createConstraint(self.body_id, self.get_link_index('chest'), self.body_id, -1, p.JOINT_FIXED, [0, 0, 90], [0, 0, 1], [0, 0, 1])
 		self.init_joint_motors()
-
-	def get_link_pose(self, link_id):
-		return p.getLinkState(self.body_id, link_id)[4:6]
 
 	def init_joint_motors(self):
 		"""Initializes joint motors.
@@ -59,7 +54,6 @@ class OperatorSim(Operator):
 		aabb = np.array(aabb)
 		return aabb[1] - aabb[0]
 
-
 	def init_links(self):
 		"""Initiates pybullet's links in operator body.
 		
@@ -70,37 +64,21 @@ class OperatorSim(Operator):
 		   	-
 
 		"""
-		dims_dict = {}
-		for i in range(p.getNumJoints(self.body_id)):
-			name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
-			link = {}
-			link['name'] = name
-			link['dims'] = self.get_link_bb_dim(i)
-			dims_dict[name] = link['dims']
-			# utils.draw_AABB(p,p.getAABB(self.body_id, i))
-			link['init_pose'] = p.getLinkState(self.body_id, i)[:2]
-			link['id'] = i
-			self.links.append(link)
-			if name == 'left_wrist':
-				self.end_effectors[name] = i
-				self.get_logger().info("EF hand_left id: " + str(i))
-				self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
-												+ "   " + str(link['init_pose'][1][1]) 
-												+ "   " + str(link['init_pose'][1][2]) 
-												+ "   " + str(link['init_pose'][1][3]))
-			if name == 'right_wrist':
-				self.end_effectors[name] = i
-				self.get_logger().info("EF hand_right id: " + str(i))
-				self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
-												+ "   " + str(link['init_pose'][1][1]) 
-												+ "   " + str(link['init_pose'][1][2]) 
-												+ "   " + str(link['init_pose'][1][3]))
-			if name == 'neck':
-				self.get_logger().info("Neck id: " + str(i))
-			if name in self.link_names_map.values():
-				self.draw_LF_coordinate_systems(i) 
-		utils.dump_op_link_dims(dims_dict)
+		self.links = []
+		# dims_dict = {}
+		for key in self.link_map:
+			human_name = self.link_map[key]
+			roboy_name = key
+			id = self.get_link_index(human_name)
+			dims = self.get_link_bb_dim(id)
+			# dims_dict[name] = link['dims']
+			init_pose = p.getLinkState(self.body_id, id)[:2]
 
+			self.links.append(Link(id, human_name, roboy_name, dims, init_pose))
+
+			self.draw_LF_coordinate_systems(id)
+			# utils.draw_AABB(p,p.getAABB(self.body_id, i))
+		# utils.dump_op_link_dims(dims_dict)
 
 	def get_link_index(self, link_name):
 		"""Gets link's index given it's name.
@@ -113,8 +91,8 @@ class OperatorSim(Operator):
 
 		"""
 		index = None
-		for i, link in enumerate(self.links):
-			if link['name'] == link_name:
+		for i in range(p.getNumJoints(self.body_id)):
+			if link_name == str(p.getJointInfo(self.body_id,i)[12], 'utf-8'):
 				index = i
 				break
 		return index

@@ -1,13 +1,11 @@
 import pybullet as p
 import numpy as np
 from numpy.linalg import norm
-import time 
-import rclpy
 from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from std_msgs.msg import Float32
 
-from bulletroboy.exoforce import ExoForce
-from bulletroboy.operator_simulation import OperatorSim, Moves
+from .exoforce import ExoForce
+from .operator_simulation import OperatorSim, Moves
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
@@ -247,10 +245,7 @@ class TendonSim():
 		"""
 		start = self.start_location
 		for via_point in self.tendon.via_points:
-			while not self.operator.get_link_center(via_point.link):
-				time.sleep(0.2)
-				    rclpy.logging._root_logger.info("Operator not ready")
-			point = self.operator.get_link_center(via_point.link) + via_point.link_point
+			point = self.operator.get_link(via_point.link).get_center() + via_point.link_point
 			segment = p.addUserDebugLine(start, point, lineColorRGB=self.debug_color, lineWidth=2)
 			self.segments.append(segment)
 			start = point

@@ -7,7 +7,6 @@ from std_msgs.msg import Float32
 
 from bulletroboy.exoforce import ExoForce
 from bulletroboy.operator import Operator, Moves
-from bulletroboy.link_mapping import ROBOY_TO_OPERATOR_IDS
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.

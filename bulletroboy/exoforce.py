@@ -128,7 +128,7 @@ class ViaPoint():
 		self.id = via_point['id']
 		self.link = via_point['link']
 		self.link_point = via_point['point']
-		self.world_point = via_point['point']
+		self.world_point = via_point['point'] if self.link == "cage" else None
 
 	def to_msg(self, init_conf=False):
 		"""Returns via point data as a ROS message.
@@ -347,8 +347,16 @@ class ExoForce(Node, ABC):
 		"""
 		self.end_effectors = []
 		for muscle in self.muscle_units:
-			ef = muscle.end_effector.link
-			if ef not in self.end_effectors: self.end_effectors.append(ef)
+			if self.get_ef(muscle.end_effector.link) is None:
+				self.end_effectors.append(muscle.end_effector)
+
+	def get_ef(self, ef_name):
+		ef = None
+		for end_effector in self.end_effectors:
+			if end_effector.link == ef_name:
+				ef = end_effector
+				break
+		return ef
 
 	@abstractmethod
 	def update(self):
@@ -459,8 +467,8 @@ class ExoForce(Node, ABC):
 		"""
 		for ef in self.end_effectors:
 			end_effector_msg = EndEffector()
-			end_effector_msg.name = ef
-			for muscle in self.get_ef_muscle_units(ef):
+			end_effector_msg.name = ef.link
+			for muscle in self.get_ef_muscle_units(ef.link):
 				muscle_msg = muscle.to_msg(init_conf=True)
 				end_effector_msg.muscle_units.append(muscle_msg)
 			response.end_effectors.append(end_effector_msg)

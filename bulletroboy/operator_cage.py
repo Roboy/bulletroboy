@@ -1,6 +1,10 @@
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import ReentrantCallbackGroup
+
 from geometry_msgs.msg import PoseStamped
 from .operator import Operator, Link
 from .utils import load_op_link_dims
+
 
 class OperatorCage(Operator):
 	"""This class represents the "real" Operator and communicates directly with the animus_server.
@@ -8,7 +12,9 @@ class OperatorCage(Operator):
 	"""
 	def __init__(self):
 		super().__init__()
-		self.pose_subscriber = self.create_subscription(PoseStamped, '/bullet_ik', self.vr_pose_listener, 1)
+		self.pose_subscriber = self.create_subscription(PoseStamped, '/bullet_ik', self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
+		input("\nStand in initial position and press enter...")
+		self.start_publishing()
 
 	def init_links(self):
 		"""Initiates the links in operator class.
@@ -55,7 +61,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     operator = OperatorCage()
-    rclpy.spin(operator)
+    rclpy.spin(operator, MultiThreadedExecutor())
 
     operator.destroy_node()
     rclpy.shutdown()

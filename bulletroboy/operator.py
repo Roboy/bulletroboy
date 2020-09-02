@@ -46,7 +46,8 @@ class Operator(Node, ABC):
 		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
 
-		self.timer = self.create_timer(0.1, self.publish_ef_state)
+	def start_publishing(self, period=0.1):
+		self.timer = self.create_timer(period, self.publish_ef_state)
 
 	def init_end_effectors(self, efs):
 		self.end_effectors = []

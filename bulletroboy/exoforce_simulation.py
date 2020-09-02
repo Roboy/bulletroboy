@@ -96,7 +96,7 @@ class ExoForceSim(ExoForce):
 			self.current_move = Moves.CATCH
 		count = p.readUserDebugParameter(self.hands_up_id)
 		if(count > self.hands_up):
-			self.catch = count
+			self.hands_up = count
 			self.current_move = Moves.HANDS_UP
 		self.operator.move(self.current_move)
 	

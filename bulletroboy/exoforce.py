@@ -179,7 +179,7 @@ class Tendon():
 
 		"""
 		for via_point in self.via_points:
-			via_point.world_point = operator.get_link_center(via_point.link) + via_point.link_point
+			via_point.world_point = operator.get_link(via_point.link).get_center() + via_point.link_point
 
 
 class Motor():

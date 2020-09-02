@@ -58,8 +58,8 @@ def main():
     # RUN SIM
     try:
         while True:
-            exoforce.operator.publish_state()
-            #exoforce.move_operator_sim()
+            operator.start_publishing()
+            exoforce.move_operator_sim()
             exoforce.update()
             p.stepSimulation()
 

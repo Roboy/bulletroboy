@@ -47,6 +47,8 @@ class ExoForceSim(ExoForce):
 		self.arm_roll_id = p.addUserDebugParameter("Arm roll", 1, 0, 0)
 		self.catch = 0 
 		self.catch_id = p.addUserDebugParameter("Catch", 1, 0, 0)
+		self.hands_up = 0 
+		self.hands_up_id = p.addUserDebugParameter("Hands up", 1, 0, 0)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -92,6 +94,10 @@ class ExoForceSim(ExoForce):
 		if(count > self.catch):
 			self.catch = count
 			self.current_move = Moves.CATCH
+		count = p.readUserDebugParameter(self.hands_up_id)
+		if(count > self.hands_up):
+			self.catch = count
+			self.current_move = Moves.HANDS_UP
 		self.operator.move(self.current_move)
 	
 	def tendon_update_listener(self, tendon_force):
@@ -163,6 +169,8 @@ class ExoForceSim(ExoForce):
 		   	-
 
 		"""	
+		self.operator.update_pose()
+
 		for tendon_sim in self.sim_tendons:
 			tendon_sim.tendon.update(self.operator)
 			tendon_sim.update_lines()

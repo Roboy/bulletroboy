@@ -97,6 +97,11 @@ class OperatorSim(Operator):
 				break
 		return index
 	
+	def update_pose(self):
+		for link in self.links:
+			pos, orn = p.getLinkState(self.body_id, link.id)[0:2]
+			link.set_pose(pos, orn)
+
 	def move(self, case):
 		"""Applies a movement to the operator.
 		
@@ -135,6 +140,7 @@ class Moves(Enum):
 	FOREARM_ROLL = 4
 	ARM_ROLL = 5
 	CATCH = 6
+	HANDS_UP = 7
 
 class Movements():
 	"""This class defines 2 types of movements:
@@ -250,6 +256,13 @@ class Movements():
 			right_elbow_pos = 0
 			left_shoulder_quat = p.getQuaternionFromEuler([0, 0, math.pi/2])
 			right_shoulder_quat = p.getQuaternionFromEuler([0, 0, math.pi/2])
+			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
+
+		elif case == Moves.HANDS_UP:
+			left_elbow_pos = 0
+			right_elbow_pos = 0
+			left_shoulder_quat = p.getQuaternionFromEuler([math.pi, 0, 0])
+			right_shoulder_quat = p.getQuaternionFromEuler([math.pi, 0, 0])
 			chest_quat = p.getQuaternionFromEuler([0, 0, 0])
 
 		p.setJointMotorControl2(self.op.body_id, self.left_elbow, p.POSITION_CONTROL, left_elbow_pos)

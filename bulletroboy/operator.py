@@ -22,7 +22,7 @@ class Link():
 		if self.init_pose is None:
 			self.init_pose = [pos, orn]
 		self.pose = [pos, orn]
-	
+
 	def get_center(self):
 		return np.array(self.pose[0]) if self.pose is not None else None
 
@@ -94,7 +94,7 @@ class Operator(Node, ABC):
 		for ef_link in self.end_effectors:
 		   if ef_link.pose is None:
 			   continue
-		   self.get_logger().info('Sending Endeffector pose: ' + ef_link.human_name)
+		#    self.get_logger().info('Sending Endeffector pose: ' + ef_link.human_name)
 		   ef_pos, ef_orn = ef_link.pose
 		   msg = PoseStamped()
 		   msg.header.frame_id = ef_link.human_name
@@ -114,7 +114,6 @@ class Operator(Node, ABC):
 		"""ROS service callback to get link info from link name.
 		"""
 		#self.get_logger().info("received call")
-		link = self.get_link_info_from_name(request.link_name)
 		link = self.get_link(request.link_name)
 		response.link_id = link.id
 		response.dimensions.x, response.dimensions.y, response.dimensions.z = link.dims

@@ -2,12 +2,11 @@ import pybullet as p
 import numpy as np
 from numpy.linalg import norm
 
-from roboy_simulation_msgs.msg import Collision as CollisionMsg
+from roboy_simulation_msgs.msg import TendonUpdate, Collision
 from std_msgs.msg import Float32
 
-from bulletroboy.exoforce import ExoForce
-from bulletroboy.operator import Operator, Moves
-from bulletroboy.link_mapping import ROBOY_TO_OPERATOR_IDS
+from .exoforce import ExoForce
+from .operator_simulation import OperatorSim, Moves
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
@@ -32,7 +31,7 @@ class ExoForceSim(ExoForce):
 		if self.mode == "debug":
 			self.init_debug_parameters()
 		elif self.mode in ["tendon", "forces"]:
-			self.create_subscription(CollisionMsg, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+			self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
 		else:
 			raise Exception(f"Mode [{mode}] not supported!")
@@ -47,6 +46,8 @@ class ExoForceSim(ExoForce):
 		self.arm_roll_id = p.addUserDebugParameter("Arm roll", 1, 0, 0)
 		self.catch = 0 
 		self.catch_id = p.addUserDebugParameter("Catch", 1, 0, 0)
+		self.hands_up = 0 
+		self.hands_up_id = p.addUserDebugParameter("Hands up", 1, 0, 0)
 
 	def init_sim(self):
 		"""Initializes simulation.
@@ -92,6 +93,10 @@ class ExoForceSim(ExoForce):
 		if(count > self.catch):
 			self.catch = count
 			self.current_move = Moves.CATCH
+		count = p.readUserDebugParameter(self.hands_up_id)
+		if(count > self.hands_up):
+			self.hands_up = count
+			self.current_move = Moves.HANDS_UP
 		self.operator.move(self.current_move)
 	
 	def cage_rotation_listener(self, angle):
@@ -168,6 +173,8 @@ class ExoForceSim(ExoForce):
 		   	-
 
 		"""	
+		self.operator.update_pose()
+
 		for tendon_sim in self.sim_tendons:
 			tendon_sim.tendon.update(self.operator)
 			tendon_sim.update_lines()
@@ -251,7 +258,7 @@ class TendonSim():
 		"""
 		start = self.start_location
 		for via_point in self.tendon.via_points:
-			point = self.operator.get_link_center(via_point.link) + via_point.link_point
+			point = self.operator.get_link(via_point.link).get_center() + via_point.link_point
 			segment = p.addUserDebugLine(start, point, lineColorRGB=self.inactive_color, lineWidth=2)
 			self.segments.append(segment)
 			start = point

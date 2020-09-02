@@ -6,9 +6,9 @@ import rclpy
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 
-from bulletroboy.operator import Operator, Moves
-from bulletroboy.exoforce import CageConfiguration
-from bulletroboy.exoforce_simulation import ExoForceSim
+from .operator_simulation import OperatorSim, Moves
+from .exoforce import CageConfiguration
+from .exoforce_simulation import ExoForceSim
 
 CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../config/cageConfiguration.xml"
 
@@ -45,7 +45,7 @@ def main():
     initial_cage_conf = CageConfiguration(args.config_path)
 
     rclpy.init()
-    operator = Operator(human_model)
+    operator = OperatorSim(human_model)
     exoforce = ExoForceSim(initial_cage_conf, operator, args.mode)
 
     executor = MultiThreadedExecutor()
@@ -58,8 +58,8 @@ def main():
     # RUN SIM
     try:
         while True:
-            exoforce.operator.publish_state()
-            #exoforce.move_operator_sim()
+            operator.start_publishing()
+            exoforce.move_operator_sim()
             exoforce.update()
             p.stepSimulation()
 

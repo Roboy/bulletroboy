@@ -1,7 +1,8 @@
 import pybullet as p
 import time
+from threading import Thread
 import numpy as np
-
+from math import pi
 from rclpy.node import Node
 
 from pyquaternion import Quaternion
@@ -20,8 +21,12 @@ class BulletRoboy(Node):
     def __init__(self, body_id):
         super().__init__("bullet_roboy")
         self.body_id = body_id
-        self.t = 0.
-
+        self.operator_initial_head_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/exoforce/operator_initial_head_pose')
+        
+    def initialize(self):
+        """This method is called after changing Roboy Pose to finish initializing BulletRoboy's attributes.
+        It was split from __init__ as the service is synchronous and we need BulletRoboy object initialized.
+        """
         # VARIABLES FOR DEBUG LINES
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]
@@ -69,6 +74,30 @@ class BulletRoboy(Node):
         #Initial pose service
         self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/roboy/initial_link_pose', self.initial_link_pose_callback)
 
+    def init_roboy_pose(self, head_id=37, front_to_x_rotation=pi/2):
+        '''Resets roboy pose according to operator pose received from forces_mapper.
+            This function assumes that the operator's "front" is the x-axis in world frame.
+            Args:
+                head_id: id of head of roboy (defaults to 37)
+                front_to_x_rotation: rotation from the current "front" of roboy to the x-axis in world frame
+            Returns:
+                -
+        '''
+        self.get_logger().info("Initialising roboy pose.")
+        resp = utils.call_service(self, self.operator_initial_head_pose_client, GetLinkPose.Request())
+        self.get_logger().info("Service called.")
+        
+        pos = [resp.pose.position.x, resp.pose.position.y, resp.pose.position.z]
+        orn = [resp.pose.orientation.x,resp.pose.orientation.y, resp.pose.orientation.z, resp.pose.orientation.w]
+        
+        base_pos = p.getBasePositionAndOrientation(self.body_id)[0]
+        base_orn = p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.body_id)[1])
+        
+        new_base_pos = np.array(pos) - (np.array(p.getLinkState(self.body_id, head_id)[0]) - np.array(base_pos))
+        new_base_orn = p.getQuaternionFromEuler([base_orn[0], base_orn[1], p.getEulerFromQuaternion(orn)[2] + front_to_x_rotation])
+        
+        p.resetBasePositionAndOrientation(self.body_id, new_base_pos, new_base_orn)    
+
     def init_urdf_info(self):
         """Gets links, free joints, endeffectors and initial link poses in roboy's body.
         Args:
@@ -82,6 +111,7 @@ class BulletRoboy(Node):
         link['init_pose'] = p.getBasePositionAndOrientation(self.body_id)
         link['id'] = -1 
         self.links.append(link)
+        self.draw_LF_coordinate_system(-1)
         for i in range(p.getNumJoints(self.body_id)):
             info = p.getJointInfo(self.body_id,i)
             link = {}
@@ -95,7 +125,8 @@ class BulletRoboy(Node):
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if name == 'hand_left':
-                self.end_effectors['hand_left'] = i
+                self.end_effectors[name] = i
+
                 self.get_logger().info("EF hand_left id: " + str(i))
                 self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 
@@ -103,7 +134,8 @@ class BulletRoboy(Node):
                                                 + "   " + str(link['init_pose'][1][3]))
                 
             if name == 'hand_right':
-                self.end_effectors['hand_right'] = i
+                self.end_effectors[name] = i
+
                 self.get_logger().info("EF hand_right id: " + str(i))
                 self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 

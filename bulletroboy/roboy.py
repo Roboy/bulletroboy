@@ -34,20 +34,26 @@ class BulletRoboy(Node):
 
         self.links = []
         self.freeJoints = []
-        self.endEffectors = {}
+        self.end_effectors = {}
         self.init_urdf_info()
         
         #Publishers and subscribers
 
-        #Joint state publisher
         timer_period = 0.1 # seconds
+
+        #Joint state publisher
         self.joint_names = []
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)
             self.joint_names.append(ji[1].decode("utf-8"))
         self.joint_publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
-        self.timer = self.create_timer(timer_period, self.joint_state_timer_callback)
+        self.joint_state_timer = self.create_timer(timer_period, self.joint_state_timer_callback)
         
+        #EF pose  publisher
+
+        self.ef_pose_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/roboy/ef_pose', 1)
+        self.ef_pose_timer = self.create_timer(timer_period, self.ef_pose_timer_callback)
+
         #Collision publisher
         self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
 
@@ -89,7 +95,7 @@ class BulletRoboy(Node):
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if name == 'hand_left':
-                self.endEffectors['hand_left'] = i
+                self.end_effectors['hand_left'] = i
                 self.get_logger().info("EF hand_left id: " + str(i))
                 self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 
@@ -97,7 +103,7 @@ class BulletRoboy(Node):
                                                 + "   " + str(link['init_pose'][1][3]))
                 
             if name == 'hand_right':
-                self.endEffectors['hand_right'] = i
+                self.end_effectors['hand_right'] = i
                 self.get_logger().info("EF hand_right id: " + str(i))
                 self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 
@@ -221,7 +227,7 @@ class BulletRoboy(Node):
         
         #process message
         ef_name = ef_pose.header.frame_id
-        ef_id = self.endEffectors[ef_name]
+        ef_id = self.end_effectors[ef_name]
         
         link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
         link_orn = [ef_pose.pose.orientation.x, 
@@ -287,6 +293,32 @@ class BulletRoboy(Node):
             msg.position.append(js[0])
             msg.name.append(self.joint_names[i])
         self.joint_publisher.publish(msg)
+
+    
+    def ef_pose_timer_callback(self):
+
+        """Callback function for the timer, publishes ef pose message every time it gets triggered by timer. 
+        """
+        for ef in self.end_effectors:
+            self.get_logger().debug('Sending Endeffector pose: ' + ef)
+            msg = PoseStamped()
+            ef_id = self.end_effectors[ef]
+            link_info = p.getLinkState(self.body_id, ef_id)[4:6]
+            link_pos = link_info[0]
+            link_orn = link_info[1]
+
+            msg.header.frame_id = ef
+
+            msg.pose.position.x = link_pos[0]
+            msg.pose.position.y = link_pos[1]
+            msg.pose.position.z = link_pos[2]
+
+            msg.pose.orientation.x = link_orn[0]
+            msg.pose.orientation.y = link_orn[1]
+            msg.pose.orientation.z = link_orn[2]
+            msg.pose.orientation.w = link_orn[3]
+
+            self.ef_pose_publisher.publish(msg)
 
     def call_service(self, client, msg):
         """Calls a client synchnrnously passing a msg and returns the response

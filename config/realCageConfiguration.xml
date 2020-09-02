@@ -1,0 +1,169 @@
+<?xml version="1.0" ?>
+<cageConfiguration>
+	<cageStructure>
+		<height>2</height>
+		<radius>1</radius>
+	</cageStructure>
+	<muscleUnits>
+		<muscleUnit id="0">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.69660974 0.9764565 -1.2910093</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="1">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.4131291 0.90900993 -1.2257142</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="2">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.9446957 0.0422492 -1.2300515</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="6">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.50047374 0.8162725 0.3903097</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="7">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.34715247 0.78369695 0.40171576</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="8">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.791664 0.04173696 0.39412642</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="12">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.0273208 -0.20801296 0.93856058</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="13">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.0273208 -0.20801296 0.93856058</viaPoint>
+				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="3">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.93075883 -0.03944159 -1.2213913</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="4">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.4035964 -0.89868927 -1.2121469</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="5">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.65030813 -0.86736846 -1.2279892</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="9">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.7867099 -0.01319528 0.3913952</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="10">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.32052875 -0.76323855 0.39202487</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="11">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.5365386 -0.7625749 0.38740003</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="14">
+			<viaPoints>
+				<viaPoint id="0" link="cage">-0.0273208 -0.20801296 0.93856058</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+		<muscleUnit id="15">
+			<viaPoints>
+				<viaPoint id="0" link="cage">0.11777735 -0.05407834 -0.48527005</viaPoint>
+				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+			</viaPoints>
+			<parameters>
+				<max_force>100</max_force>
+				<direction>1</direction>
+			</parameters>
+		</muscleUnit>
+	</muscleUnits>
+</cageConfiguration>

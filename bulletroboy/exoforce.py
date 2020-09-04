@@ -128,7 +128,7 @@ class ViaPoint():
 		self.id = via_point['id']
 		self.link = via_point['link']
 		self.link_point = via_point['point']
-		self.world_point = via_point['point']
+		self.world_point = via_point['point'] if self.link == "cage" else None
 
 	def to_msg(self, init_conf=False):
 		"""Returns via point data as a ROS message.
@@ -246,6 +246,10 @@ class MuscleUnit():
 		self.end_effector = self.via_points[-1]
 		# parameters
 		self.max_force = float(parameters['max_force'])
+		if parameters.get('direction', None):
+			self.direction = int(parameters['direction'])
+		self.displacement = None
+		self.speed = None
 
 	def set_motor_force(self, force):
 		"""Sets motor's current applied force.
@@ -345,10 +349,11 @@ class ExoForce(Node, ABC):
 		   -
 
 		"""
-		self.end_effectors = []
+		self.end_effectors = {}
+		self.roboy_end_effectors = {}
 		for muscle in self.muscle_units:
-			ef = muscle.end_effector.link
-			if ef not in self.end_effectors: self.end_effectors.append(ef)
+			self.end_effectors.update({muscle.end_effector.link: None})
+			self.roboy_end_effectors.update({muscle.end_effector.link: None})
 
 	@abstractmethod
 	def update(self):

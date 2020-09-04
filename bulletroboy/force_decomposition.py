@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.optimize import minimize
 
-MIN_TENDON_FORCE = 0.01
-MAX_COLLISION_FORCE = 100
+MIN_TENDON_FORCE = 0.5
+MAX_COLLISION_FORCE = 50
 
 def decompose_force_link_to_ef(link_id):
     """Gets link bounding box dimensions.
@@ -40,32 +40,36 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units):
     motor_attachments = np.array([muscle.motor.via_point.world_point for muscle in muscle_units])
     tendon_attachments = np.array([muscle.end_effector.world_point for muscle in muscle_units])
 
-    tendon_vectors = motor_attachments - tendon_attachments
-    tendon_directions = tendon_vectors / np.linalg.norm(tendon_vectors, axis=1, keepdims=True)
-
-    # projecting vector directions to force direction, only tendons with positive values, will be part of the decomposition
-    projections = tendon_directions.dot(force_direction)
-    active_mask = projections > 0
-    active_tendons = tendon_directions[active_mask]
-    active_max_forces = np.asarray(max_forces)[active_mask]
-
     forces = {}
     message = ""
-    if len(active_tendons) > 0:
 
-        initial_forces = np.random.rand(len(active_tendons)) * force_value
-        constraints = [{'type':'eq', 'fun': lambda x: np.sum(active_tendons.T * x, axis=1) - force_value * force_direction},
-                        {'type':'ineq', 'fun': lambda x: active_max_forces - x},
-                        {'type':'ineq', 'fun': lambda x: x - MIN_TENDON_FORCE}]
-        solution = minimize(lambda x: np.sqrt(np.sum(np.square(x))),
-                            initial_forces,
-                            constraints=constraints, options={'maxiter': 100}
-                            )
-        if solution.success:
-            final_forces = np.zeros(len(tendon_vectors))
-            final_forces[active_mask] = solution.x
-            forces = {muscle.id: force for muscle, force in zip(muscle_units, final_forces)}
-        else:
-            message = solution.message
+    if np.any([attach is None for attach in tendon_attachments]):
+        message = "End effector positions are not initialized!"
+    else:
+        tendon_vectors = motor_attachments - tendon_attachments
+        tendon_directions = tendon_vectors / np.linalg.norm(tendon_vectors, axis=1, keepdims=True)
+
+        # projecting vector directions to force direction, only tendons with positive values, will be part of the decomposition
+        projections = tendon_directions.dot(force_direction)
+        active_mask = projections > 0
+        active_tendons = tendon_directions[active_mask]
+        active_max_forces = np.asarray(max_forces)[active_mask]
+
+        if len(active_tendons) > 0:
+
+            initial_forces = np.random.rand(len(active_tendons)) * force_value
+            constraints = [{'type':'eq', 'fun': lambda x: np.sum(active_tendons.T * x, axis=1) - force_value * force_direction},
+                            {'type':'ineq', 'fun': lambda x: active_max_forces - x},
+                            {'type':'ineq', 'fun': lambda x: x - MIN_TENDON_FORCE}]
+            solution = minimize(lambda x: np.sqrt(np.sum(np.square(x))),
+                                initial_forces,
+                                constraints=constraints, options={'maxiter': 100}
+                                )
+            if solution.success:
+                final_forces = np.zeros(len(tendon_vectors))
+                final_forces[active_mask] = solution.x
+                forces = {muscle.id: force for muscle, force in zip(muscle_units, final_forces)}
+            else:
+                message = solution.message
     
     return forces, message

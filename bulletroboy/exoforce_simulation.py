@@ -8,6 +8,7 @@ from std_msgs.msg import Float32
 from .exoforce import ExoForce
 from .operator_simulation import OperatorSim, Moves
 
+
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
 

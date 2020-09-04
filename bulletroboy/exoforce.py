@@ -9,9 +9,13 @@ from xml.dom import minidom
 from rclpy.node import Node
 from roboy_control_msgs.msg import CageState, EndEffector, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
 from roboy_control_msgs.srv import GetCageEndEffectors
+from roboy_simulation_msgs.msg import Collision
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point
 
 from .force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
+
+POS_CONTROL_THRESHOLD = 0.1
 
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
@@ -338,7 +342,8 @@ class ExoForce(Node, ABC):
 
 		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
-	
+		self.create_subscription(PoseStamped, '/roboy/simulation/roboy/ef_pose', self.roboy_ef_pos_listener, 10)
+		
 	def init_end_effectors(self):
 		"""Initializes end effectors list.
 		
@@ -492,3 +497,36 @@ class ExoForce(Node, ABC):
 			self.get_logger().warn(f"Force was not decomposed: force[{collision_force}] ef[{ef}] [{msg}]")
 
 		return forces
+
+	def init_pos_control(self):
+		self.create_timer(0.5, self.pos_control)
+
+	def pos_control(self):
+		for o_ef, r_ef in zip(self.end_effectors, self.roboy_end_effectors):
+			if self.end_effectors[o_ef] is None or self.roboy_end_effectors[r_ef] is None:
+				continue
+			o_pos = self.end_effectors[o_ef]["position"]
+			r_pos = self.roboy_end_effectors[r_ef]["position"]
+			diff = o_pos - r_pos
+			diff_mask = np.absolute(diff > POS_CONTROL_THRESHOLD)
+			direction = [0,0,0]
+			if np.any(diff_mask):
+				if diff_mask[0]:
+					direction[0] = -1 if diff[0] > 0 else 1
+				if diff_mask[1]:
+					direction[1] = -1 if diff[1] > 0 else 1
+				if diff_mask[2]:
+					direction[2] = -1 if diff[2] > 0 else 1
+				collision = Collision()
+				collision.linkid = 8 if "left" in o_ef else 5
+				collision.contactnormal.x, collision.contactnormal.y, collision.contactnormal.z = np.asarray(direction, dtype=float)
+				collision.normalforce = 30.0
+
+				self.collision_listener(collision)
+
+	def roboy_ef_pos_listener(self, ef_pose):
+		if ef_pose.header.frame_id in self.link_names_map:
+			oper_link = self.link_names_map[ef_pose.header.frame_id]
+			pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
+			orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
+			self.roboy_end_effectors[oper_link] = {"position": pos, "orientation:": orn}

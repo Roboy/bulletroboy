@@ -3,10 +3,13 @@ import numpy as np
 from numpy.linalg import norm
 
 from roboy_simulation_msgs.msg import TendonUpdate, Collision
+from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float32
 
 from .exoforce import ExoForce
 from .operator_simulation import OperatorSim, Moves
+
+from .utils import load_roboy_to_human_link_name_map
 
 
 class ExoForceSim(ExoForce):
@@ -23,6 +26,7 @@ class ExoForceSim(ExoForce):
 		"""
 		super().__init__(cage_conf, "exoforce_simulation")
 	
+		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.mode = mode
 		self.operator = operator
 		self.init_sim()
@@ -36,6 +40,9 @@ class ExoForceSim(ExoForce):
 			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
 		else:
 			raise Exception(f"Mode [{mode}] not supported!")
+
+		self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.operator_ef_pos_listener, 1)
+		
 	
 	def init_movement_params(self):
 		'''Initializes movement buttons of the GUI.
@@ -221,6 +228,30 @@ class ExoForceSim(ExoForce):
 				break
 		return tendon_sim
 
+	def operator_ef_pos_listener(self, ef_pose):
+		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.
+		Args:
+			ef_pose: received PoseStamped msg.
+		
+		Returns:
+			-
+		"""
+		end_effector = ef_pose.header.frame_id
+		#self.get_logger().info("Received pose for " + end_effector)
+		if end_effector not in self.end_effectors:
+			self.get_logger().warn(end_effector + " is not an end effector!")
+			return
+
+		link_pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
+		link_orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
+		# for muscle in muscles:
+		# 	muscle.end_effector.world_point = link_pos
+
+		if self.end_effectors[end_effector] is None:
+			self.get_logger().info("Got ef initial pose: " + end_effector)
+			self.end_effectors[end_effector] = {"position": None, "orientation": None}
+		self.end_effectors[end_effector]["position"] = link_pos
+		self.end_effectors[end_effector]["orientation"] = link_orn
 
 class TendonSim():
 	"""This class handles the simulation of each tendon attached to the operator.

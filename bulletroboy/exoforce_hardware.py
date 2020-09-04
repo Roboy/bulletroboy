@@ -16,7 +16,6 @@ from geometry_msgs.msg import PoseStamped
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 
-# POS_CONTROL_THRESHOLD = 0.1
 FAST_PWM_TENSION = 300
 MIN_PWM_TENSION = 150
 YES_OPTIONS = ["Yes","yes","y",""]
@@ -36,7 +35,6 @@ class ExoforceHW(ExoForce):
 		self.create_subscription(Collision, 'roboy/simulation/roboy/collision_hw', self.collision_listener, 1)
 		# self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.ef_pos_listener, 1)
 		self.create_subscription(PoseStamped, '/bullet_ik', self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
-		# self.create_subscription(PoseStamped, '/roboy/simulation/roboy/ef_pose', self.roboy_ef_pos_listener, 10, callback_group=self.callback_group)
 		
 		self.roboy_plexus_ready = False
 		choice = input("Connect to roboy plexus? (Yes/no): ")
@@ -72,6 +70,9 @@ class ExoforceHW(ExoForce):
 
 	def start_exoforce(self):
 		self.create_timer(0.5, self.update)
+		choice = input("\nInitialize position control? (Yes/no): ")
+		if choice in YES_OPTIONS:
+			self.init_pos_control()
 
 	def init_tendons(self):
 		choice = input("\nInitialize tendons? (Yes/no): ")
@@ -131,12 +132,6 @@ class ExoforceHW(ExoForce):
 				self.get_logger().info("Motor " + str(muscle.id) + " touched!")
 			if muscle.id == 3:
 				print(dist)
-
-	# def pos_control(self):
-	# 	for o_ef, r_ef in zip(self.end_effectors, self.roboy_end_effectors):
-	# 		diff = np.absolute(o_ef - r_ef)
-	# 		print(diff)
-	# 		print(diff < POS_CONTROL_THRESHOLD)
 
 	def motor_state_listener(self, state):
 		for muscle, displacement in zip(self.muscle_units, state.displacement[:16]):
@@ -223,12 +218,6 @@ class ExoforceHW(ExoForce):
 			self.end_effectors[end_effector] = {"position": None, "orientation": None}
 		self.end_effectors[end_effector]["position"] = link_pos
 		self.end_effectors[end_effector]["orientation"] = link_orn
-
-	def roboy_ef_pos_listener(self, ef_pose):
-		if ef_pose.header.frame_id in self.link_names_map:
-			oper_link = self.link_names_map[ef_pose.header.frame_id]
-			pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
-			self.roboy_end_effectors[oper_link] = pos
 
 	def update(self):
 		"""Updates ExoForce's state.

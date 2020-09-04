@@ -61,6 +61,7 @@ class BulletRoboy(Node):
 
         #Collision publisher
         self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
+        self.collision_for_hw_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision_hw', 1)
 
         #Operator EF pose subscriber
         self.right_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/right', self.ef_pose_callback, 1)
@@ -401,7 +402,7 @@ class BulletRoboy(Node):
             -
 
         """
-        if collision[9] > 0:
+        if collision[9] > 0 and self.get_link_info_from_id(collision[3])["name"] in self.roboy_to_human_link_names_map.keys():
             msg = Collision()
 
             #collision[3] == linkIndexA in PyBullet docu
@@ -432,6 +433,48 @@ class BulletRoboy(Node):
 
             self.collision_publisher.publish(msg)
 
+    def publish_collision_to_decomposer(self, collision):
+        """Publishes collision as a ROS Message.
+
+        Args:
+            collision (list): item of the contact points list output of pybullet getcontactPoints.
+
+        Returns:
+            -
+
+        """
+        if collision[9] > 0 and self.get_link_info_from_id(collision[3])["name"] in self.roboy_to_human_link_names_map.keys():
+            msg = Collision()
+            link_name = self.get_link_info_from_id(collision[3])["name"]
+            #collision[3] == linkIndexA in PyBullet docu
+            if "right" in link_name:
+                msg.linkid = 5
+            elif "left" in link_name:
+                msg.linkid = 7
+            else:
+                return
+
+            #collision[5] == positionOnA in PyBullet docu
+            msg.position.x = collision[5][0]
+            msg.position.y = collision[5][1]
+            msg.position.z = collision[5][2] - 1.5
+
+            #collision[7] == contactNormalOnB in PyBullet docu
+            msg.contactnormal.x = collision[7][0]
+            msg.contactnormal.y = collision[7][1]
+            msg.contactnormal.z = collision[7][2] - 1.5
+
+            self.draw_force(msg.linkid, msg.position, msg.contactnormal, collision[9])
+
+            #collision[8] == contactDistance in PyBullet docu
+            msg.contactdistance = collision[8]
+
+            #collision[9] == normalForce in PyBullet docu
+            msg.normalforce = collision[9]
+
+            self.get_logger().info("Publishing collision in link %i" % msg.linkid)
+
+            self.collision_for_hw_publisher.publish(msg)
     def draw_force(self, linkid, position, contactnormal, normalforce):
         """Draw collision force as a debugLine.
 

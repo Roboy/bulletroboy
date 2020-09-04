@@ -17,27 +17,27 @@ class EnvironmentCtrl():
         p.loadURDF("samurai.urdf")
         
         #Size parameter
-        self.size_id = p.addUserDebugParameter("Size " , 1, 25, 20)
+        self.size_id = p.addUserDebugParameter("Size " , 1, 25, 8.2)
 
         #object position parameters
         self.x = -0.5
         self.y = -0.8
         self.z = 0.5
-        self.x_id = p.addUserDebugParameter("Position, x " , -5, 5, -0.5)
-        self.y_id = p.addUserDebugParameter("Position, y " , -5, 5, -0.8)
-        self.z_id = p.addUserDebugParameter("Position, z " , -5, 5, 0.5)
+        self.x_id = p.addUserDebugParameter("Position, x " , -5, 5, 0.6)
+        self.y_id = p.addUserDebugParameter("Position, y " , -5, 5, 0.0)
+        self.z_id = p.addUserDebugParameter("Position, z " , -5, 5, 1.8)
         
         #object orientation parameters
         self.or_x = 0
         self.or_y = 0
         self.or_z = 0
-        self.or_x_id = p.addUserDebugParameter("Orientation, x-Axis " , -90, 90, 0)
+        self.or_x_id = p.addUserDebugParameter("Orientation, x-Axis " , -90, 90, 14)
         self.or_y_id = p.addUserDebugParameter("Orientation, y-Axis " , -90, 90, 0)
         self.or_z_id = p.addUserDebugParameter("Orientation, z-Axis " , -90, 90, 0)
 
         #object mass parameter
         self.mass = 0.1
-        self.mass_id = p.addUserDebugParameter("Mass " , 0, 5, 0.1)
+        self.mass_id = p.addUserDebugParameter("Mass " , 0, 5, 3.0)
 
         #Number of times add cube button was clicked
         self.add_cube = 0

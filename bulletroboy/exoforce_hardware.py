@@ -18,7 +18,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 # POS_CONTROL_THRESHOLD = 0.1
 FAST_PWM_TENSION = 300
-MIN_PWM_TENSION = 200
+MIN_PWM_TENSION = 150
 YES_OPTIONS = ["Yes","yes","y",""]
 
 class ExoforceHW(ExoForce):
@@ -32,7 +32,8 @@ class ExoforceHW(ExoForce):
 		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.callback_group = ReentrantCallbackGroup()
 
-		self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+		# self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+		self.create_subscription(Collision, 'roboy/simulation/roboy/collision_hw', self.collision_listener, 1)
 		# self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.ef_pos_listener, 1)
 		self.create_subscription(PoseStamped, '/bullet_ik', self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
 		# self.create_subscription(PoseStamped, '/roboy/simulation/roboy/ef_pose', self.roboy_ef_pos_listener, 10, callback_group=self.callback_group)
@@ -88,6 +89,7 @@ class ExoforceHW(ExoForce):
 				for muscle in self.get_ef_muscle_units(ef):
 					set_points.append(float(MIN_PWM_TENSION * muscle.direction))
 				self.send_motor_commands(motor_ids, set_points)
+			self.send_motor_commands([16],[float(MIN_PWM_TENSION)])
 			print("\nTendons ready!\n")
 	
 	# def init_tendons(self):
@@ -242,7 +244,7 @@ class ExoforceHW(ExoForce):
 			return
 		motor_ids = []
 		set_points = []
-		for muscle in self.get_ef_muscle_units("right_wrist"):
+		for muscle in self.muscle_units:
 			motor_ids.append(muscle.id)
 			speed = 0 if muscle.speed is None else muscle.speed
 			if speed * muscle.direction < 0:
@@ -261,7 +263,9 @@ class ExoforceHW(ExoForce):
 		self.control_mode_req.legacy = False
 		self.control_mode_req.control_mode = mode
 		self.control_mode_req.motor_id = motor_ids if motor_ids is not None else [muscle.id for muscle in self.muscle_units]
+		self.control_mode_req.motor_id.append(16)
 		self.control_mode_req.set_points = set_points if motor_ids is not None else [0] * len(self.control_mode_req.motor_id)
+		self.control_mode_req.set_points.append(0)
 
 		self.future = self.control_mode_client.call_async(self.control_mode_req)
 

@@ -32,7 +32,7 @@ def main():
     # SETTING UP WORLD
     p.connect(p.GUI)
     flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
-    body = p.loadURDF(args.filename, useFixedBase=1, flags=flags)
+    body = p.loadURDF(args.filename, useFixedBase=1)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)
@@ -62,7 +62,8 @@ def main():
             contactPts = p.getContactPoints(body)
 
             for  point in contactPts:
-                bb.publish_collision(point)
+                # bb.publish_collision(point)
+                bb.publish_collision_to_decomposer(point)
 
         except KeyboardInterrupt:
             env.stop()

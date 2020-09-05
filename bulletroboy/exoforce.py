@@ -509,7 +509,6 @@ class ExoForce(Node, ABC):
 			r_pos = self.roboy_end_effectors[r_ef]["position"]
 			diff = o_pos - r_pos
 			diff_mask = np.absolute(diff > self.threshold)
-			print(diff)
 			direction = [0,0,0]
 			if np.any(diff_mask):
 				if diff_mask[0]:

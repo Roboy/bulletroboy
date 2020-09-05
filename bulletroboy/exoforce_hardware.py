@@ -20,6 +20,8 @@ FAST_PWM_TENSION = 300
 MIN_PWM_TENSION = 150
 YES_OPTIONS = ["Yes","yes","y",""]
 
+POS_CONTROL_THRESHOLD = 0.1
+
 class ExoforceHW(ExoForce):
 	def __init__(self, cage_conf):
 		"""
@@ -27,7 +29,7 @@ class ExoforceHW(ExoForce):
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
 		
 		"""
-		super().__init__(cage_conf, "exoforce")
+		super().__init__(cage_conf, "exoforce", POS_CONTROL_THRESHOLD)
 		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.callback_group = ReentrantCallbackGroup()
 

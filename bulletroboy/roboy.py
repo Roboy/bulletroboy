@@ -112,7 +112,7 @@ class BulletRoboy(Node):
         link['init_pose'] = p.getBasePositionAndOrientation(self.body_id)
         link['id'] = -1 
         self.links.append(link)
-        self.draw_LF_coordinate_system(-1)
+        # self.draw_LF_coordinate_system(-1)
         for i in range(p.getNumJoints(self.body_id)):
             info = p.getJointInfo(self.body_id,i)
             link = {}
@@ -145,8 +145,8 @@ class BulletRoboy(Node):
             if name == 'head':
                 self.get_logger().info("EF head id: " + str(i))
 
-            if name in self.roboy_to_human_link_names_map.keys():
-                self.draw_LF_coordinate_system(i) 
+            # if name in self.roboy_to_human_link_names_map.keys():
+            #     self.draw_LF_coordinate_system(i) 
 
     def get_link_bb_dim(self, link_id):
         """Gets link bounding box dimensions.

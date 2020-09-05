@@ -15,7 +15,6 @@ from geometry_msgs.msg import Point
 
 from .force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
 
-POS_CONTROL_THRESHOLD = 0.1
 
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
@@ -326,7 +325,7 @@ class ExoForce(Node, ABC):
 	"""Main ExoForce class. It handles the muscle units and the cage itself.
 	
 	"""
-	def __init__(self, cage_conf, node_name):
+	def __init__(self, cage_conf, node_name, threshold):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
@@ -343,7 +342,8 @@ class ExoForce(Node, ABC):
 		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
 		self.create_subscription(PoseStamped, '/roboy/simulation/roboy/ef_pose', self.roboy_ef_pos_listener, 10)
-		
+		self.threshold = threshold
+
 	def init_end_effectors(self):
 		"""Initializes end effectors list.
 		
@@ -508,7 +508,8 @@ class ExoForce(Node, ABC):
 			o_pos = self.end_effectors[o_ef]["position"]
 			r_pos = self.roboy_end_effectors[r_ef]["position"]
 			diff = o_pos - r_pos
-			diff_mask = np.absolute(diff > POS_CONTROL_THRESHOLD)
+			diff_mask = np.absolute(diff > self.threshold)
+			print(diff)
 			direction = [0,0,0]
 			if np.any(diff_mask):
 				if diff_mask[0]:

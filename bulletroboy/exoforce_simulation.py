@@ -11,6 +11,7 @@ from .operator_simulation import OperatorSim, Moves
 
 from .utils import load_roboy_to_human_link_name_map
 
+POS_CONTROL_THRESHOLD = 0.2
 
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
@@ -24,7 +25,7 @@ class ExoForceSim(ExoForce):
 			mode (string): Mode in which the ExoForceSim will we executed.
 		
 		"""
-		super().__init__(cage_conf, "exoforce_simulation")
+		super().__init__(cage_conf, "exoforce_simulation", POS_CONTROL_THRESHOLD)
 	
 		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.mode = mode
@@ -294,7 +295,7 @@ class TendonSim():
 			segment = p.addUserDebugLine(start, point, lineColorRGB=self.inactive_color, lineWidth=2)
 			self.segments.append(segment)
 			start = point
-		self.debug_text = p.addUserDebugText(self.name, self.start_location, textColorRGB=self.inactive_color, textSize=0.8)
+		# self.debug_text = p.addUserDebugText(self.name, self.start_location, textColorRGB=self.inactive_color, textSize=0.8)
 
 	def apply_force(self, force):
 		"""Applies force to the simulated operator.
@@ -334,4 +335,4 @@ class TendonSim():
 			color = self.active_color if self.tendon.motor.force > 0 else self.inactive_color
 			p.addUserDebugLine(start, point, lineColorRGB=color, lineWidth=2, replaceItemUniqueId=segment)
 			start = point
-		p.addUserDebugText(self.name, self.start_location, color, textSize=0.8, replaceItemUniqueId=self.debug_text)
+		# p.addUserDebugText(self.name, self.start_location, color, textSize=0.8, replaceItemUniqueId=self.debug_text)

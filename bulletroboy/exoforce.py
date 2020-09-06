@@ -490,12 +490,13 @@ class ExoForce(Node, ABC):
 
 		"""
 		ef = decompose_force_link_to_ef(link_id)
+		self.get_logger().info("Force mapped to ef: " + ef)
 
 		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef)) if link_id is not None else {}
 		
 		if not forces:
 			self.get_logger().warn(f"Force was not decomposed: force[{collision_force}] ef[{ef}] [{msg}]")
-
+		
 		return forces
 
 	def init_pos_control(self):

@@ -144,6 +144,10 @@ class BulletRoboy(Node):
                                                 + "   " + str(link['init_pose'][1][3]))
             if name == 'head':
                 self.get_logger().info("EF head id: " + str(i))
+            if name == 'lowerarm_right':
+                self.get_logger().info("EF lowerarm_right id: " + str(i))
+            if name == 'lowerarm_left':
+                self.get_logger().info("EF lowerarm_left id: " + str(i))
 
             # if name in self.roboy_to_human_link_names_map.keys():
             #     self.draw_LF_coordinate_system(i) 

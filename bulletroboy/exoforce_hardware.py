@@ -33,7 +33,7 @@ class ExoforceHW(ExoForce):
 		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.callback_group = ReentrantCallbackGroup()
 
-		# self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+		self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
 		self.create_subscription(Collision, 'roboy/simulation/roboy/collision_hw', self.collision_listener, 1)
 		# self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.ef_pos_listener, 1)
 		self.create_subscription(PoseStamped, '/bullet_ik', self.operator_ef_pos_listener, 10, callback_group=self.callback_group)

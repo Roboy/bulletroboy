@@ -15,9 +15,9 @@ def decompose_force_link_to_ef(link_id):
 
     """
     end_effector = None
-    if link_id in [7, 8]:
+    if link_id in [7, 8, 43]:
         end_effector = "left_wrist"
-    elif link_id in [4, 5]:
+    elif link_id in [4, 5, 3]:
         end_effector = "right_wrist"
     return end_effector
 

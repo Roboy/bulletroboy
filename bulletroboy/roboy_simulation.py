@@ -61,9 +61,9 @@ def main():
             p.stepSimulation()
             contactPts = p.getContactPoints(body)
 
-            # for  point in contactPts:
-                # bb.publish_collision(point)
-                # bb.publish_collision_to_decomposer(point)
+            for  point in contactPts:
+                bb.publish_collision(point)
+                bb.publish_collision_to_decomposer(point)
 
         except KeyboardInterrupt:
             env.stop()

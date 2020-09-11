@@ -246,7 +246,7 @@ def loss_function(x, *params):
     xx = x.reshape(-1)
     yy = y.reshape(-1)
     zz = z.reshape(-1)
-    ws = np.array([xx, yy, zz]) # change mesch into coordinate vectors.
+    ws = np.array([xx, yy, zz]) # change mesh into coordinate vectors.
 
     cage = (floor_radius, ceiling_radius, height, floor_alpha, floor_beta, ceiling_alpha, ceiling_beta)
     attachment_point = get_attachment_points(cage)
@@ -279,8 +279,10 @@ __name__ = "__main__"
 if __name__ == "__main__":
     start = time()
 
-    # initial values
-    with open(r'Optimization_Config.yaml') as File:
+    # get initial values from optimization config file
+    OptimizationConfigFilePath = os.path.dirname(os.path.realpath(__file__)) + "/../config/Optimization_Config.yaml"
+
+    with open(OptimizationConfigFilePath) as File:
         OPTIMIZATION_CONFIG = yaml.load(File, Loader=yaml.FullLoader)
     StepSize = OPTIMIZATION_CONFIG.get('StepSize')              # in m
 
@@ -306,7 +308,7 @@ if __name__ == "__main__":
                        [0, -100, 0],
                        [0, 0, -100]])
 
-    # todo: set the direction preference vector to sport a certain direction in the optimization
+    # todo: set the direction preference vector to support a certain direction in the optimization
     # note: if the direction vector is set to all zero the optimizer will not value any force direction stronger.
     DirectionPreference = np.array([0, 0, 1])   # give mor value to a workspace that is able to simulate vertical forces
 
@@ -334,24 +336,25 @@ if __name__ == "__main__":
 
     print(Solution)
 
-    k = 0
-    saved = False
-    while not saved:
-        if not any(f"{Solver}_test_{k}.txt" in s for s in os.listdir(os.getcwd())):
-            with open(f"{Solver}_test_{k}.txt", "wt") as text_file:
-                text_file.write(f"loss:\n{Solution.fun}\n"
-                                f"Number of iterations:\n{Solution.nit}\n"
-                                f"radius:\n{Radius}\n"
-                                f"height:\n{Height}\n"
-                                f"angles:\n{Angles}\n"
-                                f"step size:{StepSize}\n"
-                                f"seed:{Seed}\n"
-                                f"Initial simplex:\n{InitialSimplex}")
-            text_file.close()
-            saved = True
-        else:
-            k += 1
-            saved = False
+    # save the solution to a text file
+    # k = 0
+    # saved = False
+    # while not saved:
+    #     if not any(f"{Solver}_test_{k}.txt" in s for s in os.listdir(os.getcwd())):
+    #         with open(f"{Solver}_test_{k}.txt", "wt") as text_file:
+    #             text_file.write(f"loss:\n{Solution.fun}\n"
+    #                             f"Number of iterations:\n{Solution.nit}\n"
+    #                             f"radius:\n{Radius}\n"
+    #                             f"height:\n{Height}\n"
+    #                             f"angles:\n{Angles}\n"
+    #                             f"step size:{StepSize}\n"
+    #                             f"seed:{Seed}\n"
+    #                             f"Initial simplex:\n{InitialSimplex}")
+    #         text_file.close()
+    #         saved = True
+    #     else:
+    #         k += 1
+    #         saved = False
 
     AttachmentPointsLeft = get_attachment_points(Solution.x, joint_right=False).tolist()
     AttachmentPointsRight = get_attachment_points(Solution.x, joint_right=True).tolist()
@@ -363,8 +366,8 @@ if __name__ == "__main__":
                                     'AttachmentPointsRight': AttachmentPointsRight, 'Width': Width,
                                     'FloorHeight': FloorHeight, 'MaxForce': MaxForce, 'MinForce': MinForce,
                                     'TotalHeight': TotalHeight}
-            with open(f"attachment_points_{Solver}_test_{k}.yaml", 'w') as file:
-                documents = yaml.dump(OptimizationSolution, file)
+            with open(f"attachment_points_{Solver}_test_{k}.yaml", 'w') as File:
+                documents = yaml.dump(OptimizationSolution, File)
             saved = True
         else:
             k += 1

@@ -1,0 +1,31 @@
+CeilingAlpha: 1.0471975511965976
+CeilingBeta: 2.0943951023931953
+CeilingRadius: 1
+FloorAlpha: 1.0471975511965976
+FloorBeta: 2.0943951023931953
+FloorHeight: 0
+FloorRadius: 1
+Height: 2.5
+HipLeft:
+- 0.0
+- 0.1
+- 0.968
+HipRight:
+- 0.0
+- 0.1
+- 0.968
+MaxForce: 100
+MinForce: 0.01
+RadiusLargeGripSpace: 0.59
+RadiusSmallGripSpace: 0.2
+ShoulderLeft:
+- 0.0
+- -0.2
+- 1.5
+ShoulderRight:
+- 0.0
+- 0.2
+- 1.5
+StepSize: 0.15
+TotalHeight: 2.5
+Width: 1

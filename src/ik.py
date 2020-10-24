@@ -19,7 +19,8 @@ def quaternion_multiply(quaternion1, quaternion0):
                      -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0], dtype=np.float64)
 
 rospy.init_node("bullet_joints")
-joint_target_pub = rospy.Publisher("/joint_targets", JointState, queue_size=1)
+topic_root = "roboy/pinky"
+joint_target_pub = rospy.Publisher(topic_root+"/joint_targets", JointState, queue_size=1)
 
 
 msg = JointState()
@@ -151,8 +152,8 @@ def ik(msg):
         
         else:
             endEffectorId = efs[msg.header.frame_id]
-            threshold = 0.05
-            maxIter = 30
+            threshold = 0.03
+            maxIter = 80
             
             # if first:
             #     init_orn = orn
@@ -165,7 +166,7 @@ def ik(msg):
             #                                                 # threshold, maxIter, corrected_orn) 
 
             jointPoses = accurateCalculateInverseKinematics(0, endEffectorId, pos,
-                                                            threshold, maxIter, corrected_orn) 
+                                                            threshold, maxIter)#, corrected_orn) 
             # if (useSimulation):
             # for i in range(len(freeJoints)):
             #     p.setJointMotorControl2(bodyIndex=0,

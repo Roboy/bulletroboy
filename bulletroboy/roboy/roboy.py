@@ -1,18 +1,15 @@
 import pybullet as p
 import time
-from threading import Thread
 import numpy as np
 from math import pi
 from rclpy.node import Node
-
-from pyquaternion import Quaternion
 
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-import bulletroboy.utils as utils
+from ..utils.utils import load_roboy_to_human_link_name_map, call_service
 
 class BulletRoboy(Node):
     """
@@ -34,7 +31,7 @@ class BulletRoboy(Node):
         #trailDuration is duration (in seconds) after debug lines will be removed automatically
         #use 0 for no-removal
         self.trailDuration = 5
-        self.roboy_to_human_link_names_map = utils.load_roboy_to_human_link_name_map()
+        self.roboy_to_human_link_names_map = load_roboy_to_human_link_name_map()
         self.human_to_roboy_link_names_map = {v: k for k, v in self.roboy_to_human_link_names_map.items()}
 
         self.links = []
@@ -85,7 +82,7 @@ class BulletRoboy(Node):
                 -
         '''
         self.get_logger().info("Initialising roboy pose.")
-        resp = utils.call_service(self, self.operator_initial_head_pose_client, GetLinkPose.Request())
+        resp = call_service(self, self.operator_initial_head_pose_client, GetLinkPose.Request())
         self.get_logger().info("Service called.")
         
         pos = [resp.pose.position.x, resp.pose.position.y, resp.pose.position.z]

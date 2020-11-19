@@ -1,10 +1,9 @@
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 from geometry_msgs.msg import PoseStamped
 from roboy_middleware_msgs.msg import MotorCommand
 from .operator import Operator, Link
-from .utils import load_op_link_dims
+from ..utils.utils import load_op_link_dims
 
 import time
 
@@ -71,18 +70,3 @@ class OperatorCage(Operator):
 						ef_pose.pose.orientation.z, 
 						ef_pose.pose.orientation.w]
 		link.set_pose(link_pos, link_orn)
-
-
-import rclpy
-
-def main(args=None):
-    rclpy.init(args=args)
-
-    operator = OperatorCage()
-    rclpy.spin(operator, MultiThreadedExecutor())
-
-    operator.destroy_node()
-    rclpy.shutdown()
-
-if __name__ == "__main__":
-	main()

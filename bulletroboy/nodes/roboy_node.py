@@ -2,17 +2,14 @@ import argparse
 import os
 
 import pybullet as p
-import math
 
 import rclpy
 
 from threading import Thread
-from bulletroboy.roboy import BulletRoboy
-from bulletroboy.environment_control import EnvironmentCtrl
-from roboy_control_msgs.srv import GetLinkPose
-import bulletroboy.utils as utils
+from ..roboy.roboy import BulletRoboy
+from ..roboy.environment_control import EnvironmentCtrl
 
-MODEL_DEFAULT_PATH =  os.path.dirname(os.path.realpath(__file__)) + "/" + "../../roboy3_models/upper_body/bullet.urdf"
+MODEL_DEFAULT_PATH =  os.path.dirname(os.path.realpath(__file__)) + "/" + "../../../roboy3_models/upper_body/bullet.urdf"
 
 def is_valid_file(parser, arg):
     if not os.path.exists(arg):

@@ -7,7 +7,7 @@ from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromName
 
-from .utils import load_roboy_to_human_link_name_map
+from ..utils.utils import load_roboy_to_human_link_name_map
 
 class Link():
 	def __init__(self, id, human_name, roboy_name, dims, init_pose=None):

@@ -6,18 +6,17 @@ import rclpy
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 
-from .operator_simulation import OperatorSim, Moves
-from .exoforce import CageConfiguration
-from .exoforce_simulation import ExoForceSim
+from ..exoforce.exoforce import CageConfiguration
+from ..exoforce.exoforce_simulation import ExoForceSim
+from ..operator.operator_simulation import OperatorSim
 
-CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../config/cageConfiguration.xml"
+CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../../config/cageConfiguration.xml"
 
 def is_valid_file(parser, arg):
 	if not os.path.exists(arg):
 		parser.error("The file %s does not exist!" % arg)
 	else:
-		return arg #return open(arg, 'r')  # return an open file handle
-
+		return arg
 
 def main():
 

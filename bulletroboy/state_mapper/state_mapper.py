@@ -1,4 +1,3 @@
-import os
 from threading import Event
 
 import numpy as np
@@ -6,27 +5,24 @@ from scipy.spatial.transform import Rotation as R
 
 from pyquaternion import Quaternion
 
-import yaml 
-import rclpy
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 # from sensor_msgs.msg import JointState
-import bulletroboy.utils as utils
+from ..utils.utils import load_roboy_to_human_link_name_map
 from roboy_simulation_msgs.msg import Collision
 from roboy_simulation_msgs.srv import LinkInfoFromName
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 
-class ForcesMapper(Node):
+class StateMapper(Node):
     def __init__(self):
-        super().__init__('forces_imitator')
+        super().__init__('state_mapper')
 
         self.action_done_event = Event()
         self.callback_group = ReentrantCallbackGroup()
-        self.roboy_to_human_link_names_map = utils.load_roboy_to_human_link_name_map()
+        self.roboy_to_human_link_names_map = load_roboy_to_human_link_name_map()
 
         self.human_to_roboy_link_names_map = {v: k for k, v in self.roboy_to_human_link_names_map.items()}
 
@@ -330,17 +326,3 @@ class ForcesMapper(Node):
         diff = roboy_init_orn / op_init_orn
 
         return diff
-
-def main(args=None):
-    rclpy.init(args=args)
-
-    forcesMapper = ForcesMapper()
-    executor = MultiThreadedExecutor()
-    rclpy.spin(forcesMapper, executor)
-
-    forcesMapper.destroy_node()
-    rclpy.shutdown()
-
-
-if __name__ == '__main__':
-    main()

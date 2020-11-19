@@ -4,7 +4,7 @@ import math
 import numpy as np
 from enum import Enum
 
-from .utils import draw_AABB, dump_op_link_dims
+from ..utils.utils import draw_AABB, dump_op_link_dims
 from .operator import Operator, Link
 
 class OperatorSim(Operator):

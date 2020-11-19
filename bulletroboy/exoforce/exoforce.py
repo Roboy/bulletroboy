@@ -13,7 +13,7 @@ from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point
 
-from .force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
+from ..utils.force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
 
 
 class CageConfiguration():

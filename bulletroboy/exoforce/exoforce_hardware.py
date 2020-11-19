@@ -1,19 +1,15 @@
 import numpy as np
-import time
 from pyquaternion import Quaternion
 
 from .exoforce import ExoForce
-from .utils import load_roboy_to_human_link_name_map
 from .force_decomposition import decompose_force_link_to_ef
+from ..utils.utils import load_roboy_to_human_link_name_map
 
 from roboy_simulation_msgs.msg import Collision
 from roboy_middleware_msgs.msg import MotorCommand, MotorState
 from roboy_middleware_msgs.srv import ControlMode
-from std_msgs.msg import Float32
-from sensor_msgs.msg import JointState
 from geometry_msgs.msg import PoseStamped
 
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 FAST_PWM_TENSION = 300
@@ -273,26 +269,3 @@ class ExoforceHW(ExoForce):
 		self.motor_command_msg.setpoint = set_points
 
 		self.motor_command_publisher.publish(self.motor_command_msg)
-
-		
-
-import os
-import rclpy
-from bulletroboy.exoforce import CageConfiguration
-CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../config/realCageConfiguration.xml"
-
-def main(args=None):
-	rclpy.init(args=args)
-
-	# EXOFORCE SETUP
-	initial_cage_conf = CageConfiguration(CONFIG_DEFAULT_PATH)
-	exoforce = ExoforceHW(initial_cage_conf)
-	executor = MultiThreadedExecutor()
-	rclpy.spin(exoforce, executor)
-
-	exoforce.destroy_node()
-	executor.shutdown()
-	rclpy.shutdown()
-
-if __name__ == "__main__":
-	main()

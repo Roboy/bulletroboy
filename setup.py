@@ -20,13 +20,13 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'roboy_simulation = bulletroboy.roboy_simulation:main',
-            'cage_simulation = bulletroboy.cage_simulation:main',
-            'test_publisher = bulletroboy.test_publisher:main',
-            'forces_mapper = bulletroboy.forces_mapper:main',
-            'test_client = bulletroboy.test_client:main',
-            'operator = bulletroboy.operator_cage:main',
-            'exoforce = bulletroboy.exoforce_hardware:main'
+            'roboy_sim      = bulletroboy.nodes.roboy_node:main',
+            'cage_sim       = bulletroboy.nodes.cage_node:main',
+            'state_mapper   = bulletroboy.nodes.state_mapper_node:main',
+            'operator       = bulletroboy.nodes.operator_node:main',
+            'exoforce       = bulletroboy.nodes.exoforce_node:main',
+            'test_publisher = bulletroboy.tests.test_publisher:main',
+            'test_client    = bulletroboy.tests.test_client:main'
         ],
     },
 )

@@ -2,14 +2,14 @@ import pybullet as p
 import numpy as np
 from numpy.linalg import norm
 
-from roboy_simulation_msgs.msg import TendonUpdate, Collision
+from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float32
 
 from .exoforce import ExoForce
-from .operator_simulation import OperatorSim, Moves
+from ..operator.operator_simulation import Moves
 
-from .utils import load_roboy_to_human_link_name_map
+from ..utils.utils import load_roboy_to_human_link_name_map
 
 POS_CONTROL_THRESHOLD = 0.2
 

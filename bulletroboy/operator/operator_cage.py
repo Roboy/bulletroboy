@@ -3,7 +3,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from geometry_msgs.msg import PoseStamped
 from roboy_middleware_msgs.msg import MotorCommand
 from .operator import Operator, Link
-from ..utils.utils import load_op_link_dims
+from ..utils.utils import load_op_link_dims, Topics
 
 import time
 
@@ -15,8 +15,8 @@ class OperatorCage(Operator):
 	"""
 	def __init__(self):
 		super().__init__()
-		self.pose_subscriber = self.create_subscription(PoseStamped, '/bullet_ik', self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
-		self.motor_command_publisher = self.create_publisher(MotorCommand, '/roboy/middleware/MotorCommand', 1)
+		self.pose_subscriber = self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
+		self.motor_command_publisher = self.create_publisher(MotorCommand, Topics.MOTOR_COMMAND, 1)
 		input("\nStand in initial position and press enter...")
 		self.pull()
 		self.start_publishing()

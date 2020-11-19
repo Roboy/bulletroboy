@@ -9,7 +9,7 @@ from std_msgs.msg import Float32
 from .exoforce import ExoForce
 from ..operator.operator_simulation import Moves
 
-from ..utils.utils import load_roboy_to_human_link_name_map
+from ..utils.utils import load_roboy_to_human_link_name_map, Topics
 
 POS_CONTROL_THRESHOLD = 0.2
 
@@ -37,12 +37,12 @@ class ExoForceSim(ExoForce):
 		if self.mode == "debug":
 			self.init_debug_parameters()
 		elif self.mode in ["tendon", "forces"]:
-			self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
-			self.create_subscription(Float32, '/roboy/simulation/cage_rotation', self.cage_rotation_listener, 1)
+			self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)
+			self.create_subscription(Float32, Topics.CAGE_ROTATION, self.cage_rotation_listener, 1)
 		else:
 			raise Exception(f"Mode [{mode}] not supported!")
 
-		self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.operator_ef_pos_listener, 1)
+		self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.operator_ef_pos_listener, 1)
 		
 	
 	def init_movement_params(self):

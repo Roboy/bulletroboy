@@ -9,7 +9,7 @@ from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 # from sensor_msgs.msg import JointState
-from ..utils.utils import load_roboy_to_human_link_name_map
+from ..utils.utils import load_roboy_to_human_link_name_map, Topics, Services
 from roboy_simulation_msgs.msg import Collision
 from roboy_simulation_msgs.srv import LinkInfoFromName
 from roboy_simulation_msgs.srv import LinkInfoFromId
@@ -33,30 +33,30 @@ class StateMapper(Node):
         self.roboy_is_ready = False
 
         # Define clients
-        self.roboy_link_info_from_id_client = self.create_client(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', callback_group=self.callback_group)
-        self.operator_link_info_from_name_client = self.create_client(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', callback_group=self.callback_group)
-        self.roboy_initial_link_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/roboy/initial_link_pose', callback_group=self.callback_group)
-        self.operator_initial_link_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', callback_group=self.callback_group)
+        self.roboy_link_info_from_id_client = self.create_client(LinkInfoFromId, Services.LINK_INFO_FROM_ID, callback_group=self.callback_group)
+        self.operator_link_info_from_name_client = self.create_client(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, callback_group=self.callback_group)
+        self.roboy_initial_link_pose_client = self.create_client(GetLinkPose, Services.ROBOY_INITIAL_LINK_POSE, callback_group=self.callback_group)
+        self.operator_initial_link_pose_client = self.create_client(GetLinkPose, Services.OP_INITIAL_LINK_POSE, callback_group=self.callback_group)
 
         # Define subscriptions
         self.robot_collision_subscription = self.create_subscription(
             Collision,
-            'roboy/simulation/roboy/collision',
+            Topics.ROBOY_COLLISIONS,
             self.collision_listener,
             1)
         # Operator EF pose subscriber
         self.operator_movement_subscription = self.create_subscription(
             PoseStamped, 
-            '/roboy/simulation/operator/pose/endeffector', 
+            Topics.OP_EF_POSES, 
             self.operator_movement_listener, 
             1)
         # Define publishers
-        self.exoforce_collision_publisher = self.create_publisher(Collision, '/roboy/simulation/exoforce/operator/collisions', 1)
-        self.right_ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector/right', 1)
-        self.left_ef_publisher = self.create_publisher(PoseStamped, '/roboy/exoforce/pose/endeffector/left', 1)
+        self.exoforce_collision_publisher = self.create_publisher(Collision, Topics.MAPPED_COLLISIONS, 1)
+        self.right_ef_publisher = self.create_publisher(PoseStamped, Topics.MAPPED_OP_REF_POSE, 1)
+        self.left_ef_publisher = self.create_publisher(PoseStamped, Topics.MAPPED_OP_LEF_POSE, 1)
 
         # Define service
-        self.operator_initial_head_pose = self.create_service(GetLinkPose, '/roboy/simulation/exoforce/operator_initial_head_pose', self.operator_initial_head_pose_callback)
+        self.operator_initial_head_pose = self.create_service(GetLinkPose, Services.INITIAL_HEAD_POSE, self.operator_initial_head_pose_callback)
     
     def operator_initial_head_pose_callback(self, request, response, link_name = "neck"):
         """Callback for ROS service for initial head pose of the operator.

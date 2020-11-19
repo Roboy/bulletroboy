@@ -7,7 +7,7 @@ from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromName
 
-from ..utils.utils import load_roboy_to_human_link_name_map
+from ..utils.utils import load_roboy_to_human_link_name_map, Topics, Services
 
 class Link():
 	def __init__(self, id, human_name, roboy_name, dims, init_pose=None):
@@ -41,10 +41,10 @@ class Operator(Node, ABC):
 		self.link_map = load_roboy_to_human_link_name_map()
 		self.init_links()
 		self.init_end_effectors(["left_wrist", "right_wrist"])
-
-		self.ef_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/operator/pose/endeffector', 1)
-		self.link_info_service = self.create_service(LinkInfoFromName, '/roboy/simulation/operator/link_info_from_name', self.link_info_from_name_callback)
-		self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/operator/initial_link_pose', self.initial_link_pose_callback)
+		print(Topics.OP_EF_POSES)
+		self.ef_publisher = self.create_publisher(PoseStamped, Topics.OP_EF_POSES, 1)
+		self.link_info_service = self.create_service(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, self.link_info_from_name_callback)
+		self.initial_pose_service = self.create_service(GetLinkPose, Services.OP_INITIAL_LINK_POSE, self.initial_link_pose_callback)
 
 	def start_publishing(self, period=0.1):
 		self.timer = self.create_timer(period, self.publish_ef_state)

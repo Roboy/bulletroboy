@@ -14,7 +14,7 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point
 
 from ..utils.force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
-
+from ..utils.utils import Topics, Services
 
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
@@ -339,9 +339,9 @@ class ExoForce(Node, ABC):
 
 		self.init_end_effectors()
 
-		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 1)
+		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
-		self.create_subscription(PoseStamped, '/roboy/simulation/roboy/ef_pose', self.roboy_ef_pos_listener, 10)
+		self.create_subscription(PoseStamped, Topics.ROBOY_EF_POSES, self.roboy_ef_pos_listener, 10)
 		self.threshold = threshold
 
 	def init_end_effectors(self):

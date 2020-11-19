@@ -2,8 +2,8 @@ import numpy as np
 from pyquaternion import Quaternion
 
 from .exoforce import ExoForce
-from .force_decomposition import decompose_force_link_to_ef
-from ..utils.utils import load_roboy_to_human_link_name_map
+from ..utils.force_decomposition import decompose_force_link_to_ef
+from ..utils.utils import load_roboy_to_human_link_name_map, Topics, Services
 
 from roboy_simulation_msgs.msg import Collision
 from roboy_middleware_msgs.msg import MotorCommand, MotorState
@@ -29,18 +29,18 @@ class ExoforceHW(ExoForce):
 		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.callback_group = ReentrantCallbackGroup()
 
-		self.create_subscription(Collision, '/roboy/simulation/exoforce/operator/collisions', self.collision_listener, 1)
+		self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)
 		self.create_subscription(Collision, 'roboy/simulation/roboy/collision_hw', self.collision_listener, 1)
-		# self.create_subscription(PoseStamped, '/roboy/simulation/operator/pose/endeffector', self.ef_pos_listener, 1)
-		self.create_subscription(PoseStamped, '/bullet_ik', self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
+		# self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.ef_pos_listener, 1)
+		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
 		
 		self.roboy_plexus_ready = False
 		choice = input("Connect to roboy plexus? (Yes/no): ")
 		if choice in YES_OPTIONS:
-			self.create_subscription(MotorState, '/roboy/middleware/MotorState', self.motor_state_listener, 1, callback_group=self.callback_group)
-			self.motor_command_publisher = self.create_publisher(MotorCommand, '/roboy/middleware/MotorCommand', 1)
+			self.create_subscription(MotorState, Topics.MOTOR_STATE, self.motor_state_listener, 1, callback_group=self.callback_group)
+			self.motor_command_publisher = self.create_publisher(MotorCommand, Topics.MOTOR_COMMAND, 1)
 
-			self.control_mode_client = self.create_client(ControlMode, '/roboy/middleware/ControlMode')
+			self.control_mode_client = self.create_client(ControlMode, Services.CONTROL_MODE)
 			while not self.control_mode_client.wait_for_service(timeout_sec=1.0):
 				self.get_logger().info('roboy_plexus not available, waiting again...')
 			self.get_logger().info('Succesfull connection to roboy plexus!')

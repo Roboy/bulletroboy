@@ -9,7 +9,7 @@ from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-from ..utils.utils import load_roboy_to_human_link_name_map, call_service
+from ..utils.utils import load_roboy_to_human_link_name_map, call_service, Topics, Services
 
 class BulletRoboy(Node):
     """
@@ -18,7 +18,7 @@ class BulletRoboy(Node):
     def __init__(self, body_id):
         super().__init__("bullet_roboy")
         self.body_id = body_id
-        self.operator_initial_head_pose_client = self.create_client(GetLinkPose, '/roboy/simulation/exoforce/operator_initial_head_pose')
+        self.operator_initial_head_pose_client = self.create_client(GetLinkPose, Services.INITIAL_HEAD_POSE)
         
     def initialize(self):
         """This method is called after changing Roboy Pose to finish initializing BulletRoboy's attributes.
@@ -48,29 +48,29 @@ class BulletRoboy(Node):
         for i in range(p.getNumJoints(self.body_id)):
             ji = p.getJointInfo(self.body_id,i)
             self.joint_names.append(ji[1].decode("utf-8"))
-        self.joint_publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
+        self.joint_publisher = self.create_publisher(JointState, Topics.JOINT_STATES, 1)
         self.joint_state_timer = self.create_timer(timer_period, self.joint_state_timer_callback)
         
         #EF pose  publisher
 
-        self.ef_pose_publisher = self.create_publisher(PoseStamped, '/roboy/simulation/roboy/ef_pose', 1)
+        self.ef_pose_publisher = self.create_publisher(PoseStamped, Topics.ROBOY_EF_POSES, 1)
         self.ef_pose_timer = self.create_timer(timer_period, self.ef_pose_timer_callback)
 
         #Collision publisher
-        self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
+        self.collision_publisher = self.create_publisher(Collision, Topics.ROBOY_COLLISIONS, 1)
         self.collision_for_hw_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision_hw', 1)
 
         #Operator EF pose subscriber
-        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/right', self.ef_pose_callback, 1)
-        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/left', self.ef_pose_callback, 1)
+        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_REF_POSE, self.ef_pose_callback, 1)
+        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_LEF_POSE, self.ef_pose_callback, 1)
 
         #Services and clients
 
         #LinkNameFromId service
-        self.link_info_service = self.create_service(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', self.link_info_from_id_callback)
+        self.link_info_service = self.create_service(LinkInfoFromId, Services.LINK_INFO_FROM_ID, self.link_info_from_id_callback)
         
         #Initial pose service
-        self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/roboy/initial_link_pose', self.initial_link_pose_callback)
+        self.initial_pose_service = self.create_service(GetLinkPose, Services.ROBOY_INITIAL_LINK_POSE, self.initial_link_pose_callback)
 
     def init_roboy_pose(self, head_id=37, front_to_x_rotation=pi/2):
         '''Resets roboy pose according to operator pose received from forces_mapper.

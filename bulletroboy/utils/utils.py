@@ -2,6 +2,47 @@ import os
 import yaml
 import io
 
+
+class Topics:
+
+	# link poses topics
+	VR_HEADSET_POSES 	= "/bullet_ik"
+	OP_EF_POSES 		= "/roboy/simulation/operator/pose/endeffector"
+	MAPPED_OP_REF_POSE 	= "/roboy/exoforce/pose/endeffector/right"
+	MAPPED_OP_LEF_POSE 	= "/roboy/exoforce/pose/endeffector/left"
+	ROBOY_EF_POSES 		= "/roboy/simulation/roboy/ef_pose"
+
+	# roboy
+	JOINT_STATES		= "/roboy/simulation/joint_state"
+
+	# roboy plexus
+	MOTOR_STATE 		= "/roboy/middleware/MotorState"
+	MOTOR_COMMAND 		= "/roboy/middleware/MotorCommand"
+
+	# collision
+	ROBOY_COLLISIONS 	= "roboy/simulation/roboy/collision"
+	MAPPED_COLLISIONS 	= "/roboy/simulation/exoforce/operator/collisions"
+
+	# cage
+	CAGE_STATE			= "/roboy/simulation/cage_state"
+	CAGE_ROTATION 		= "/roboy/simulation/cage_rotation"
+
+
+class Services:
+
+	# roboy plexus services
+	CONTROL_MODE 		= "/roboy/middleware/ControlMode"
+
+	# TODO: replace link services with param server
+	# links services
+	LINK_INFO_FROM_NAME = "/roboy/simulation/operator/link_info_from_name"
+	OP_INITIAL_LINK_POSE 	= "/roboy/simulation/operator/initial_link_pose"
+	LINK_INFO_FROM_ID	= "/roboy/simulation/roboy/link_info_from_id"
+	ROBOY_INITIAL_LINK_POSE	= "/roboy/simulation/roboy/initial_link_pose"
+
+	INITIAL_HEAD_POSE	= "/roboy/simulation/exoforce/operator_initial_head_pose"
+
+
 def call_service(node, client, msg):
 	while not client.wait_for_service(timeout_sec=1.0):
 		node.get_logger().info("service not available, waiting again...")

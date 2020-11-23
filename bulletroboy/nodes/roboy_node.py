@@ -27,30 +27,22 @@ def main():
     
     #INITIALISING ROS AND NODE
     rclpy.init()
-    rclpy.logging._root_logger.info("Starting Bullet Roboy node for pose service.")
-
+    
     bb = BulletRoboy(body)
-
     spin_thread = Thread(target=rclpy.spin, args=(bb,))
     spin_thread.start()
 
-    bb.init_roboy_pose()
-  
-    
-    rclpy.logging._root_logger.info("Initializing Bullet roboy node after reseting roboy pose.")
-    
-    bb.initialize()
-
     while rclpy.ok():
         try:
-            #update the environement parameters with each step
-            env.update()
-            p.stepSimulation()
-            contactPts = p.getContactPoints(body)
+            if bb.ready:
+                #update the environement parameters with each step
+                env.update()
+                p.stepSimulation()
+                contactPts = p.getContactPoints(body)
 
-            for  point in contactPts:
-                bb.publish_collision(point)
-                bb.publish_collision_to_decomposer(point)
+                for point in contactPts:
+                    bb.publish_collision(point)
+                    bb.publish_collision_to_decomposer(point)
 
         except KeyboardInterrupt:
             env.stop()

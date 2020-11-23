@@ -42,8 +42,20 @@ class Services:
 
 	INITIAL_HEAD_POSE	= "/roboy/simulation/exoforce/operator_initial_head_pose"
 
+	# parameters
+	STATE_MAPPER_GET	= "/state_mapper/get_parameters"
 
 def parse_launch_arg(arg, default_value, logger):
+	"""Parse node args received from ros launcher.
+
+	Parameters:
+		arg (string): Argument received from launcher
+		default_value (string): Default value
+		logger (Logger): Logger object
+
+	Returns:
+		string: argument value
+	"""
 	if arg == '':
 		return default_value
 	else:
@@ -53,17 +65,27 @@ def parse_launch_arg(arg, default_value, logger):
 			logger(f"File '{arg}' does not exist, using default value '{default_value}")
 			return default_value
 
-def call_service(node, client, msg):
+def call_service(client, request, logger):
+	"""Synchronous call to a service.
+
+	Parameters:
+		client (Client): The client used to communicate with the server
+		request (SrvTypeRequest): The service request msg
+		logger (Logger): Logger object
+
+	Returns:
+		SrvTypeResponse: Response msg from the call
+	"""
 	while not client.wait_for_service(timeout_sec=1.0):
-		node.get_logger().info("service not available, waiting again...")
-	response = client.call(msg)
-	node.get_logger().info("Got response")
+		logger.info("service not available, waiting again...")
+	response = client.call(request)
 	return response
 		
-def call_service_async(self, client, req):
+def call_service_async(client, request, callback, logger):
 	while not client.wait_for_service(timeout_sec=1.0):
-		self.get_logger().info("service not available, waiting again...")
-	self.future = self.client.call_async(req)
+		logger.info("service not available, waiting again...")
+	future = client.call_async(request)
+	future.add_done_callback(callback)
 
 def dump_op_link_dims(dims_dict):
 	"""Saves the link dims dict"""

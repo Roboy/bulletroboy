@@ -138,7 +138,7 @@ class StateMapper(Node):
 		self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
 
 		if not self.roboy_is_ready:
-			self.get_logger().info('Roboy simulation is not ready.')
+			#self.get_logger().info('Roboy simulation is not ready.')
 
 			return
 

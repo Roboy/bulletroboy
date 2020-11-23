@@ -1,6 +1,4 @@
-import argparse
-import os
-
+import sys, os
 import pybullet as p
 
 import rclpy
@@ -8,28 +6,20 @@ import rclpy
 from threading import Thread
 from ..roboy.roboy import BulletRoboy
 from ..roboy.environment_control import EnvironmentCtrl
+from ..utils.utils import parse_launch_arg
 
 MODEL_DEFAULT_PATH =  os.path.dirname(os.path.realpath(__file__)) + "/" + "../../../roboy3_models/upper_body/bullet.urdf"
-
-def is_valid_file(parser, arg):
-    if not os.path.exists(arg):
-        rclpy.logging._root_logger.error("The file %s does not exist!" % arg)
-    else:
-        return arg #return open(arg, 'r')  # return an open file handle
-
 
 def main():
     """Sets up pybullet environment and runs simulation.
     """
     # PARSING ARGUMENTS
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", dest="filename", default=MODEL_DEFAULT_PATH, metavar="FILE", help="path to the model URDF description", type=lambda x: is_valid_file(parser, x))
-    args = parser.parse_args()
-    
-    # SETTING UP WORLD
+    model_path = parse_launch_arg(sys.argv[1], MODEL_DEFAULT_PATH, rclpy.logging._root_logger.info)
+
+    # SETTING UP SIMULATION
     p.connect(p.GUI)
-    flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
-    body = p.loadURDF(args.filename, useFixedBase=1)
+    #flags= p.URDF_USE_SELF_COLLISION + p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+    body = p.loadURDF(model_path, useFixedBase=1)
     env = EnvironmentCtrl()
 
     p.setGravity(0,0,-10)

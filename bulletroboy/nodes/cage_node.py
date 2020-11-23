@@ -1,31 +1,25 @@
-import argparse
-import os, math
+import sys, os, math
 import pybullet as p
 import pybullet_data
-import rclpy
 from threading import Thread
+
+import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
 from ..exoforce.exoforce import CageConfiguration
 from ..exoforce.exoforce_simulation import ExoForceSim
 from ..operator.operator_simulation import OperatorSim
+from ..utils.utils import parse_launch_arg
 
-CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../../config/cageConfiguration.xml"
-
-def is_valid_file(parser, arg):
-	if not os.path.exists(arg):
-		parser.error("The file %s does not exist!" % arg)
-	else:
-		return arg
+OPERATOR_DEFAULT_URFD = "humanoid/humanoid.urdf"
+CAGE_CONF_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../../config/cageConfiguration.xml"
 
 def main():
 
 	# PARSING ARGUMENTS
-	parser = argparse.ArgumentParser()
-	parser.add_argument("-m", "--mode", dest="mode", default="debug", help="execution mode: [debug]: uses pybullet debug forces [tendon]: uses tendon forces [forces]: uses link forces")
-	parser.add_argument("--config-path", dest="config_path", default=CONFIG_DEFAULT_PATH, metavar="FILE", help="path to the cage configuration XML file", type=lambda x: is_valid_file(parser, x) )
-	parser.add_argument("--model-path", dest="model_path", metavar="FILE", help="path to the human model URDF description", type=lambda x: is_valid_file(parser, x) )
-	args = parser.parse_args()
+	operator_urdf = parse_launch_arg(sys.argv[1], OPERATOR_DEFAULT_URFD, rclpy.logging._root_logger.info)
+	cage_conf_path = parse_launch_arg(sys.argv[2], CAGE_CONF_DEFAULT_PATH, rclpy.logging._root_logger.info)
+	cage_mode = sys.argv[3]
 
 	# SIMULATION SETUP
 	p.connect(p.GUI)
@@ -37,15 +31,14 @@ def main():
 	# LOADING SIM BODIES
 	p.loadURDF("plane.urdf")
 	
-	human_urdf = args.model_path if args.model_path else "humanoid/humanoid.urdf"
-	human_model = p.loadURDF(human_urdf, [0, 0, 1], p.getQuaternionFromEuler([math.pi/2, 0, 0]), globalScaling=0.284, useFixedBase=True, flags=p.URDF_USE_INERTIA_FROM_FILE)
+	operator_model = p.loadURDF(operator_urdf, [0, 0, 1], p.getQuaternionFromEuler([math.pi/2, 0, 0]), globalScaling=0.284, useFixedBase=True, flags=p.URDF_USE_INERTIA_FROM_FILE)
 
 	# EXOFORCE SETUP
-	initial_cage_conf = CageConfiguration(args.config_path)
+	initial_cage_conf = CageConfiguration(cage_conf_path)
 
 	rclpy.init()
-	operator = OperatorSim(human_model)
-	exoforce = ExoForceSim(initial_cage_conf, operator, args.mode)
+	operator = OperatorSim(operator_model)
+	exoforce = ExoForceSim(initial_cage_conf, operator, cage_mode)
 
 	executor = MultiThreadedExecutor()
 	executor.add_node(operator)
@@ -53,8 +46,8 @@ def main():
 	spin_thread = Thread(target=executor.spin)
 
 	spin_thread.start()
-	input("Start position control?")
-	exoforce.init_pos_control()
+	# input("Start position control?")
+	# exoforce.init_pos_control()
 
 	# RUN SIM
 	try:

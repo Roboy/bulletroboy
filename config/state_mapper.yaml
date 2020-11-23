@@ -1,0 +1,70 @@
+state_mapper:
+  ros__parameters:
+    # Order in the following 2 lists is important for mapping
+    roboy_link_names:
+      [torso,
+      upperarm_right,
+      lowerarm_right,
+      hand_right,
+      upperarm_left,
+      lowerarm_left,
+      hand_left,
+      head]
+    operator_link_names:
+      [chest,
+      right_shoulder,
+      right_elbow,
+      right_wrist,
+      left_shoulder,
+      left_elbow,
+      left_wrist,
+      neck]
+
+# Unmapped Robot links
+
+# wrist_right_link1
+# wrist_right_link2
+# wrist_right_link
+# rh_palm
+# wrist_left_link1
+# wrist_left_link2
+# wrist_left_link
+# head_link2
+# head_link1
+# lh_palm
+# elbow_right
+# shoulder_right_link2
+# shoulder_right_link1
+# shoulder_right_link
+# elbow_left
+# shoulder_left_link1
+# shoulder_left_link2
+# shoulder_left_link
+# camera_left
+# camera_right
+# lh_manipulator
+# lh_ffknuckle
+# lh_ffproximal
+# lh_ffmiddle
+# lh_ffdistal
+# lh_fftip
+# lh_mfknuckle
+# lh_mfproximal
+# lh_mfmiddle
+# lh_mfdistal
+# lh_mftip
+# lh_rfknuckle
+# lh_rfproximal
+# rest of finger links
+
+# Unmapped Human links
+
+# base
+# root
+# neck
+# right_hip
+# righht_knee
+# right_ankle
+# left_hip
+# left_knee
+# left_ankle

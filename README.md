@@ -1,10 +1,10 @@
-# Roboy in pybullet
+# ExoForce
 
 ## Setup 
-*Tested on Ubuntu 18.04 and Windows 10*
+*Tested on Ubuntu 20.04*
 - install python>=3.6
 - install [pybullet](https://github.com/bulletphysics/bullet3/blob/master/README.md#pybullet)
-- install [ROS2 Eloquent Elusor](https://index.ros.org/doc/ros2/Installation/Eloquent/)
+- install [ROS2 Foxy Fitzroy](https://index.ros.org/doc/ros2/Installation/Foxy/)
 ```bash
 # Creating ROS2 workspace
 mkdir -p roboy_ws/src
@@ -17,33 +17,19 @@ git clone https://github.com/Roboy/bulletroboy.git
 
 # Building packages in workspace
 cd roboy_ws
-source /opt/ros/eloquent/setup.bash
-colcon build --symlink-install --packages-select bulletroboy roboy_simulation_msgs roboy_control_msgs
+source /opt/ros/foxy/setup.bash
+colcon build --symlink-install --packages-select bulletroboy roboy_simulation_msgs roboy_control_msgs roboy_middleware_msgs
 
 # Sourcing workspace overlay (ROS2 Wiki recommends opening a new terminal before this step)
-source /opt/ros/eloquent/setup.bash
+source /opt/ros/foxy/setup.bash
 cd roboy_ws
 . install/setup.bash
 ```
 
-## Examples
+## Usage
 To be able to run any node after the package is built, you need to source the workspace overlay.
 
-Run the simulation example, where 
-- Roboy draws a predefined circle using inverse kinematics 
-- the joint states are published with ROS2.
+Run the system with the operator simulation.
 ```bash
-# run ros2 node
-ros2 run bulletroboy roboy_simulation
-
-# in a new terminal, to see current joint states
-ros2 topic echo /roboy/simulation/joint_state
-
-# in a new terminal, to see collisions 
-ros2 topic echo roboy/simulation/roboy/collision
-```
-
-Run the cage simulation of a human figure with attached tendons.
-```bash
-ros2 run bulletroboy cage_simulation  # see node help for execution modes
+ros2 launch bulletroboy cage_sim.launch.py  # use -s to list arguments
 ```

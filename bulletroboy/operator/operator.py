@@ -138,6 +138,6 @@ class Operator(Node, ABC):
 		response.pose.orientation.y = link_orn[1]
 		response.pose.orientation.z = link_orn[2]
 		response.pose.orientation.w = link_orn[3]
-		self.get_logger().info(f"Responding")
+		self.get_logger().debug(f"Responding")
 
 		return response

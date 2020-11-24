@@ -1,5 +1,3 @@
-from threading import Event
-
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -8,7 +6,6 @@ from pyquaternion import Quaternion
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 
-# from sensor_msgs.msg import JointState
 from ..utils.utils import Topics, Services
 from roboy_simulation_msgs.msg import Collision
 from roboy_simulation_msgs.srv import LinkInfoFromName
@@ -26,7 +23,6 @@ class StateMapper(Node):
 				('operator_link_names', None)
 			])
 		
-		self.action_done_event = Event()
 		self.callback_group = ReentrantCallbackGroup()
 
 		self.roboy_link_names = self.get_parameter("roboy_link_names").get_parameter_value().string_array_value
@@ -123,7 +119,7 @@ class StateMapper(Node):
 		response.pose.orientation.y = head_orn[1]
 		response.pose.orientation.z = head_orn[2]
 		response.pose.orientation.w = head_orn[3]
-		self.get_logger().info("Responding")
+		self.get_logger().debug("Responding")
 
 		self.roboy_is_ready = True
 
@@ -183,7 +179,7 @@ class StateMapper(Node):
 	def collision_listener(self, msg):
 		"""Collision subscriber handler.
 		"""
-		self.get_logger().debug("got collision")
+		self.get_logger().info(f"Mapping collision: {msg.normalforce} N dir: {msg.contactnormal}")
 		operator_collision = self.map_collision_to_operator(msg)
 		if operator_collision is None:
 			return
@@ -293,18 +289,18 @@ class StateMapper(Node):
 	def get_initial_link_pose(self, link_name, client):
 		"""Gets initial link pose for a link using its name
 
-		Parameters: 
+		Parameters:
 			link_name (String): The name of the link
 			client (RosClient): The client used to pass a request and get a response from service
 
 		Returns:
 			A array containing two vectors, first is position and second is orientations
 		"""
-		self.get_logger().info('Getting initial' + link_name + ' link pose')
+		self.get_logger().info('Getting initial ' + link_name + ' link pose...')
 		initial_link_pose_req = GetLinkPose.Request()
 		initial_link_pose_req.link_name = link_name
 		response = self.call_service(client, initial_link_pose_req)
-		self.get_logger().info('service called')
+		self.get_logger().debug('service called')
 
 		return [[response.pose.position.x, 
 			response.pose.position.y, 
@@ -357,12 +353,12 @@ class StateMapper(Node):
 		"""
 		if self.roboy_initial_link_poses.get(roboy_link_name) == None :
 			self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)
-			self.get_logger().info("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
+			self.get_logger().debug("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
 		roboy_init_orn = Quaternion(np.array(self.roboy_initial_link_poses[roboy_link_name][1]))
 		operator_link_name = self.get_operator_link_name(roboy_link_name)
 		if self.operator_initial_link_poses.get(operator_link_name) == None :
 			self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
-			self.get_logger().info("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
+			self.get_logger().debug("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
 		op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
 
 		diff = roboy_init_orn / op_init_orn

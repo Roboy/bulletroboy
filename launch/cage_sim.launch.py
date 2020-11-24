@@ -21,6 +21,14 @@ def generate_launch_description():
                                 description='- debug: uses pybullet debug force\n\t- tendon: uses tendon forces\n\t- forces: uses link forces'),
         Node(
             package='bulletroboy',
+            executable='state_mapper',
+            parameters = [os.path.join(
+                get_package_share_directory('bulletroboy'),
+                'config',
+                'state_mapper.yaml')]
+        ),
+        Node(
+            package='bulletroboy',
             executable='roboy_sim',
             arguments = [LaunchConfiguration('roboy_urdf')]
         ),
@@ -30,14 +38,5 @@ def generate_launch_description():
             arguments = [LaunchConfiguration('operator_urdf'),
                         LaunchConfiguration('cage_conf'),
                         LaunchConfiguration('cage_mode')]
-        ),
-        Node(
-            package='bulletroboy',
-            executable='state_mapper',
-            parameters = [os.path.join(
-                get_package_share_directory('bulletroboy'),
-                'config',
-                'state_mapper.yaml'
-        )]
         )
     ])

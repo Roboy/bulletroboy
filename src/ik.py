@@ -12,6 +12,7 @@ from cage_interaction import CageInteraction
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
+from rospkg import RosPack
 
 from pyquaternion import Quaternion
 import pybullet_data

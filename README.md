@@ -7,6 +7,12 @@
 - install [ROS Melodic Morenia](http://wiki.ros.org/melodic/Installation/Ubuntu)
 
 ```bash
+# setup ROS for python3
+sudo pip3 install rospkg catkin_pkg
+
+# install other requirements
+pip3 install --user pyquaternion
+
 # Create ROS workspace
 mkdir -p roboy_ws/src
 

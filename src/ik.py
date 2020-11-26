@@ -3,12 +3,15 @@ import pybullet as p
 import math
 import time
 import rospy
-from sensor_msgs.msg import JointState
+from sensor_msgs.msg import JointState, CompressedImage
+from std_srvs.srv import Trigger
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import InteractiveMarkerUpdate
 import numpy as np
-
+import pybullet_data
 from pyquaternion import Quaternion
+from cv_bridge import CvBridge, CvBridgeError
+import cv2
 
 def quaternion_multiply(quaternion1, quaternion0):
     x0, y0, z0, w0 = quaternion0
@@ -18,15 +21,34 @@ def quaternion_multiply(quaternion1, quaternion0):
                      x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0, 
                      -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0], dtype=np.float64)
 
+def reset_head_cb(req):
+    rospy.loginfo("resetting head position")
+    global head_initialized
+    head_initialized = False
+    return [True,""]
+
 rospy.init_node("bullet_joints")
 topic_root = "roboy/pinky"
 joint_target_pub = rospy.Publisher(topic_root+"/joint_targets", JointState, queue_size=1)
-
+reset_head_srv = rospy.Service(topic_root+"/reset_ik", Trigger, reset_head_cb)
+caml_pub = rospy.Publisher(topic_root+'/sensors/caml/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
+camr_pub = rospy.Publisher(topic_root+'/sensors/camr/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
+bridge = CvBridge()
 
 msg = JointState()
 
 p.connect(p.GUI)
-ob = p.loadURDF("/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,-1), baseOrientation=(0,0,0.7071,0.7071))
+p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW,0)
+p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW,0)
+p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
+p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+p.loadURDF("samurai.urdf", 0,2,0)
+roboy = p.loadURDF("/home/roboy/workspace/roboy3/src/robots/upper_body/brain_model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
+
+
+
+p.syncBodyInfo()
 p.setGravity(0,0,-10)
 t = 0.
 prevPose = [0, 0, 0]
@@ -37,10 +59,8 @@ useNullSpace = 0
 useOrientation = 0
 
 #This can be used to test the IK result accuracy.
-useSimulation = 1
-useRealTimeSimulation = 1
 ikSolver = 0
-p.setRealTimeSimulation(useRealTimeSimulation)
+p.setRealTimeSimulation(1)
 #trailDuration is duration (in seconds) after debug lines will be removed automatically
 #use 0 for no-removal
 trailDuration = 15
@@ -53,7 +73,7 @@ markerVisualId["head"] = p.addUserDebugText("head", [0,0,0])
 
 
 global freeJoints, numJoints, init_orn,  head_initialized, right_initialized, right_orn_offset
-numJoints = p.getNumJoints(ob)
+numJoints = p.getNumJoints(roboy)
 rospy.logwarn("Using hardcoded orientation correction quterions for controllers!")
 right_initialized = True
 left_initialized = True
@@ -71,12 +91,15 @@ freeJoints = []
 joint_names = {}
 efs = {}
 for i in range(numJoints):
-    info = p.getJointInfo(ob,i)
+    info = p.getJointInfo(roboy,i)
+    print(i)
+    print(info[12])
     if info[2] == p.JOINT_REVOLUTE:
+        # if "elbow" in info[1]:
         # if info[1] == b'head_axis0' or info[1] == b'head_axis1' or info[1] == b'head_axis2':
         #     continue
         freeJoints.append(i)
-        joint_names[i] = (p.getJointInfo(0, i)[1].decode("utf-8"))
+        joint_names[i] = (p.getJointInfo(roboy, i)[1].decode("utf-8"))
         rospy.loginfo("Added joint %s to freeJoints"%joint_names[i])
     if info[12] == b'hand_right':
         endEffectorId = i
@@ -85,21 +108,60 @@ for i in range(numJoints):
     if info[12] == b'hand_left':
         efs["hand_left"] = i
 
+height = 480
+width = 640
+aspect = width/height
+
+fov, nearplane, farplane = 100, 0.01, 100
+projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, nearplane, farplane)
+
+init_up_vector = (0, 0, 1)
+
+def camera(link_id):
+    com_p, com_o, _, _, _, _ = p.getLinkState(roboy, link_id)
+    com_t = list(com_p)
+    com_p = list(com_p)
+
+    com_t[1] = com_p[1] - 5
+
+    rot_matrix = p.getMatrixFromQuaternion(com_o)
+    rot_matrix = np.array(rot_matrix).reshape(3, 3)
+    init_camera_vector = com_t
+    camera_vector = rot_matrix.dot(init_camera_vector)
+    up_vector = rot_matrix.dot(init_up_vector)
+
+    view_matrix = p.computeViewMatrix(com_p, com_p + 0.1 * camera_vector, up_vector)
+    w, h, img, depth, mask = p.getCameraImage(width, height, view_matrix, projection_matrix, shadow=0, renderer=p.ER_BULLET_HARDWARE_OPENGL,flags=p.ER_NO_SEGMENTATION_MASK)
+    # p.addUserDebugLine(lineFromXYZ=com_p, lineToXYZ=camera_vector, lifeTime=0)
+    return w,h,img
+
+def to_cv2(w,h,img,right):
+    rgba_pic = np.array(img, np.uint8).reshape((h, w, 4))
+    # if right:
+        # rgba_pic = np.roll(rgba_pic, 300)
+    pic = cv2.cvtColor(rgba_pic, cv2.COLOR_RGBA2BGR)
+        # pic = pic[0:height,300:width]
+    # else:
+        # rgba_pic = np.roll(rgba_pic, -300)
+        # pic = cv2.cvtColor(rgba_pic, cv2.COLOR_RGBA2BGR)
+        # pic = pic[0:height,0:width-300]
+
+    return pic
 
 
-def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
+def accurateCalculateInverseKinematics(roboy, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
     closeEnough = False
     iter = 0
     dist2 = 1e30
     while (not closeEnough and iter < maxIter):
         if targetOrn is None:
-            jointPoses = p.calculateInverseKinematics(ob, endEffectorId, targetPos)
+            jointPoses = p.calculateInverseKinematics(roboy, endEffectorId, targetPos)
         else:
-            jointPoses = p.calculateInverseKinematics(ob, endEffectorId, targetPos, targetOrientation=targetOrn)
+            jointPoses = p.calculateInverseKinematics(roboy, endEffectorId, targetPos, targetOrientation=targetOrn)
         #import pdb; pdb.set_trace()
         for idx,pos in zip(freeJoints,jointPoses): #range(len(freeJoints)):#p.getNumJoints(ob)):#
             # p.resetJointState(ob, freeJoints[i], jointPoses[i])
-            p.setJointMotorControl2(bodyIndex=ob,
+            p.setJointMotorControl2(bodyIndex=roboy,
                                         jointIndex=idx,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
                                         targetPosition=pos)#jointPoses[i])
@@ -107,7 +169,7 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
                                         # force=1,
                                         # positionGain=5,
                                         # velocityGain=0.1)
-        ls = p.getLinkState(ob, endEffectorId)
+        ls = p.getLinkState(roboy, endEffectorId)
         newPos = ls[4]
         diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]
         dist2 = (diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
@@ -115,6 +177,8 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
         iter = iter + 1
     #print ("Num iter: "+str(iter) + "threshold: "+str(dist2))
     return jointPoses
+
+
 
 def ik(msg):
 
@@ -151,8 +215,9 @@ def ik(msg):
             left_initialized = True
         
         else:
+            rospy.logwarn_throttle(1, "calculating ik")
             endEffectorId = efs[msg.header.frame_id]
-            threshold = 0.03
+            threshold = 0.05
             maxIter = 80
             
             # if first:
@@ -164,7 +229,7 @@ def ik(msg):
                
             # jointPoses = p.calculateInverseKinematics(0, endEffectorId, pos, corrected_orn)#(0,0,0,1)) #orn)  #accurateCalculateInverseKinematics(0, endEffectorId, pos,
             #                                                 # threshold, maxIter, corrected_orn) 
-
+            # pos[0] += 0.05
             jointPoses = accurateCalculateInverseKinematics(0, endEffectorId, pos,
                                                             threshold, maxIter)#, corrected_orn) 
             # if (useSimulation):
@@ -205,68 +270,37 @@ def marker(msg):
                                         positionGain=1,
                                         velocityGain=0.1)
 
-
 ik_sub = rospy.Subscriber("/bullet_ik", PoseStamped, ik, queue_size=10)
 
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
-rate = rospy.Rate(50)
+rate = rospy.Rate(100)
+
+
 while not rospy.is_shutdown():
-    msg.position = []
-    msg.velocity = []
-    msg.effort = []
-    msg.name = []
-    for i in freeJoints:
-        if "head" not in joint_names[i]:
-            js = p.getJointState(0, i)
-            msg.position.append(js[0])
-            msg.velocity.append(0)
-            msg.effort.append(0)
-            msg.name.append(joint_names[i])
-    if rospy.get_param('publish_cardsflow'):        
-        joint_target_pub.publish(msg)
+    left = camera(11)
+    right = camera(12)
+    left_pic = to_cv2(left[0],left[1],left[2],0)
+    right_pic = to_cv2(right[0],right[1],right[2],1)
+    caml_pub.publish(bridge.cv2_to_compressed_imgmsg(left_pic))
+    camr_pub.publish(bridge.cv2_to_compressed_imgmsg(right_pic))
+    vis = np.concatenate((left_pic, right_pic), axis=1)
+    cv2.imshow('window', vis)
+    cv2.waitKey(1)
+    # rate.sleep()
+
+    # msg.position = []
+    # msg.velocity = []
+    # msg.effort = []
+    # msg.name = []
+    # for i in freeJoints:
+    #     if "head" not in joint_names[i]:
+    #         js = p.getJointState(0, i)
+    #         msg.position.append(js[0])
+    #         msg.velocity.append(0)
+    #         msg.effort.append(0)
+    #         msg.name.append(joint_names[i])
+    # if rospy.get_param('publish_cardsflow'):        
+    #     joint_target_pub.publish(msg)
     rate.sleep()
+
 p.disconnect()
-
-    # ls = p.getLinkState(ob, endEffectorId)
-    # if (hasPrevPose):
-    #     p.addUserDebugLine(prevPose, pos, [0, 0, 0.3], 1, trailDuration)
-    #     p.addUserDebugLine(prevPose1, ls[4], [1, 0, 0], 1, trailDuration)
-    # prevPose = pos
-    # prevPose1 = ls[4]
-    # hasPrevPose = 1
-
-# while not rospy.is_shutdown():
-#     rospy.spin()
-
-# while True:
-#     if (useRealTimeSimulation):
-#         t = time.time()  #(dt, micro) = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f').split('.')
-#         #t = (dt.second/60.)*2.*math.pi
-#     else:
-#         t = t + 0.001
-
-#     if (useSimulation and useRealTimeSimulation == 0):
-#         p.stepSimulation()
-
-#     pos = [0.2 * math.cos(t)-0.4, -0.4, 0. + 0.2 * math.sin(t) + 0.7]
-#     threshold = 0.001
-#     maxIter = 100
-#     jointPoses = accurateCalculateInverseKinematics(ob, endEffectorId, pos,
-#                                                     threshold, maxIter)
-#     if (useSimulation):
-#         for i in range(len(freeJoints)):
-#             p.setJointMotorControl2(bodyIndex=ob,
-#                                     jointIndex=freeJoints[i],
-#                                     controlMode=p.POSITION_CONTROL,
-#                                     targetPosition=jointPoses[i],
-#                                     targetVelocity=0,
-#                                     force=100,
-#                                     positionGain=1,
-#                                     velocityGain=0.1)
-#     ls = p.getLinkState(ob, endEffectorId)
-#     if (hasPrevPose):
-#         p.addUserDebugLine(prevPose, pos, [0, 0, 0.3], 1, trailDuration)
-#         p.addUserDebugLine(prevPose1, ls[4], [1, 0, 0], 1, trailDuration)
-#     prevPose = pos
-#     prevPose1 = ls[4]
-#     hasPrevPose = 1

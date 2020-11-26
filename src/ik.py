@@ -200,6 +200,8 @@ def accurateCalculateInverseKinematics(roboy, endEffectorId, targetPos, threshol
     #print ("Num iter: "+str(iter) + "threshold: "+str(dist2))
     return jointPoses
 
+
+
 def ik(msg):
 
     global freeJoints, markerVisualId, head_initialized, right_initialized, orn_offset, left_initialized

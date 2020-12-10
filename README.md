@@ -33,3 +33,11 @@ Run the system with the operator simulation.
 ```bash
 ros2 launch bulletroboy cage_sim.launch.py  # use -s to list arguments
 ```
+
+Run the system with the real exoforce cage. 
+(Each command must be executed in a new terminal. Operator and exoforce nodes require interaction through the terminal and cannot be added to the launch file yet.)
+```bash
+ros2 launch bulletroboy exoforce.launch.py # use -s to list arguments
+ros2 run bulletroboy operator
+ros2 run bulletroboy exoforce
+```

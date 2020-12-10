@@ -2,7 +2,7 @@ import numpy as np
 from pyquaternion import Quaternion
 
 from .exoforce import ExoForce
-from ..utils.utils import load_roboy_to_human_link_name_map, Topics, Services
+from ..utils.utils import Topics, Services
 
 from roboy_simulation_msgs.msg import Collision
 from roboy_middleware_msgs.msg import MotorCommand, MotorState
@@ -25,7 +25,6 @@ class ExoforceHW(ExoForce):
 		
 		"""
 		super().__init__(cage_conf, "exoforce", POS_CONTROL_THRESHOLD)
-		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.callback_group = ReentrantCallbackGroup()
 
 		self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)

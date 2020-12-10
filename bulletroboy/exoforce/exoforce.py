@@ -341,7 +341,7 @@ class ExoForce(Node, ABC):
 
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
-		self.create_subscription(PoseStamped, Topics.ROBOY_EF_POSES, self.roboy_ef_pos_listener, 10)
+		#self.create_subscription(PoseStamped, Topics.ROBOY_EF_POSES, self.roboy_ef_pos_listener, 10)
 		self.threshold = threshold
 
 	def init_end_effectors(self):
@@ -525,9 +525,9 @@ class ExoForce(Node, ABC):
 
 				self.collision_listener(collision)
 
-	def roboy_ef_pos_listener(self, ef_pose):
-		if ef_pose.header.frame_id in self.link_names_map:
-			oper_link = self.link_names_map[ef_pose.header.frame_id]
-			pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
-			orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
-			self.roboy_end_effectors[oper_link] = {"position": pos, "orientation:": orn}
+	# def roboy_ef_pos_listener(self, ef_pose):
+	# 	if ef_pose.header.frame_id in self.link_names_map:
+	# 		oper_link = self.link_names_map[ef_pose.header.frame_id]
+	# 		pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
+	# 		orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
+	# 		self.roboy_end_effectors[oper_link] = {"position": pos, "orientation:": orn}

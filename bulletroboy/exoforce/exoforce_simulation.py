@@ -9,7 +9,7 @@ from std_msgs.msg import Float32
 from .exoforce import ExoForce
 from ..operator.operator_simulation import Moves
 
-from ..utils.utils import load_roboy_to_human_link_name_map, Topics
+from ..utils.utils import Topics
 
 POS_CONTROL_THRESHOLD = 0.2
 
@@ -27,7 +27,6 @@ class ExoForceSim(ExoForce):
 		"""
 		super().__init__(cage_conf, "exoforce_simulation", POS_CONTROL_THRESHOLD)
 	
-		self.link_names_map = load_roboy_to_human_link_name_map()
 		self.mode = mode
 		self.operator = operator
 		self.init_sim()
@@ -182,6 +181,10 @@ class ExoForceSim(ExoForce):
 		   	-
 
 		"""	
+		if not self.operator.ready:
+			return
+
+		self.move_operator_sim()
 		self.operator.update_pose()
 
 		for tendon_sim in self.sim_tendons:
@@ -277,8 +280,6 @@ class TendonSim():
 		self.start_location = self.tendon.motor.via_point.world_point
 		self.segments = []
 
-		self.init_lines()
-
 	def init_lines(self):
 		"""Initializes debug lines for each via point.
 		
@@ -329,6 +330,8 @@ class TendonSim():
 		   -
 
 		"""
+		if not self.segments: self.init_lines()
+
 		start = self.start_location
 		for segment, via_point in zip(self.segments, self.tendon.via_points):
 			point = via_point.world_point

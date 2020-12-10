@@ -15,6 +15,8 @@ class OperatorCage(Operator):
 	"""
 	def __init__(self):
 		super().__init__()
+
+	def start_node(self):
 		self.pose_subscriber = self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
 		self.motor_command_publisher = self.create_publisher(MotorCommand, Topics.MOTOR_COMMAND, 1)
 		input("\nStand in initial position and press enter...")

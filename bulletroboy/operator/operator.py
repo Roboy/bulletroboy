@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import rclpy
-
 from rclpy.node import Node
+from rcl_interfaces.srv import GetParameters
+
 from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromName
 
-from ..utils.utils import load_roboy_to_human_link_name_map, Topics, Services
+from ..utils.utils import call_service_async, Topics, Services
 
 class Link():
 	def __init__(self, id, human_name, roboy_name, dims, init_pose=None):
@@ -36,15 +37,39 @@ class Operator(Node, ABC):
 			-
 
 		"""
-		super().__init__("operator_node")
-		# TODO delete from moves and add to init_links
-		self.link_map = load_roboy_to_human_link_name_map()
+		super().__init__("operator")
+		self.ready = False
+
+		# State Mapper node parameters client
+		self.state_mapper_parameters_client = self.create_client(GetParameters, Services.STATE_MAPPER_GET)
+		request = GetParameters.Request()
+		request.names = ['roboy_link_names','operator_link_names']
+		call_service_async(self.state_mapper_parameters_client, request, self.initialize, self.get_logger())
+
+	def initialize(self, future):
+		try:
+			result = future.result()
+		except Exception as e:
+			self.get_logger().error("mapped_links service call failed %r" % (e,))
+		else:
+			roboy_link_names = result.values[0].string_array_value
+			operator_link_names = result.values[1].string_array_value
+			self.link_map = {k: v for k, v in zip(roboy_link_names, operator_link_names)}
+			self.init_node()
+			self.start_node()
+			self.ready = True
+
+	def init_node(self):
 		self.init_links()
 		self.init_end_effectors(["left_wrist", "right_wrist"])
-		print(Topics.OP_EF_POSES)
+		
 		self.ef_publisher = self.create_publisher(PoseStamped, Topics.OP_EF_POSES, 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, Services.OP_INITIAL_LINK_POSE, self.initial_link_pose_callback)
+
+	@abstractmethod
+	def start_node(self):
+		pass
 
 	def start_publishing(self, period=0.1):
 		self.timer = self.create_timer(period, self.publish_ef_state)

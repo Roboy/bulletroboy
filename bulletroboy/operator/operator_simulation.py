@@ -17,8 +17,10 @@ class OperatorSim(Operator):
 			body_id (int): Pybullet body indentifier.
 
 		"""
-		self.body_id = body_id
 		super().__init__()
+		self.body_id = body_id
+
+	def start_node(self):
 		self.movements = Movements(self)
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
@@ -26,6 +28,8 @@ class OperatorSim(Operator):
 		p.createConstraint(self.body_id, -1, -1, -1, p.JOINT_FIXED, [0,0,0],[0,0,0],[0,0,0],[0,0,0,1])
 		p.createConstraint(self.body_id, self.get_link_index('chest'), self.body_id, -1, p.JOINT_FIXED, [0, 0, 90], [0, 0, 1], [0, 0, 1])
 		self.init_joint_motors()
+
+		self.start_publishing()
 
 	def init_joint_motors(self):
 		"""Initializes joint motors.

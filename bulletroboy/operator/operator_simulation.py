@@ -21,6 +21,15 @@ class OperatorSim(Operator):
 		self.body_id = body_id
 
 	def start_node(self):
+		"""Starts node.
+		
+		Args:
+			-
+
+		Returns:
+		   -
+
+		"""
 		self.movements = Movements(self)
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
@@ -99,6 +108,15 @@ class OperatorSim(Operator):
 		return index
 	
 	def update_pose(self):
+		"""Updates operator link object poses accoding to simulation.
+		
+		Args:
+			-
+
+		Returns:
+		   	-
+
+		"""
 		for link in self.links:
 			pos, orn = p.getLinkState(self.body_id, link.id)[0:2]
 			link.set_pose(pos, orn)
@@ -117,8 +135,10 @@ class OperatorSim(Operator):
 	
 	def draw_LF_coordinate_systems(self, link_id):
 		"""Draws the coordinate system of the link.
+
 		Args: 
-			link_id : id of the link.
+			link_id (int): id of the link.
+
 		"""
 		p.addUserDebugLine([0,0,0],[0.3,0,0],[1,0,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)
 		p.addUserDebugLine([0,0,0],[0,0.3,0],[0,1,0],lineWidth= 3, parentObjectUniqueId=self.body_id, parentLinkIndex=link_id)

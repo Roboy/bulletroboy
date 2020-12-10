@@ -96,15 +96,18 @@ class StateMapper(Node):
 				break
 		return operator_link
 
-	def operator_initial_head_pose_callback(self, request, response, link_name = "neck"):
+	def operator_initial_head_pose_callback(self, request, response, link_name="neck"):
 		"""Callback for ROS service for initial head pose of the operator.
+
 		Args:
 			request: the GetLinkPose service request contains a link name,
 					but we do not need it for this service.
 			response: the response that would be sent back.
-					link_name: name of the head link for the current operator.
+			link_name: name of the head link for the current operator.
+
 		Returns:
 			the response.
+
 
 		"""
 		self.get_logger().info("Service operator initial head pose: request received")
@@ -130,6 +133,7 @@ class StateMapper(Node):
 
 		Args:
 			ef_pose: end effector pose received from the operator.
+
 		"""
 		self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
 
@@ -164,12 +168,13 @@ class StateMapper(Node):
 	def call_service(self, client, msg):
 		"""Calls a client synchnrnously passing a msg and returns the response
 
-		Parameters:
+		Args:
 			client (RosClient): The client used to communicate with the server
 			msg (Object): A server msg to send to the server as a request
 
 		Returns:
 			response (Object): A response msg from the server
+
 		"""
 		while not client.wait_for_service(timeout_sec=1.0):
 			self.get_logger().info("service not available, waiting again...")
@@ -178,6 +183,7 @@ class StateMapper(Node):
 
 	def collision_listener(self, msg):
 		"""Collision subscriber handler.
+
 		"""
 		self.get_logger().info(f"Mapping collision: {msg.normalforce} N dir: {msg.contactnormal}")
 		operator_collision = self.map_collision_to_operator(msg)
@@ -187,13 +193,14 @@ class StateMapper(Node):
 		self.exoforce_collision_publisher.publish(operator_collision)
 
 	def map_collision_to_operator(self, roboy_collision):
-		"""Maps roboy link id in collision to the operator corresponding link id
+		"""Maps roboy link id in collision to the operator corresponding link id.
 
-		Parameters:
-			roboy_collision (Collision): The roboy collision
+		Args:
+			roboy_collision (Collision): The roboy collision.
 
 		Returns:
-			Collision: The collision with mapped linkid
+			Collision: The collision with mapped linkid.
+
 		"""
 		self.get_logger().debug('mapping start')
 		roboy_link_info = self.get_roboy_link_info(roboy_collision.linkid)
@@ -224,13 +231,14 @@ class StateMapper(Node):
 		return operator_collision
 
 	def get_roboy_link_info(self, roboy_link_id):
-		"""Gets the roboy link name from roboy link id by calling the corresponding servicce synchronously
+		"""Gets the roboy link name from roboy link id by calling the corresponding servicce synchronously.
 
-		Parameters:
-			roboy_link_id (uint8): The link id of roboy
+		Args:
+			roboy_link_id (uint8): The link id of roboy.
 
 		Returns:
-			LinkInfoFromId: The link info of the passed link id
+			LinkInfoFromId: The link info of the passed link id.
+
 		"""
 		self.get_logger().debug('Getting roboy link info')
 		roboy_link_info_from_id_req = LinkInfoFromId.Request()
@@ -240,13 +248,14 @@ class StateMapper(Node):
 		return response
 
 	def get_operator_link_info(self, operator_link_name):
-		"""Gets the operator link id from the operator link name by calling the corresponding servicce synchronously
+		"""Gets the operator link id from the operator link name by calling the corresponding servicce synchronously.
 
-		Parameters:
-			operator_link_name (str): The link name of the operator
+		Args:
+			operator_link_name (string): The link name of the operator.
 
 		Returns:
-			LinkInfoFromName: The link info of the passed link name
+			LinkInfoFromName: The link info of the passed link name.
+
 		"""
 		self.get_logger().debug('Getting operator link info')
 		operator_link_info_from_id_req = LinkInfoFromName.Request()
@@ -258,11 +267,13 @@ class StateMapper(Node):
 	def roboy_to_operator_link_ratio(self, roboy_dimensions, operator_dimensions):
 		"""Calculates the ratio between robot link and human link.
 
-		Parameters:
-			roboy_dimensions(Position):The bounding box of the link whose ratio needs to be calculated.
-			operator_dimensions(Position): The bounding box of the link whose ratio is needed
+		Args:
+			roboy_dimensions (Vector3): The bounding box of the link whose ratio needs to be calculated.
+			operator_dimensions (Vector3): The bounding box of the link whose ratio is needed
+
 		Returns:
-			Vector3:ratio on the three dimensions
+			3darray(float): ratio on the three dimensions
+
 		"""
 		x_scale = roboy_dimensions.x / operator_dimensions.x
 		y_scale = roboy_dimensions.y / operator_dimensions.y
@@ -273,12 +284,13 @@ class StateMapper(Node):
 	def scale_to_operator(self, collision, scale):
 		"""Scales down the collision from robot to human.
 
-		Parameters:
+		Args:
 			collision (Collision):The collision that happened on the robot side.
-			scale (Vector3): The position scale from roboy to operator
+			scale (3darray(float)): The position scale from roboy to operator
 
 		Returns:
-			Collision:Collision scaled to human
+			Collision: Collision scaled to human
+
 		"""
 		collision.position.x = collision.position.x / scale[0]
 		collision.position.y = collision.position.y / scale[1]
@@ -287,14 +299,15 @@ class StateMapper(Node):
 		return collision
 
 	def get_initial_link_pose(self, link_name, client):
-		"""Gets initial link pose for a link using its name
+		"""Gets initial link pose for a link using its name.
 
-		Parameters:
-			link_name (String): The name of the link
-			client (RosClient): The client used to pass a request and get a response from service
+		Args:
+			link_name (string): The name of the link.
+			client (RosClient): The client used to pass a request and get a response from service.
 
 		Returns:
-			A array containing two vectors, first is position and second is orientations
+			[3darray(float), 4darray(float)]: A array containing two vectors, first is position and second is orientation.
+
 		"""
 		self.get_logger().info('Getting initial ' + link_name + ' link pose...')
 		initial_link_pose_req = GetLinkPose.Request()
@@ -313,12 +326,13 @@ class StateMapper(Node):
 	def adapt_orientation_to_roboy(self, roboy_link_name, orientation):
 		"""Adapts the orientation received to roboy's link according to roboy's and operators initial links.
 
-		Parameters:
-			roboy_link_name (str): link name according to roboy's urfd.
-			orientation (Vector4): received target orientation from operator.
+		Args:
+			roboy_link_name (string): link name according to roboy's urfd.
+			orientation (4darray(float)): received target orientation from operator.
 		
 		Returns:
-			Vector4: The adapted target orientation.
+			4darray(float): The adapted target orientation.
+
 		"""
 		
 		diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
@@ -326,30 +340,32 @@ class StateMapper(Node):
 
 		return [quat[0], quat[1], quat[2], quat[3]]
 
-	def adapt_vector_to_orientation(self, roboy_link_name, contact_normal):
+	def adapt_vector_to_orientation(self, roboy_link_name, vector):
 		"""Adapts the vector's direction received to roboy's link according to roboy's and operators initial links.
 
-		Parameters:
-			roboy_link_name (str): link name according to roboy's urfd.
-			contact_normal (Vector3): received target orientation from operator.
+		Args:
+			roboy_link_name (string): link name according to roboy's urfd.
+			vector (3darray(float)): received target orientation from operator.
 
 		Returns:
-			Vector4: The adapted target orientation.
+			4darray(float): The adapted target orientation.
+
 		"""
 
 		diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
 		R = diff.rotation_matrix
 
-		return R.dot(contact_normal)
+		return R.dot(vector)
 
 	def roboy_to_operator_orientation_diff(self, roboy_link_name):
-		"""Calculated the orientation difference between the roboy link frame and the operator link frame
+		"""Calculates the orientation difference between the roboy link frame and the operator link frame
 
-		Parameters:
-			roboy_link_name (str): The name of the roboy link
+		Args:
+			roboy_link_name (string): The name of the roboy link
 
 		Returns:
-			diff (Quaternion): The difference of quaternions between roboy and operator links
+			Quaternion: The difference of quaternions between roboy and operator links
+
 		"""
 		if self.roboy_initial_link_poses.get(roboy_link_name) == None :
 			self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)

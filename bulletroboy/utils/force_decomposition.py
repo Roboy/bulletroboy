@@ -7,11 +7,12 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, pa
     
     Args:
         force_value (float): Value of the applied force.
-		force_direction array[3]: Force direction in world space coordinates.
+		force_direction (3darray(float)): Force direction in world space coordinates.
         muscle_units (list[MuscleUnit]): List of the muscle units conected to the end effector.
+        params (dict): Decomposition params.
 
     Returns:
-		dict: Dictionary with the decomposed forces, the key is the tendon id.
+		dict{tendon_id: force_value}: Dictionary with the decomposed forces.
         string: Decomposition error message, will be empty if the decomposition was performed succesfully.
 
     """

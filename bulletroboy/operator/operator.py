@@ -11,7 +11,19 @@ from roboy_simulation_msgs.srv import LinkInfoFromName
 from ..utils.utils import call_service_async, Topics, Services
 
 class Link():
+	"""This class handles one operator link.
+
+	"""
 	def __init__(self, id, human_name, roboy_name, dims, init_pose=None):
+		"""
+		Args:
+			id (int): Link id.
+			human_name (string): Human link name.
+			roboy_name (string): Name of roboy's link that maps to this human link.
+			dims (3darray[float]): x, y, and z dimensions of the link.
+			init_pose ([3darray[float], 4darray[float]]): Intial pose (pos, orn) of the link.
+
+		"""
 		self.human_name = human_name
 		self.roboy_name = roboy_name
 		self.id = id
@@ -20,11 +32,30 @@ class Link():
 		self.pose = init_pose
 
 	def set_pose(self, pos, orn):
+		"""Updates link object pose.
+		
+		Args:
+			pos (3darray[float]): Position of the link.
+			orn (4darray[float]): Orientation of the link.
+
+		Returns:
+		   	-
+
+		"""
 		if self.init_pose is None:
 			self.init_pose = [pos, orn]
 		self.pose = [pos, orn]
 
 	def get_center(self):
+		"""Gets link center point.
+		
+		Args:
+			-
+
+		Returns:
+		   	-
+
+		"""
 		return np.array(self.pose[0]) if self.pose is not None else None
 
 class Operator(Node, ABC):
@@ -81,6 +112,15 @@ class Operator(Node, ABC):
 		self.timer = self.create_timer(period, self.publish_ef_state)
 
 	def init_end_effectors(self, efs):
+		"""Initilizes operator's end effector.
+		
+		Args:
+			efs (list[string]): Names of the end effectors link.
+
+		Returns:
+		   	-
+
+		"""
 		self.end_effectors = []
 		for link in self.links:
 			if link.human_name in efs:
@@ -89,12 +129,30 @@ class Operator(Node, ABC):
 		
 
 	def get_human_link(self, roboy_link_name):
+		"""Gets link object given the roboy's link name that maps to it.
+		
+		Args:
+			roboy_link_name (string): Roboy's link name to look for.
+
+		Returns:
+		   	Link: Link object.
+
+		"""
 		for link in self.links:
 			if link.roboy_name == roboy_link_name:
 				return link
 		return None
 
 	def get_link(self, human_link_name):
+		"""Gets link object given a human link name.
+		
+		Args:
+			human_link_name (string): Link name to look for.
+
+		Returns:
+		   	Link: Link object.
+
+		"""
 		for link in self.links:
 			if link.human_name == human_link_name:
 				return link
@@ -144,6 +202,7 @@ class Operator(Node, ABC):
 
 	def link_info_from_name_callback(self, request, response):
 		"""ROS service callback to get link info from link name.
+
 		"""
 		#self.get_logger().info("received call")
 		link = self.get_link(request.link_name)
@@ -153,8 +212,9 @@ class Operator(Node, ABC):
 		return response 
 
 	def initial_link_pose_callback(self, request, response):
-		'''ROS service callback to get initial link position from link name.
-		'''
+		"""ROS service callback to get initial link position from link name.
+
+		"""
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
 
 		link = self.get_link(request.link_name)

@@ -14,6 +14,11 @@ class OperatorHW(Operator):
 
 	"""
 	def __init__(self):
+		"""
+		Args:
+			-
+
+		"""
 		super().__init__()
 
 	def start_node(self):
@@ -28,8 +33,10 @@ class OperatorHW(Operator):
 
 		Args:
 			-
+
 		Returns:
 			-
+
 		"""
 		self.links = []
 		for i, key in enumerate(self.link_map):
@@ -39,6 +46,15 @@ class OperatorHW(Operator):
 			self.links.append(Link(i, human_name, roboy_name, dims))
 
 	def pull(self):
+		"""Pulls operator to simulate connection to the roboy.
+
+		Args:
+			-
+
+		Returns:
+			-
+			
+		"""
 		msg = MotorCommand()
 
 		msg.legacy = False

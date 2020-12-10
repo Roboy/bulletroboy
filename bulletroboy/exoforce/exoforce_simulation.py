@@ -21,7 +21,7 @@ class ExoForceSim(ExoForce):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
-			human_model (int): Id of the human model loaded in pybullet.
+			operator (Operator): Operator node.
 			mode (string): Mode in which the ExoForceSim will we executed.
 		
 		"""
@@ -46,6 +46,13 @@ class ExoForceSim(ExoForce):
 	
 	def init_movement_params(self):
 		'''Initializes movement buttons of the GUI.
+		
+		Args:
+			-
+
+		Returns:
+		   -
+
 		'''
 		self.current_move = Moves.STAND_STILL
 		self.stand = 0
@@ -88,6 +95,13 @@ class ExoForceSim(ExoForce):
 
 	def move_operator_sim(self):
 		'''Moves the operator according to GUI buttons.
+		
+		Args:
+			-
+
+		Returns:
+		   -
+
 		'''
 		count = p.readUserDebugParameter(self.stand_id)
 		if(count > self.stand):
@@ -111,7 +125,7 @@ class ExoForceSim(ExoForce):
 		"""Cage rotation listener.
 
 		Args:
-			angle (Float32): Angle message message.
+			angle (Float32): Angle message.
 
 		Returns:
 			-
@@ -222,7 +236,7 @@ class ExoForceSim(ExoForce):
 			id (int): Id of the tendon simulation to search.
 
 		Returns:
-		   TendonSim: Tendon simulation with given id.
+		   TendonSim: Tendon simulation object with given id.
 
 		"""
 		tendon_sim = None
@@ -234,11 +248,13 @@ class ExoForceSim(ExoForce):
 
 	def operator_ef_pos_listener(self, ef_pose):
 		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.
+
 		Args:
 			ef_pose: received PoseStamped msg.
 		
 		Returns:
 			-
+			
 		"""
 		end_effector = ef_pose.header.frame_id
 		#self.get_logger().info("Received pose for " + end_effector)

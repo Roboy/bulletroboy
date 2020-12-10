@@ -6,52 +6,52 @@ import io
 class Topics:
 
 	# link poses topics
-	VR_HEADSET_POSES 	= "/bullet_ik"
-	OP_EF_POSES 		= "/roboy/simulation/operator/pose/endeffector"
-	MAPPED_OP_REF_POSE 	= "/roboy/exoforce/pose/endeffector/right"
-	MAPPED_OP_LEF_POSE 	= "/roboy/exoforce/pose/endeffector/left"
-	ROBOY_EF_POSES 		= "/roboy/simulation/roboy/ef_pose"
+	VR_HEADSET_POSES 		= "/bullet_ik"
+	OP_EF_POSES 			= "/roboy/simulation/operator/pose/endeffector"
+	MAPPED_OP_REF_POSE 		= "/roboy/exoforce/pose/endeffector/right"
+	MAPPED_OP_LEF_POSE 		= "/roboy/exoforce/pose/endeffector/left"
+	ROBOY_EF_POSES 			= "/roboy/simulation/roboy/ef_pose"
 
 	# roboy
-	JOINT_STATES		= "/roboy/simulation/joint_state"
+	JOINT_STATES			= "/roboy/simulation/joint_state"
 
 	# roboy plexus
-	MOTOR_STATE 		= "/roboy/middleware/MotorState"
-	MOTOR_COMMAND 		= "/roboy/middleware/MotorCommand"
+	MOTOR_STATE 			= "/roboy/middleware/MotorState"
+	MOTOR_COMMAND 			= "/roboy/middleware/MotorCommand"
 
 	# collision
-	ROBOY_COLLISIONS 	= "roboy/simulation/roboy/collision"
-	MAPPED_COLLISIONS 	= "/roboy/simulation/exoforce/operator/collisions"
+	ROBOY_COLLISIONS 		= "roboy/simulation/roboy/collision"
+	MAPPED_COLLISIONS 		= "/roboy/simulation/exoforce/operator/collisions"
 
 	# cage
-	CAGE_STATE			= "/roboy/simulation/cage_state"
-	CAGE_ROTATION 		= "/roboy/simulation/cage_rotation"
+	CAGE_STATE				= "/roboy/simulation/cage_state"
+	CAGE_ROTATION 			= "/roboy/simulation/cage_rotation"
 
 
 class Services:
 
 	# roboy plexus services
-	CONTROL_MODE 		= "/roboy/middleware/ControlMode"
+	CONTROL_MODE 			= "/roboy/middleware/ControlMode"
 
-	# TODO: replace link services with param server
 	# links services
-	LINK_INFO_FROM_NAME = "/roboy/simulation/operator/link_info_from_name"
+	LINK_INFO_FROM_NAME 	= "/roboy/simulation/operator/link_info_from_name"
 	OP_INITIAL_LINK_POSE 	= "/roboy/simulation/operator/initial_link_pose"
-	LINK_INFO_FROM_ID	= "/roboy/simulation/roboy/link_info_from_id"
+	LINK_INFO_FROM_ID		= "/roboy/simulation/roboy/link_info_from_id"
 	ROBOY_INITIAL_LINK_POSE	= "/roboy/simulation/roboy/initial_link_pose"
 
-	INITIAL_HEAD_POSE	= "/roboy/simulation/exoforce/operator_initial_head_pose"
+	INITIAL_HEAD_POSE		= "/roboy/simulation/exoforce/operator_initial_head_pose"
 
 	# parameters
-	STATE_MAPPER_GET	= "/state_mapper/get_parameters"
+	STATE_MAPPER_GET		= "/state_mapper/get_parameters"
+
 
 def parse_launch_arg(arg, default_value, logger):
 	"""Parse node args received from ros launcher.
 
 	Parameters:
-		arg (string): Argument received from launcher
-		default_value (string): Default value
-		logger (Logger): Logger object
+		arg (string): Argument received from launcher.
+		default_value (string): Default value.
+		logger (Logger): Node logger object.
 
 	Returns:
 		string: argument value

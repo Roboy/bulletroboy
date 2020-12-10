@@ -19,6 +19,7 @@ from ..utils.utils import Topics, Services
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
 		It reads and writes from a XML file.
+
 	"""
 	def __init__(self, filepath=None):
 		"""
@@ -362,6 +363,15 @@ class ExoForce(Node, ABC):
 			self.roboy_end_effectors.update({muscle.end_effector.link: None})
 
 	def init_force_decomp_params(self):
+		"""Reads force decomposition params.
+		
+		Args:
+			-
+
+		Returns:
+		   -
+
+		"""
 		self.declare_parameters(
 			namespace='',
 			parameters=[

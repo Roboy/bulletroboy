@@ -1,6 +1,7 @@
 import os
 import yaml
 import io
+import warnings
 
 
 class Topics:
@@ -139,6 +140,8 @@ def draw_AABB(pybullet, aabb):
 
 def load_roboy_to_human_link_name_map():
 	"""Fetches the link name map"""
+	warnings.warn("load_roboy_to_human_link_name_map is deprecated", DeprecationWarning)
+
 	script_dir = os.path.dirname(__file__)
 	rel_path = "../../resource/roboy_to_human_linkname_map.yaml"
 	abs_file_path = os.path.join(script_dir, rel_path)
@@ -148,6 +151,8 @@ def load_roboy_to_human_link_name_map():
 
 def dump_op_link_dims(dims_dict):
 	"""Saves the link dims dict"""
+	warnings.warn("dump_op_link_dims is deprecated", DeprecationWarning)
+
 	script_dir = os.path.dirname(__file__)
 	rel_path = "../../resource/operator_link_standard_dimentions.yaml"
 	abs_file_path = os.path.join(script_dir, rel_path)
@@ -156,6 +161,8 @@ def dump_op_link_dims(dims_dict):
 
 def load_op_link_dims():
 	"""Fetches the link dims dict"""
+	warnings.warn("load_op_link_dims is deprecated", DeprecationWarning)
+
 	script_dir = os.path.dirname(__file__)
 	rel_path = "../../resource/operator_link_standard_dimentions.yaml"
 	abs_file_path = os.path.join(script_dir, rel_path)

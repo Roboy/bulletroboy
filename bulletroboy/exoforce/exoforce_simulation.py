@@ -25,7 +25,7 @@ class ExoForceSim(ExoForce):
 			mode (string): Mode in which the ExoForceSim will we executed.
 		
 		"""
-		super().__init__(cage_conf, "exoforce_simulation", POS_CONTROL_THRESHOLD)
+		super().__init__(cage_conf, "exoforce", POS_CONTROL_THRESHOLD)
 	
 		self.mode = mode
 		self.operator = operator
@@ -251,9 +251,6 @@ class ExoForceSim(ExoForce):
 		# for muscle in muscles:
 		# 	muscle.end_effector.world_point = link_pos
 
-		if self.end_effectors[end_effector] is None:
-			self.get_logger().info("Got ef initial pose: " + end_effector)
-			self.end_effectors[end_effector] = {"position": None, "orientation": None}
 		self.end_effectors[end_effector]["position"] = link_pos
 		self.end_effectors[end_effector]["orientation"] = link_orn
 

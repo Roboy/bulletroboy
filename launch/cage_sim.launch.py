@@ -35,6 +35,10 @@ def generate_launch_description():
         Node(
             package='bulletroboy',
             executable='cage_sim',
+            parameters = [os.path.join(
+                get_package_share_directory('bulletroboy'),
+                'config',
+                'conf.yaml')],
             arguments = [LaunchConfiguration('operator_urdf'),
                         LaunchConfiguration('cage_conf'),
                         LaunchConfiguration('cage_mode')]

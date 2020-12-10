@@ -2,7 +2,6 @@ import numpy as np
 from pyquaternion import Quaternion
 
 from .exoforce import ExoForce
-from ..utils.force_decomposition import decompose_force_link_to_ef
 from ..utils.utils import load_roboy_to_human_link_name_map, Topics, Services
 
 from roboy_simulation_msgs.msg import Collision
@@ -108,7 +107,7 @@ class ExoforceHW(ExoForce):
 
 	def calibration(self):
 		print(self.end_effectors.values())
-		if np.any([p is None for p in self.end_effectors.values()]):
+		if np.any([ef["position"] is None for ef in self.end_effectors.values()]):
 			print("Waiting for end effector initial poses...")
 			return
 
@@ -149,7 +148,7 @@ class ExoforceHW(ExoForce):
 		"""
 		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
 
-		ef = decompose_force_link_to_ef(collision_msg.linkid)
+		ef = self.decompose_force_link_to_ef(collision_msg.linkid)
 		############ TEMP WORKAROUND
 		# for muscle in self.get_ef_muscle_units(ef):
 		# 	muscle.end_effector.world_point = np.array([0.5, -0.5, -0.3])
@@ -211,9 +210,6 @@ class ExoforceHW(ExoForce):
 		for muscle in muscles:
 			muscle.end_effector.world_point = link_pos
 
-		if self.end_effectors[end_effector] is None:
-			self.get_logger().info("Got ef initial pose: " + end_effector)
-			self.end_effectors[end_effector] = {"position": None, "orientation": None}
 		self.end_effectors[end_effector]["position"] = link_pos
 		self.end_effectors[end_effector]["orientation"] = link_orn
 

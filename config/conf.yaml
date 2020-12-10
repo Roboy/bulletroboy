@@ -20,6 +20,15 @@ state_mapper:
       left_wrist,
       neck]
 
+exoforce:
+  ros__parameters:
+    force_decomposition:
+      min_tendon_force: 0.5
+      max_collision_force: 50.0
+    decomposition_to_ef:
+      left_wrist: [7, 8, 43]
+      right_wrist: [4, 5, 3]
+
 operator:
   ros__parameters:
     operator_link_dimentions:

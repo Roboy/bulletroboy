@@ -1,27 +1,8 @@
 import numpy as np
 from scipy.optimize import minimize
 
-MIN_TENDON_FORCE = 0.5
-MAX_COLLISION_FORCE = 50
 
-def decompose_force_link_to_ef(link_id):
-    """Gets link bounding box dimensions.
-    
-    Args:
-        link_id (int): Index of the link to search.
-
-    Returns:
-        3darray[float]: x, y, and z dimensions of the bounding box.
-
-    """
-    end_effector = None
-    if link_id in [7, 8, 43]:
-        end_effector = "left_wrist"
-    elif link_id in [4, 5, 3]:
-        end_effector = "right_wrist"
-    return end_effector
-
-def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units):
+def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, params):
     """Decomposes force applied to end effector to the tendons connected to it.
     
     Args:
@@ -34,7 +15,7 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units):
         string: Decomposition error message, will be empty if the decomposition was performed succesfully.
 
     """
-    force_value = np.clip(force_value, 0 , MAX_COLLISION_FORCE)
+    force_value = np.clip(force_value, 0 , params['max_collision_force'])
 
     max_forces = [muscle.max_force for muscle in muscle_units]
     motor_attachments = np.array([muscle.motor.via_point.world_point for muscle in muscle_units])
@@ -60,7 +41,7 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units):
             initial_forces = np.random.rand(len(active_tendons)) * force_value
             constraints = [{'type':'eq', 'fun': lambda x: np.sum(active_tendons.T * x, axis=1) - force_value * force_direction},
                             {'type':'ineq', 'fun': lambda x: active_max_forces - x},
-                            {'type':'ineq', 'fun': lambda x: x - MIN_TENDON_FORCE}]
+                            {'type':'ineq', 'fun': lambda x: x - params['min_tendon_force']}]
             solution = minimize(lambda x: np.sqrt(np.sum(np.square(x))),
                                 initial_forces,
                                 constraints=constraints, options={'maxiter': 100}

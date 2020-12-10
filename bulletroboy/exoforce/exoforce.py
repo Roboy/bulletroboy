@@ -13,7 +13,7 @@ from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point
 
-from ..utils.force_decomposition import decompose_force_link_to_ef, decompose_force_ef_to_tendons
+from ..utils.force_decomposition import decompose_force_ef_to_tendons
 from ..utils.utils import Topics, Services
 
 class CageConfiguration():
@@ -338,6 +338,7 @@ class ExoForce(Node, ABC):
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
 
 		self.init_end_effectors()
+		self.init_force_decomp_params()
 
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
@@ -357,8 +358,25 @@ class ExoForce(Node, ABC):
 		self.end_effectors = {}
 		self.roboy_end_effectors = {}
 		for muscle in self.muscle_units:
-			self.end_effectors.update({muscle.end_effector.link: None})
+			self.end_effectors.update({muscle.end_effector.link: {"position": None, "orientation": None, "decomp_to_link": None}})
 			self.roboy_end_effectors.update({muscle.end_effector.link: None})
+
+	def init_force_decomp_params(self):
+		self.declare_parameters(
+			namespace='',
+			parameters=[
+				('force_decomposition.min_tendon_force', None),
+				('force_decomposition.max_collision_force', None)] + 
+				[('decomposition_to_ef.' + ef, None) for ef in self.end_effectors.keys()]
+			)
+		
+		self.force_decomp_params = {
+			'min_tendon_force': self.get_parameter("force_decomposition.min_tendon_force").get_parameter_value().double_value,
+			'max_collision_force': self.get_parameter("force_decomposition.max_collision_force").get_parameter_value().double_value
+		}
+
+		for ef in self.end_effectors:
+			self.end_effectors[ef]["decomp_to_link"] = self.get_parameter("decomposition_to_ef." + ef).get_parameter_value().integer_array_value
 
 	@abstractmethod
 	def update(self):
@@ -489,15 +507,32 @@ class ExoForce(Node, ABC):
 		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
 
 		"""
-		ef = decompose_force_link_to_ef(link_id)
+		ef = self.decompose_force_link_to_ef(link_id)
 		self.get_logger().info("Force mapped to ef: " + ef)
 
-		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef)) if link_id is not None else {}
+		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef), self.force_decomp_params) if link_id is not None else {}
 		
 		if not forces:
 			self.get_logger().warn(f"Force was not decomposed: force[{collision_force}] ef[{ef}] [{msg}]")
 		
 		return forces
+		
+	def decompose_force_link_to_ef(self, link_id):
+		"""Decomposes a force applied to a link to an end effector.
+		
+		Args:
+			link_id (int): Index of the link where the force was applied.
+
+		Returns:
+			string: Name of the end effector.
+
+		"""
+		end_effector = None
+		for ef in self.end_effectors:
+			if link_id in self.end_effectors[ef]["decomp_to_link"]:
+				end_effector = ef
+				break
+		return end_effector
 
 	def init_pos_control(self):
 		self.create_timer(0.5, self.pos_control)

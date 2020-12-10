@@ -4,7 +4,7 @@ import math
 import numpy as np
 from enum import Enum
 
-from ..utils.utils import draw_AABB, dump_op_link_dims
+from ..utils.utils import draw_AABB
 from .operator import Operator, Link
 
 class OperatorSim(Operator):
@@ -69,20 +69,17 @@ class OperatorSim(Operator):
 
 		"""
 		self.links = []
-		# dims_dict = {}
 		for key in self.link_map:
 			human_name = self.link_map[key]
 			roboy_name = key
 			id = self.get_link_index(human_name)
 			dims = self.get_link_bb_dim(id)
-			# dims_dict[name] = link['dims']
 			init_pose = p.getLinkState(self.body_id, id)[:2]
 
 			self.links.append(Link(id, human_name, roboy_name, dims, init_pose))
 
 			# self.draw_LF_coordinate_systems(id)
 			# utils.draw_AABB(p,p.getAABB(self.body_id, i))
-		# utils.dump_op_link_dims(dims_dict)
 
 	def get_link_index(self, link_name):
 		"""Gets link's index given it's name.

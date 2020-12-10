@@ -25,7 +25,7 @@ def generate_launch_description():
             parameters = [os.path.join(
                 get_package_share_directory('bulletroboy'),
                 'config',
-                'state_mapper.yaml')]
+                'conf.yaml')]
         ),
         Node(
             package='bulletroboy',

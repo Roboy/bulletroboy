@@ -3,7 +3,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from geometry_msgs.msg import PoseStamped
 from roboy_middleware_msgs.msg import MotorCommand
 from .operator import Operator, Link
-from ..utils.utils import load_op_link_dims, Topics
+from ..utils.utils import Topics, Services
 
 import time
 
@@ -32,11 +32,10 @@ class OperatorCage(Operator):
 			-
 		"""
 		self.links = []
-		dims_dict = load_op_link_dims()
 		for i, key in enumerate(self.link_map):
 			human_name = self.link_map[key]
 			roboy_name = key
-			dims = dims_dict[human_name]
+			dims = self.get_parameter("operator_link_dimentions." + human_name).get_parameter_value().double_array_value
 			self.links.append(Link(i, human_name, roboy_name, dims))
 
 	def pull(self):

@@ -55,6 +55,12 @@ class Operator(Node, ABC):
 			roboy_link_names = result.values[0].string_array_value
 			operator_link_names = result.values[1].string_array_value
 			self.link_map = {k: v for k, v in zip(roboy_link_names, operator_link_names)}
+
+			self.declare_parameters(
+				namespace='',
+				parameters=[('operator_link_dimentions.' + link_name, None) for link_name in operator_link_names]
+				)
+
 			self.init_node()
 			self.start_node()
 			self.ready = True

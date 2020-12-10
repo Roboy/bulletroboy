@@ -25,7 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'roboy_sim      = bulletroboy.nodes.roboy_node:main',
-            'cage_sim       = bulletroboy.nodes.cage_node:main',
+            'cage_sim       = bulletroboy.nodes.cage_simulation_node:main',
             'state_mapper   = bulletroboy.nodes.state_mapper_node:main',
             'operator       = bulletroboy.nodes.operator_node:main',
             'exoforce       = bulletroboy.nodes.exoforce_node:main',

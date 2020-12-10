@@ -9,7 +9,7 @@ import time
 
 PULL_MOTOR = 16
 
-class OperatorCage(Operator):
+class OperatorHW(Operator):
 	"""This class represents the "real" Operator and communicates directly with the animus_server.
 
 	"""

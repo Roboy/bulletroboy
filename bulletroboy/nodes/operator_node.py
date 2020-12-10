@@ -1,11 +1,11 @@
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
-from ..operator.operator_cage import OperatorCage
+from ..operator.operator_hardware import OperatorHW
 
 def main(args=None):
     rclpy.init(args=args)
 
-    operator = OperatorCage()
+    operator = OperatorHW()
     rclpy.spin(operator, MultiThreadedExecutor())
 
     operator.destroy_node()

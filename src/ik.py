@@ -45,7 +45,7 @@ p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 
-p.loadURDF("samurai.urdf", 0,2,0)
+castle = p.loadURDF("samurai.urdf", 0,2,0)
 
 rp = RosPack()
 model_path = rp.get_path('robots') + "/upper_body/brain_model.urdf"

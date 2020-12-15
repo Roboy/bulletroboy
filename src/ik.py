@@ -43,7 +43,7 @@ p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW,0)
 p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-p.loadURDF("samurai.urdf", 0,2,0)
+castle = p.loadURDF("samurai.urdf", 0,2,0)
 roboy = p.loadURDF("/home/roboy/workspace/roboy3/src/robots/upper_body/brain_model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 
@@ -275,7 +275,8 @@ ik_sub = rospy.Subscriber("/bullet_ik", PoseStamped, ik, queue_size=10)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
 rate = rospy.Rate(100)
 
-
+o = 0
+sig = 1
 while not rospy.is_shutdown():
     left = camera(11)
     right = camera(12)
@@ -286,6 +287,10 @@ while not rospy.is_shutdown():
     vis = np.concatenate((left_pic, right_pic), axis=1)
     cv2.imshow('window', vis)
     cv2.waitKey(1)
+    o += sig*0.005
+    if abs(o) > math.pi:
+        sig = -1*sig
+    p.resetBasePositionAndOrientation(castle, [0,2,0], (0,0,o,1))  
     # rate.sleep()
 
     # msg.position = []

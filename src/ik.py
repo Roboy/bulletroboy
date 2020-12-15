@@ -12,6 +12,7 @@ import pybullet_data
 from pyquaternion import Quaternion
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
+from rospkg import RosPack
 
 def quaternion_multiply(quaternion1, quaternion0):
     x0, y0, z0, w0 = quaternion0
@@ -43,10 +44,12 @@ p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW,0)
 p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-castle = p.loadURDF("samurai.urdf", 0,2,0)
-roboy = p.loadURDF("/home/roboy/workspace/roboy3/src/robots/upper_body/brain_model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
+p.loadURDF("samurai.urdf", 0,2,0)
 
+rp = RosPack()
+model_path = rp.get_path('robots') + "/upper_body/brain_model.urdf"
+roboy = p.loadURDF(model_path, useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 p.syncBodyInfo()
 p.setGravity(0,0,-10)
@@ -147,7 +150,6 @@ def to_cv2(w,h,img,right):
         # pic = pic[0:height,0:width-300]
 
     return pic
-
 
 def accurateCalculateInverseKinematics(roboy, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
     closeEnough = False

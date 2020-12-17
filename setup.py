@@ -29,6 +29,7 @@ setup(
             'state_mapper   = bulletroboy.nodes.state_mapper_node:main',
             'operator       = bulletroboy.nodes.operator_node:main',
             'exoforce       = bulletroboy.nodes.exoforce_node:main',
+            'force_control  = bulletroboy.nodes.force_control_node:main',
             'test_publisher = bulletroboy.tests.test_publisher:main',
             'test_client    = bulletroboy.tests.test_client:main'
         ],

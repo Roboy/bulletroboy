@@ -15,18 +15,18 @@ def quaternion_multiply(quaternion1, quaternion0):
     x1, y1, z1, w1 = quaternion1
     return np.array([x1 * w0 + y1 * z0 - z1 * y0 + w1 * x0,
                      -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
-                     x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0, 
+                     x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0,
                      -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0], dtype=np.float64)
 
 rospy.init_node("bullet_joints")
-topic_root = "roboy/pinky"
+topic_root = "/roboy/pinky"
 joint_target_pub = rospy.Publisher(topic_root+"/joint_targets", JointState, queue_size=1)
 
 
 msg = JointState()
 
 p.connect(p.GUI)
-ob = p.loadURDF("/home/roboy/workspace/roboy3/src/robots/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,-1), baseOrientation=(0,0,0.7071,0.7071))
+ob = p.loadURDF("/home/missxa/workspace/roboy3/src/robots/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,-1), baseOrientation=(0,0,0.7071,0.7071))
 p.setGravity(0,0,-10)
 t = 0.
 prevPose = [0, 0, 0]
@@ -102,7 +102,8 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
             p.setJointMotorControl2(bodyIndex=ob,
                                         jointIndex=idx,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
-                                        targetPosition=pos)#jointPoses[i])
+                                        targetPosition=pos,
+                                        maxVelocity=0.5)#jointPoses[i])
                                         # targetVelocity=0,
                                         # force=1,
                                         # positionGain=5,
@@ -122,13 +123,13 @@ def ik(msg):
     pos = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
     orn = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
 
-    
+
     if msg.header.frame_id == "head":
         if not head_initialized:
             pos = list(pos)
             pos[2] -= 0.4
             rospy.logwarn_throttle(1, "head: " +  str(pos))
-            p.resetBasePositionAndOrientation(0, pos, (0,0,0.7071,0.7071))  
+            p.resetBasePositionAndOrientation(0, pos, (0,0,0.7071,0.7071))
             head_initialized = True
 
     else:#if msg.header.frame_id == "hand_left":
@@ -149,24 +150,24 @@ def ik(msg):
             rospy.logwarn("Left controller orientation offset: " + str(orn_offset["hand_left"]))
             # rospy.logwarn_throttle(1,left_orn_offset)
             left_initialized = True
-        
+
         else:
             endEffectorId = efs[msg.header.frame_id]
             threshold = 0.03
             maxIter = 80
-            
+
             # if first:
             #     init_orn = orn
-            # else:           
+            # else:
             rospy.loginfo_throttle(1, orn)
             corrected_orn = quaternion_multiply(orn, orn_offset[msg.header.frame_id]) #(0,0,0.7071,0.7071))
             # corrected_orn = quaternion_multiply(corrected_orn, (0,0,-0.7071,0.7071))
-               
+
             # jointPoses = p.calculateInverseKinematics(0, endEffectorId, pos, corrected_orn)#(0,0,0,1)) #orn)  #accurateCalculateInverseKinematics(0, endEffectorId, pos,
-            #                                                 # threshold, maxIter, corrected_orn) 
+            #                                                 # threshold, maxIter, corrected_orn)
 
             jointPoses = accurateCalculateInverseKinematics(0, endEffectorId, pos,
-                                                            threshold, maxIter)#, corrected_orn) 
+                                                            threshold, maxIter)#, corrected_orn)
             # if (useSimulation):
             # for i in range(len(freeJoints)):
             #     p.setJointMotorControl2(bodyIndex=0,
@@ -222,7 +223,9 @@ while not rospy.is_shutdown():
             msg.velocity.append(0)
             msg.effort.append(0)
             msg.name.append(joint_names[i])
-    if rospy.get_param('publish_cardsflow'):        
+    if rospy.get_param('publish_cardsflow'):
+        # print(msg)
+        # rospy.loginfo_throttle(1, msg)
         joint_target_pub.publish(msg)
     rate.sleep()
 p.disconnect()

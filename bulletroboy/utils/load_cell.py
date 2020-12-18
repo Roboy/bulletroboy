@@ -11,3 +11,6 @@ class LoadCell:
 
     def readForce(self):
         return 0
+
+    def getAttached(self):
+        return False

@@ -1,5 +1,9 @@
 from rclpy.node import Node
+
+from roboy_simulation_msgs.msg import TendonUpdate
+
 from ..utils.load_cell import LoadCell, ConnectionError
+from ..utils.utils import Topics
 
 class TendonForceController:
 	"""This class handles the force controller for one individual tendon.
@@ -41,6 +45,8 @@ class ForceControl(Node):
 		for conf in controllers_conf:
 			self.controllers.append(TendonForceController(conf))
 
+		self.create_subscription(TendonUpdate, Topics.SET_TENDON_FORCE, self.set_force_set_point, 1)
+
 	def get_controllers_conf(self):
 		controllers_id = self.get_parameter('controllers_id').get_parameter_value().integer_array_value
 		serials = self.get_parameter('serials').get_parameter_value().integer_array_value
@@ -60,3 +66,12 @@ class ForceControl(Node):
 			except ConnectionError as e:
 				self.get_logger().warn(f"Failed to connect to load cell {controller.id}")
 				self.get_logger().debug(f"Connection error to load cell {controller.id}: {e.message}")
+
+	def get_controller(self, id):
+		for controller in self.controllers:
+			if controller.id == id:
+				return controller
+		return None
+
+	def set_force_set_point(self, msg):
+		self.get_controller(msg.id).set_point = msg.force

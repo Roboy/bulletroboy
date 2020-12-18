@@ -3,8 +3,8 @@
 ## Setup 
 *Tested on Ubuntu 20.04*
 - install python>=3.6
-- install [pybullet](https://github.com/bulletphysics/bullet3/blob/master/README.md#pybullet)
 - install [ROS2 Foxy Fitzroy](https://index.ros.org/doc/ros2/Installation/Foxy/)
+- install [Phidget22 libraries](https://www.phidgets.com/docs/OS_-_Linux#Quick_Downloads)
 ```bash
 # Creating ROS2 workspace
 mkdir -p roboy_ws/src
@@ -24,6 +24,9 @@ colcon build --symlink-install --packages-select bulletroboy roboy_simulation_ms
 source /opt/ros/foxy/setup.bash
 cd roboy_ws
 . install/setup.bash
+
+# Install python packages
+pip install -r requirements.txt
 ```
 
 ## Usage

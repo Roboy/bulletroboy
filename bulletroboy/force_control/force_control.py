@@ -23,18 +23,44 @@ class TendonForceController:
 							'load_cell_conf' (dict)	: Load cell configuration.
 		
 		"""
+		self.target_force = 0
+		self.ready = False
+		self.detached = False
+
 		self.id = conf['controller_id']
 		self.kp = conf['kp']
 		self.ki = conf['ki']
 		self.kd = conf['kd']
 		self.direction = conf['direction']
-		self.force_sensor = LoadCell(conf['load_cell_conf'])
-		self.set_point = 0
 
-	@property
-	def ready(self):
-		"""Returns True if LoadCell object is attached to a load cell channel, False otherwise."""
-		self.force_sensor.getAttached()
+		self.force_sensor = LoadCell(conf['load_cell_conf'])
+		self.force_sensor.setOnAttachHandler(self.onAttach)
+		self.force_sensor.setOnDetachHandler(self.onDetach)
+
+	def onAttach(self):
+		"""Event handler for the attach event of the LoadCell object.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
+		self.ready = True
+		self.detached = False
+	
+	def onDetach(self):
+		"""Event handler for the detach event of the LoadCell object.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
+		self.detached = True
 
 	def connectToSensor(self):
 		"""Opens and attaches the LoadCell object to a load cell channel.
@@ -58,7 +84,11 @@ class TendonForceController:
 			(float): PWM set point.
 		
 		"""
-		error = self.set_point - self.force_sensor.readForce()
+		if self.detached:
+			self.ready = False
+			return 0
+
+		error = self.target_force - self.force_sensor.readForce()
 
 		# TODO: Implement PID controller
 
@@ -95,7 +125,7 @@ class ForceControl(Node):
 		for conf in controllers_conf:
 			self.controllers.append(TendonForceController(conf))
 
-		self.create_subscription(TendonUpdate, Topics.SET_TENDON_FORCE, self.set_force_set_point, 1)
+		self.create_subscription(TendonUpdate, Topics.SET_TENDON_FORCE, self.set_target_force, 1)
 
 		self.start_controllers()
 		self.init_roboy_plexus()
@@ -188,7 +218,7 @@ class ForceControl(Node):
 				return controller
 		return None
 
-	def set_force_set_point(self, msg):
+	def set_target_force(self, msg):
 		"""Set tendon target force callback.
 
 		Args:
@@ -198,7 +228,7 @@ class ForceControl(Node):
 			-
 		
 		"""
-		self.get_controller(msg.id).set_point = msg.force
+		self.get_controller(msg.id).target_force = msg.force
 
 	def control_loop(self):
 		"""Control loop timer callback.

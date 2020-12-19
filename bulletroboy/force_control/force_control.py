@@ -86,7 +86,7 @@ class TendonForceController:
 		"""
 		if self.detached:
 			self.ready = False
-			return 0
+			return 0.0
 
 		error = self.target_force - self.force_sensor.readForce()
 
@@ -125,7 +125,7 @@ class ForceControl(Node):
 		for conf in controllers_conf:
 			self.controllers.append(TendonForceController(conf))
 
-		self.create_subscription(TendonUpdate, Topics.SET_TENDON_FORCE, self.set_target_force, 1)
+		self.create_subscription(TendonUpdate, Topics.TENDON_FORCE, self.set_target_force, 1)
 
 		self.start_controllers()
 		self.init_roboy_plexus()
@@ -228,7 +228,14 @@ class ForceControl(Node):
 			-
 		
 		"""
-		self.get_controller(msg.id).target_force = msg.force
+		controller = self.get_controller(msg.id)
+		if controller is None:
+			self.get_logger().warn(f"Trying to set target force for tendon ({msg.id}) without controller.")
+		else:
+			if msg.force < 0:
+				self.get_logger().warn(f"Trying to set negative target force for tendon ({msg.id}).")
+			else:
+				controller.target_force = msg.force
 
 	def control_loop(self):
 		"""Control loop timer callback.

@@ -88,7 +88,7 @@ class OperatorSim(Operator):
 			self.links.append(Link(id, human_name, roboy_name, dims, init_pose))
 
 			# self.draw_LF_coordinate_systems(id)
-			# utils.draw_AABB(p,p.getAABB(self.body_id, i))
+			# draw_AABB(p,p.getAABB(self.body_id, id), human_name)
 
 	def get_link_index(self, link_name):
 		"""Gets link's index given it's name.

@@ -442,7 +442,7 @@ class BulletRoboy(Node):
 			msg.contactnormal.y = normal_in_lf[1]
 			msg.contactnormal.z = normal_in_lf[2]
 			
-			self.draw_force(collision[5], collision[7], collision[9], color=debug_line_color)
+			# self.draw_force(collision[5], collision[7], collision[9], color=debug_line_color)
 
 			self.draw_force([msg.position.x, msg.position.y, msg.position.z], [msg.contactnormal.x, msg.contactnormal.y, msg.contactnormal.z], collision[9], msg.linkid, [1,0,0])
 
@@ -481,14 +481,14 @@ class BulletRoboy(Node):
 			#collision[5] == positionOnA in PyBullet docu
 			msg.position.x = collision[5][0]
 			msg.position.y = collision[5][1]
-			msg.position.z = collision[5][2] - 1.5
+			msg.position.z = collision[5][2] - 1.5 # TODO to parameter
 
 			#collision[7] == contactNormalOnB in PyBullet docu
 			msg.contactnormal.x = collision[7][0]
 			msg.contactnormal.y = collision[7][1]
 			msg.contactnormal.z = collision[7][2] - 1.5
 
-			self.draw_force([msg.position.x, msg.position.y, msg.position.z], [msg.contactnormal.x, msg.contactnormal.y, msg.contactnormal.z], collision[9], link_id=msg.linkid)
+			self.draw_force([msg.position.x, msg.position.y, msg.position.z], [msg.contactnormal.x, msg.contactnormal.y, msg.contactnormal.z], collision[9])
 
 			#collision[8] == contactDistance in PyBullet docu
 			msg.contactdistance = collision[8]

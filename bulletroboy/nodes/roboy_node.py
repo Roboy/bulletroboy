@@ -22,7 +22,7 @@ def main():
     body = p.loadURDF(model_path, useFixedBase=1)
     env = EnvironmentCtrl()
 
-    p.setGravity(0,0,-10)
+    p.setGravity(0,0,-9.81)
     p.setRealTimeSimulation(0)
     
     #INITIALISING ROS AND NODE

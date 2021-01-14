@@ -342,7 +342,7 @@ class ExoForce(Node, ABC):
 		self.init_force_decomp_params()
 
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
-		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
+		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
 		#self.create_subscription(PoseStamped, Topics.ROBOY_EF_POSES, self.roboy_ef_pos_listener, 10)
 		self.threshold = threshold
 
@@ -377,7 +377,7 @@ class ExoForce(Node, ABC):
 			parameters=[
 				('force_decomposition.min_tendon_force', None),
 				('force_decomposition.max_collision_force', None)] + 
-				[('decomposition_to_ef.' + ef, None) for ef in self.end_effectors.keys()]
+				[('map_link_to_ef.' + ef, None) for ef in self.end_effectors.keys()]
 			)
 		
 		self.force_decomp_params = {
@@ -386,7 +386,7 @@ class ExoForce(Node, ABC):
 		}
 
 		for ef in self.end_effectors:
-			self.end_effectors[ef]["decomp_to_link"] = self.get_parameter("decomposition_to_ef." + ef).get_parameter_value().integer_array_value
+			self.end_effectors[ef]["map_to_ef"] = self.get_parameter("map_link_to_ef." + ef).get_parameter_value().integer_array_value
 
 	@abstractmethod
 	def update(self):
@@ -517,7 +517,7 @@ class ExoForce(Node, ABC):
 		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
 
 		"""
-		ef = self.decompose_force_link_to_ef(link_id)
+		ef = self.map_link_to_ef(link_id)
 		self.get_logger().info("Force mapped to ef: " + ef)
 
 		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, self.get_ef_muscle_units(ef), self.force_decomp_params) if link_id is not None else {}
@@ -527,11 +527,11 @@ class ExoForce(Node, ABC):
 		
 		return forces
 		
-	def decompose_force_link_to_ef(self, link_id):
-		"""Decomposes a force applied to a link to an end effector.
+	def map_link_to_ef(self, link_id):
+		"""Maps operator's link to an end effector.
 		
 		Args:
-			link_id (int): Index of the link where the force was applied.
+			link_id (int): Index of the link to map.
 
 		Returns:
 			string: Name of the end effector.
@@ -539,10 +539,14 @@ class ExoForce(Node, ABC):
 		"""
 		end_effector = None
 		for ef in self.end_effectors:
-			if link_id in self.end_effectors[ef]["decomp_to_link"]:
+			if link_id in self.end_effectors[ef]["map_to_ef"]:
 				end_effector = ef
 				break
 		return end_effector
+
+	# TODO: the following code for the position control was a workaround
+	# for the locking on collision requirement and did not work,
+	# it will be fixed during the semester.
 
 	def init_pos_control(self):
 		self.create_timer(0.5, self.pos_control)

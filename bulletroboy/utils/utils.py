@@ -27,6 +27,7 @@ class Topics:
 	# cage
 	CAGE_STATE				= "/roboy/simulation/cage_state"
 	CAGE_ROTATION 			= "/roboy/simulation/cage_rotation"
+	CAGE_END_EFFECTORS		= "/roboy/configuration/end_effectors"
 
 
 class Services:

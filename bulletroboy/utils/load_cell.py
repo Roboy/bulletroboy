@@ -16,13 +16,22 @@ class LoadCell(VoltageRatioInput):
 		"""
 		Args:
 			conf (dict): Dictionary with initial channel configuration:
-							'serial' (int): 	Serial number of the phidget to which the cell is connected.
-							'channel' (int): 	Number of the phidget channel to which the cell is connected.
+							'tendon_id' 	(int): Tendon id to which the cell is attached.
+							'cal_offset'  (float): Calibration offset value of the load cell.
+							'cal_factor'  (float): Calibration factor value of the load cell.
+							'serial' 		(int): Serial number of the phidget to which the cell is connected.
+							'channel' 		(int): Number of the phidget channel to which the cell is connected.
 		
 		"""
 		super().__init__()
+		self.id = conf['tendon_id']
+		self.cal_offset = conf['cal_offset']
+		self.cal_factor = conf['cal_factor']
 		self.setDeviceSerialNumber(conf['serial'])
 		self.setChannel(conf['channel'])
+
+	def getAddress(self):
+		return f"{self.getDeviceSerialNumber()}/{self.getChannel()}"
 
 	def openChannel(self):
 		"""Opens and attaches to phidget channel.
@@ -39,8 +48,11 @@ class LoadCell(VoltageRatioInput):
 		except PhidgetException as e:
 			raise ConnectionError(e.details)
 
+	def closeChannel(self):
+		self.close()
+
 	def readForce(self):
-		"""Reads force value from load cell.
+		"""Reads force value from load cell in Newtons.
 		
 		Args:
 			-
@@ -49,37 +61,23 @@ class LoadCell(VoltageRatioInput):
 		   	float: Force value in Newtons.
 
 		"""
-		return 0.0
+		force = None
+		if self.cal_factor is not None and self.cal_offset is not None:
+			force = self.cal_factor * (self.getVoltageRatio() + self.cal_offset)
+		return force
 
 
 
 # provisional code for class testing
 
 def onVoltageRatioChange(channel, voltageRatio):
-	print(f"VoltageRatio [{channel.id}]: {voltageRatio}")
+	print(f"Force [{channel.id}] ({channel.getAddress()}): {channel.readForce():.1f} N")
 
-configuration = [
-	{
-		'motor_id': 0,
-		'serial': 25345234,
-		'channel': 0
-	},
-	{
-		'motor_id': 1,
-		'serial': 25345234,
-		'channel': 1
-	},
-	{
-		'motor_id': 2,
-		'serial': 25345234,
-		'channel': 2
-	},
-	{
-		'motor_id': 3,
-		'serial': 25345234,
-		'channel': 3
-	},
-]
+phidget_serial = 585078
+cal_offsets = []
+cal_factors = []
+
+configuration = [{'tendon_id': i, 'cal_offset': o, 'cal_factor': f, 'serial': phidget_serial, 'channel': i} for i, (o, f) in enumerate(zip(cal_offsets, cal_factors))]
 
 if __name__ == "__main__":
 
@@ -100,4 +98,4 @@ if __name__ == "__main__":
 
 	# Close your Phidgets once the program is done.
 	for channel in channels:
-		channel.close()
+		channel.closeChannel()

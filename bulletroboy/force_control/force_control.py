@@ -64,6 +64,8 @@ class ForceControl(Node):
 
 	def get_controllers_conf(self):
 		controllers_id = self.get_parameter('controllers_id').get_parameter_value().integer_array_value
+		cal_offsets = self.get_parameter('cal_offset').get_parameter_value().double_array_value
+		cal_factors = self.get_parameter('cal_factor').get_parameter_value().double_array_value
 		serials = self.get_parameter('serials').get_parameter_value().integer_array_value
 		channels = self.get_parameter('channels').get_parameter_value().integer_array_value
 		kp = self.get_parameter('kp').get_parameter_value().double_array_value
@@ -71,7 +73,7 @@ class ForceControl(Node):
 		kd = self.get_parameter('kd').get_parameter_value().double_array_value
 		direction = self.get_parameter('direction').get_parameter_value().integer_array_value
 
-		load_cells_conf = [{'serial': s, 'channel': c} for s, c in zip(serials, channels)]
+		load_cells_conf = [{'tendon_id': i, 'cal_offset': o, 'cal_factor': f, 'serial': s, 'channel': c} for i, o, f, s, c in zip(controllers_id, cal_offsets, cal_factors, serials, channels)]
 
 		return [{'controller_id': index, 'kp': p, 'ki': i , 'kd': d, 'direction': di, 'load_cell_conf': conf} for index, p, i, d, di, conf in zip(controllers_id, kp, ki, kd, direction, load_cells_conf)]
 		

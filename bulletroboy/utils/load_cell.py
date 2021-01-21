@@ -30,6 +30,10 @@ class LoadCell(VoltageRatioInput):
 		self.setDeviceSerialNumber(conf['serial'])
 		self.setChannel(conf['channel'])
 
+	@property
+	def ready(self):
+		return self.getAttached() and self.cal_offset is not None and self.cal_factor is not None
+
 	def getAddress(self):
 		return f"{self.getDeviceSerialNumber()}/{self.getChannel()}"
 
@@ -49,6 +53,15 @@ class LoadCell(VoltageRatioInput):
 			raise ConnectionError(e.details)
 
 	def closeChannel(self):
+		"""Closes phidget channel.
+		
+		Args:
+			-
+
+		Returns:
+		   	-
+
+		"""
 		self.close()
 
 	def readForce(self):
@@ -61,8 +74,8 @@ class LoadCell(VoltageRatioInput):
 		   	float: Force value in Newtons.
 
 		"""
-		force = None
-		if self.cal_factor is not None and self.cal_offset is not None:
+		force = 0
+		if self.ready:
 			force = self.cal_factor * (self.getVoltageRatio() + self.cal_offset)
 		return force
 
@@ -70,12 +83,11 @@ class LoadCell(VoltageRatioInput):
 
 # provisional code for class testing
 
-def onVoltageRatioChange(channel, voltageRatio):
-	print(f"Force [{channel.id}] ({channel.getAddress()}): {channel.readForce():.1f} N")
+import time
 
 phidget_serial = 585078
-cal_offsets = []
-cal_factors = []
+cal_offsets = [-2.2352e-08, -4.173256e-06, 4.097819e-06, 8.582138e-06]
+cal_factors = [-80000, -80000, -80000, -80000]
 
 configuration = [{'tendon_id': i, 'cal_offset': o, 'cal_factor': f, 'serial': phidget_serial, 'channel': i} for i, (o, f) in enumerate(zip(cal_offsets, cal_factors))]
 
@@ -84,7 +96,6 @@ if __name__ == "__main__":
 	channels = []
 	for i, conf in enumerate(configuration):
 		new_channel = LoadCell(conf)
-		new_channel.setOnVoltageRatioChangeHandler(onVoltageRatioChange)
 		try:
 			new_channel.openChannel()
 			channels.append(new_channel)
@@ -92,7 +103,9 @@ if __name__ == "__main__":
 			print(f"Failed to open load cell {i}: {e.message}")
 			
 	try:
-		input("Press Enter to Stop\n")
+		while True:
+			print([f"{channel.id}: [{channel.readForce():.1f} N]" for channel in channels])
+			time.sleep(0.1)
 	except (Exception, KeyboardInterrupt):
 		pass
 

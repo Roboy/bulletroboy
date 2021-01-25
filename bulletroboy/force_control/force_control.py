@@ -22,7 +22,7 @@ class TendonForceController:
 
 	@property
 	def ready(self):
-		self.force_sensor.getAttached()
+		self.force_sensor.ready
 
 	def connectToSensor(self):
 		self.force_sensor.openChannel()
@@ -41,6 +41,8 @@ class ForceControl(Node):
 			parameters=[
 				('refresh_rate', None),
 				('controllers_id', None),
+				('cal_offset', None),
+				('cal_factor', None),
 				('serials', None),
 				('channels', None),
 				('kp', None),

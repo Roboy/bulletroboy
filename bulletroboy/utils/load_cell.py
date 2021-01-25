@@ -77,7 +77,7 @@ class LoadCell(VoltageRatioInput):
 		force = 0
 		if self.ready:
 			force = self.cal_factor * (self.getVoltageRatio() + self.cal_offset)
-		return force
+		return force * 9.81
 
 
 
@@ -85,9 +85,11 @@ class LoadCell(VoltageRatioInput):
 
 import time
 
-phidget_serial = 585078
-cal_offsets = [-2.2352e-08, -4.173256e-06, 4.097819e-06, 8.582138e-06]
-cal_factors = [-80000, -80000, -80000, -80000]
+phidget_serial = 586100
+cal_offsets = [-1.433305e-06, -2.652407e-06, -4.034489e-06, 2.57045e-06]
+cal_factors = [76946.05648001497, 79410.51153687084, 79372.69350821163, 81081.8446537218]
+cal_offsets = [-4.806556e-06]
+cal_factors = [-7781.41450138835]
 
 configuration = [{'tendon_id': i, 'cal_offset': o, 'cal_factor': f, 'serial': phidget_serial, 'channel': i} for i, (o, f) in enumerate(zip(cal_offsets, cal_factors))]
 
@@ -104,7 +106,7 @@ if __name__ == "__main__":
 			
 	try:
 		while True:
-			print([f"{channel.id}: [{channel.readForce():.1f} N]" for channel in channels])
+			print([f"{channel.id}: [{channel.readForce():.3f} Kg]" for channel in channels])
 			time.sleep(0.1)
 	except (Exception, KeyboardInterrupt):
 		pass

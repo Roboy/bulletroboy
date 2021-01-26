@@ -105,6 +105,9 @@ for i in range(numJoints):
     if info[12] == b'hand_left':
         efs["hand_left"] = i
 
+def isRight(id):
+    info = p.getJointInfo(ob,id)
+    return "right" in str(info[12])
 
 
 def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
@@ -119,15 +122,16 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
         #import pdb; pdb.set_trace()
         for idx,pos in zip(freeJoints,jointPoses): #range(len(freeJoints)):#p.getNumJoints(ob)):#
             # p.resetJointState(ob, freeJoints[i], jointPoses[i])
-            p.setJointMotorControl2(bodyIndex=ob,
-                                        jointIndex=idx,#freeJoints[i],
-                                        controlMode=p.POSITION_CONTROL,
-                                        targetPosition=pos,
-                                        maxVelocity=0.5)#jointPoses[i])
-                                        # targetVelocity=0,
-                                        # force=1,
-                                        # positionGain=5,
-                                        # velocityGain=0.1)
+            if (isRight(idx) and isRight(endEffectorId)) or (not isRight(idx) and not isRight(endEffectorId)):
+                p.setJointMotorControl2(bodyIndex=ob,
+                                            jointIndex=idx,#freeJoints[i],
+                                            controlMode=p.POSITION_CONTROL,
+                                            targetPosition=pos,
+                                            maxVelocity=0.5)#jointPoses[i])
+                                            # targetVelocity=0,
+                                            # force=1,
+                                            # positionGain=5,
+                                            # velocityGain=0.1)
         ls = p.getLinkState(ob, endEffectorId)
         newPos = ls[4]
         diff = [targetPos[0] - newPos[0], targetPos[1] - newPos[1], targetPos[2] - newPos[2]]

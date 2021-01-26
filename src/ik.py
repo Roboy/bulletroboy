@@ -10,6 +10,24 @@ import numpy as np
 
 from pyquaternion import Quaternion
 
+import rospkg
+rospack = rospkg.RosPack()
+robots_path = rospack.get_path('robots')
+
+import argparse 
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--wait', dest='wait', action='store_const',
+                    const=True, default=False,
+                    help='wait 3s before autocalibration')
+
+args = parser.parse_args()
+
+if args.wait:
+    rospy.logwarn("Waiting 3 seconds before launching IK node...")
+    rospy.sleep(3)
+
+
+
 def quaternion_multiply(quaternion1, quaternion0):
     x0, y0, z0, w0 = quaternion0
     x1, y1, z1, w1 = quaternion1
@@ -17,6 +35,8 @@ def quaternion_multiply(quaternion1, quaternion0):
                      -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
                      x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0,
                      -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0], dtype=np.float64)
+
+
 
 rospy.init_node("bullet_joints")
 topic_root = "/roboy/pinky"
@@ -26,7 +46,7 @@ joint_target_pub = rospy.Publisher(topic_root+"/joint_targets", JointState, queu
 msg = JointState()
 
 p.connect(p.GUI)
-ob = p.loadURDF("/home/missxa/workspace/roboy3/src/robots/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,-1), baseOrientation=(0,0,0.7071,0.7071))
+ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,-1), baseOrientation=(0,0,0.7071,0.7071))
 p.setGravity(0,0,-10)
 t = 0.
 prevPose = [0, 0, 0]

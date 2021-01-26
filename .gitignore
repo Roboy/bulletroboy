@@ -1,0 +1,22 @@
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+*.egg-info/
+.installed.cfg
+*.egg
+
+*.manifest
+*.spec
+
+*.png
+
+*.swo
+*.swp
+
+cmake-build-debug/

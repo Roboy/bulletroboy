@@ -11,7 +11,7 @@ class TendonForceController:
 	"""This class handles the force controller for one individual tendon.
 
 	"""
-	def __init__(self, conf):
+	def __init__(self, conf, logger):
 		"""
 		Args:
 			conf (dict): Dictionary with controller configuration:
@@ -20,9 +20,13 @@ class TendonForceController:
 							'ki' (float)			: Integral gain.
 							'kd' (float)			: Derivative gain.
 							'direction' (int)		: Direction of rotation of motor on cage.
+							'pwm_limit' (float)		: Maximum PWM value for the motors.
 							'load_cell_conf' (dict)	: Load cell configuration.
+			logger (Logger): ROS logger object.
 		
 		"""
+		self.logger = logger
+		
 		self.target_force = 0
 		self.ready = False
 		self.detached = False
@@ -32,12 +36,17 @@ class TendonForceController:
 		self.ki = conf['ki']
 		self.kd = conf['kd']
 		self.direction = conf['direction']
+		self.pwm_limit = conf['pwm_limit']
+
+		self.p_error = 0
+		self.i_error = 0
+		self.d_error = 0
 
 		self.force_sensor = LoadCell(conf['load_cell_conf'])
 		self.force_sensor.setOnAttachHandler(self.onAttach)
 		self.force_sensor.setOnDetachHandler(self.onDetach)
 
-	def onAttach(self):
+	def onAttach(self, channel):
 		"""Event handler for the attach event of the LoadCell object.
 
 		Args:
@@ -49,8 +58,9 @@ class TendonForceController:
 		"""
 		self.ready = self.force_sensor.ready
 		self.detached = False
+		self.logger.info(f"Load Cell [{self.id}] atached!")
 	
-	def onDetach(self):
+	def onDetach(self, channel):
 		"""Event handler for the detach event of the LoadCell object.
 
 		Args:
@@ -61,6 +71,7 @@ class TendonForceController:
 		
 		"""
 		self.detached = True
+		self.logger.info(f"Load Cell [{self.id}] detached!")
 
 	def connectToSensor(self):
 		"""Opens and attaches the LoadCell object to a load cell channel.
@@ -88,11 +99,20 @@ class TendonForceController:
 			self.ready = False
 			return 0.0
 
-		error = self.target_force - self.force_sensor.readForce()
+		current_force = self.force_sensor.readForce()
 
-		# TODO: Implement PID controller
+		current_error = self.target_force - current_force
 
-		return 0 * self.direction
+		self.d_error = self.p_error - current_error
+		self.p_error = current_error
+		self.i_error += current_error
+
+		pwm_set_point = self.p_error * self.kp + self.i_error * self.ki + self.d_error * self.kd
+		pwm_set_point = max(pwm_set_point, self.pwm_limit) * self.direction
+
+		self.logger.info(f"Tendon [{self.id}] target [{self.target_force}] actual [{current_force}] pwm [{pwm_set_point}]")
+
+		return pwm_set_point
 
 class ForceControl(Node):
 	"""This class handles the force control ROS node.
@@ -117,7 +137,8 @@ class ForceControl(Node):
 				('kp', None),
 				('ki', None),
 				('kd', None),
-				('direction', None)
+				('direction', None),
+				('pwm_limit', None)
 			]
 		)
 		self.refresh_rate = self.get_parameter('refresh_rate').get_parameter_value().integer_value
@@ -125,7 +146,7 @@ class ForceControl(Node):
 
 		self.controllers = []
 		for conf in controllers_conf:
-			self.controllers.append(TendonForceController(conf))
+			self.controllers.append(TendonForceController(conf, self.get_logger()))
 
 		self.create_subscription(TendonUpdate, Topics.TENDON_FORCE, self.set_target_force, 1)
 
@@ -152,10 +173,11 @@ class ForceControl(Node):
 		ki = self.get_parameter('ki').get_parameter_value().double_array_value
 		kd = self.get_parameter('kd').get_parameter_value().double_array_value
 		direction = self.get_parameter('direction').get_parameter_value().integer_array_value
+		pwm_limit = self.get_parameter('pwm_limit').get_parameter_value().double_array_value
 
 		load_cells_conf = [{'tendon_id': i, 'cal_offset': o, 'cal_factor': f, 'serial': s, 'channel': c} for i, o, f, s, c in zip(controllers_id, cal_offsets, cal_factors, serials, channels)]
 
-		return [{'controller_id': index, 'kp': p, 'ki': i , 'kd': d, 'direction': di, 'load_cell_conf': conf} for index, p, i, d, di, conf in zip(controllers_id, kp, ki, kd, direction, load_cells_conf)]
+		return [{'controller_id': index, 'kp': p, 'ki': i , 'kd': d, 'direction': di, 'pwm_limit': l,'load_cell_conf': conf} for index, p, i, d, di, l, conf in zip(controllers_id, kp, ki, kd, direction, pwm_limit, load_cells_conf)]
 		
 	def init_roboy_plexus(self):
 		"""Initiliazes objects to interface with the roboy plexus.

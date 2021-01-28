@@ -32,7 +32,7 @@ class LoadCell(VoltageRatioInput):
 
 	@property
 	def ready(self):
-		return self.getAttached() and self.cal_offset is not None and self.cal_factor is not None
+		return self.cal_offset is not None and self.cal_factor is not None
 
 	def getAddress(self):
 		return f"{self.getDeviceSerialNumber()}/{self.getChannel()}"

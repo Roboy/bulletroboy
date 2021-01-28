@@ -1,0 +1,13 @@
+force_control:
+  ros__parameters:
+    refresh_rate: 100
+    controllers_id: [16]
+    serials: [586100]
+    channels: [0]
+    cal_offset: [-4.806556e-06]
+    cal_factor: [-7781.41450138835]
+    kp: [40.0]
+    ki: [1.0]
+    kd: [0.0]
+    direction: [1]
+    pwm_limit: [1000.0]

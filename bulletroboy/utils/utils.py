@@ -29,7 +29,7 @@ class Topics:
 	CAGE_ROTATION 			= "/roboy/simulation/cage_rotation"
 
 	# force control
-	SET_TENDON_FORCE		= "/roboy/middleware/TendonForce"
+	TENDON_FORCE			= "/roboy/middleware/TendonForce"
 
 
 class Services:

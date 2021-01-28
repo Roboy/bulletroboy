@@ -12,22 +12,86 @@ class TendonForceController:
 
 	"""
 	def __init__(self, conf):
+		"""
+		Args:
+			conf (dict): Dictionary with controller configuration:
+							'controller_id' (int)	: Id of the corresponding motor.
+							'kp' (float)			: Proportional gain.
+							'ki' (float)			: Integral gain.
+							'kd' (float)			: Derivative gain.
+							'direction' (int)		: Direction of rotation of motor on cage.
+							'load_cell_conf' (dict)	: Load cell configuration.
+		
+		"""
+		self.target_force = 0
+		self.ready = False
+		self.detached = False
+
 		self.id = conf['controller_id']
-		self.set_point = 0
 		self.kp = conf['kp']
 		self.ki = conf['ki']
 		self.kd = conf['kd']
 		self.direction = conf['direction']
-		self.force_sensor = LoadCell(conf['load_cell_conf'])
 
-	@property
-	def ready(self):
-		self.force_sensor.ready
+		self.force_sensor = LoadCell(conf['load_cell_conf'])
+		self.force_sensor.setOnAttachHandler(self.onAttach)
+		self.force_sensor.setOnDetachHandler(self.onDetach)
+
+	def onAttach(self):
+		"""Event handler for the attach event of the LoadCell object.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
+		self.ready = self.force_sensor.ready
+		self.detached = False
+	
+	def onDetach(self):
+		"""Event handler for the detach event of the LoadCell object.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
+		self.detached = True
 
 	def connectToSensor(self):
+		"""Opens and attaches the LoadCell object to a load cell channel.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
 		self.force_sensor.openChannel()
 
 	def getPwmSetPoint(self):
+		"""Returns pwm control value calculated from current error.
+
+		Args:
+			-
+
+		Returns:
+			(float): PWM set point.
+		
+		"""
+		if self.detached:
+			self.ready = False
+			return 0.0
+
+		error = self.target_force - self.force_sensor.readForce()
+
+		# TODO: Implement PID controller
+
 		return 0 * self.direction
 
 class ForceControl(Node):
@@ -35,6 +99,11 @@ class ForceControl(Node):
 
 	"""
 	def __init__(self):
+		"""
+		Args:
+			-
+		
+		"""
 		super().__init__("force_control")
 		self.declare_parameters(
 			namespace='',
@@ -58,13 +127,22 @@ class ForceControl(Node):
 		for conf in controllers_conf:
 			self.controllers.append(TendonForceController(conf))
 
-		self.create_subscription(TendonUpdate, Topics.SET_TENDON_FORCE, self.set_force_set_point, 1)
+		self.create_subscription(TendonUpdate, Topics.TENDON_FORCE, self.set_target_force, 1)
 
 		self.start_controllers()
-		self.connect_to_roboy_plexus()
+		self.init_roboy_plexus()
 		self.star_node()
 
 	def get_controllers_conf(self):
+		"""Reads node's parameters and builds list of configuration dictionaries.
+
+		Args:
+			-
+
+		Returns:
+			(list[dict]): List of controllers configurations.
+		
+		"""
 		controllers_id = self.get_parameter('controllers_id').get_parameter_value().integer_array_value
 		cal_offsets = self.get_parameter('cal_offset').get_parameter_value().double_array_value
 		cal_factors = self.get_parameter('cal_factor').get_parameter_value().double_array_value
@@ -79,7 +157,16 @@ class ForceControl(Node):
 
 		return [{'controller_id': index, 'kp': p, 'ki': i , 'kd': d, 'direction': di, 'load_cell_conf': conf} for index, p, i, d, di, conf in zip(controllers_id, kp, ki, kd, direction, load_cells_conf)]
 		
-	def connect_to_roboy_plexus(self):
+	def init_roboy_plexus(self):
+		"""Initiliazes objects to interface with the roboy plexus.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
 		self.motor_command_publisher = self.create_publisher(MotorCommand, Topics.MOTOR_COMMAND, 1)
 
 		self.control_mode_client = self.create_client(ControlMode, Services.CONTROL_MODE)
@@ -90,9 +177,16 @@ class ForceControl(Node):
 		self.control_mode_req = ControlMode.Request()
 		self.motor_command_msg = MotorCommand()
 
-		self.set_control_mode(3)
-
 	def start_controllers(self):
+		"""Connects controller with load cells.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
 		for controller in self.controllers:
 			try:
 				controller.connectToSensor()
@@ -101,18 +195,62 @@ class ForceControl(Node):
 				self.get_logger().debug(f"Connection error to load cell {controller.id}: {e.message}")
 
 	def star_node(self):
+		"""Starts control loop.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
+		self.set_control_mode(3)
 		self.create_timer(1 / self.refresh_rate, self.control_loop)
 
 	def get_controller(self, id):
+		"""Returns controller with requested id.
+
+		Args:
+			id (int): Id of desired controller.
+
+		Returns:
+			(TendonForceController): Contoller object.
+		
+		"""
 		for controller in self.controllers:
 			if controller.id == id:
 				return controller
 		return None
 
-	def set_force_set_point(self, msg):
-		self.get_controller(msg.id).set_point = msg.force
+	def set_target_force(self, msg):
+		"""Set tendon target force callback.
+
+		Args:
+			msg (TendonUpdate): Received ROS Message.
+
+		Returns:
+			-
+		
+		"""
+		controller = self.get_controller(msg.id)
+		if controller is None:
+			self.get_logger().warn(f"Trying to set target force for tendon ({msg.id}) without controller.")
+		else:
+			if msg.force < 0:
+				self.get_logger().warn(f"Trying to set negative target force for tendon ({msg.id}).")
+			else:
+				controller.target_force = msg.force
 
 	def control_loop(self):
+		"""Control loop timer callback.
+
+		Args:
+			-
+
+		Returns:
+			-
+		
+		"""
 		motor_ids = []
 		set_points = []
 		for controller in self.controllers:
@@ -123,6 +261,21 @@ class ForceControl(Node):
 		self.send_motor_commands(motor_ids, set_points)
 
 	def set_control_mode(self, mode, motor_ids=None, set_points=[]):
+		"""Set motors control mode.
+
+		Args:
+			mode (int)				: Control mode:
+										0: ENCODER0_POSITION: position controller using encoder0
+										1: ENCODER1_POSITION: position controller using encoder1
+										2: DISPLACEMENT: position controller using displacement
+										3: DIRECT_PWM: directly controlling the pwm value of the motor
+			motor_ids (list[int]) 	: Motor list to change mode, if None, all motors will be updated.
+			set_points (list[float]): Set points for the corresponding motor list, if empty all motors will be set to 0.
+
+		Returns:
+			-
+		
+		"""
 		self.control_mode_req.legacy = False
 		self.control_mode_req.control_mode = mode
 		self.control_mode_req.motor_id = motor_ids if motor_ids is not None else [controller.id for controller in self.controllers]
@@ -131,6 +284,16 @@ class ForceControl(Node):
 		self.control_mode_client.call_async(self.control_mode_req)
 
 	def send_motor_commands(self, motor_ids=None, set_points=None):
+		"""Set motors set point.
+
+		Args:
+			motor_ids (list[int]) 	: Motor list to set, if None, all motors will be updated.
+			set_points (list[float]): Set points for the corresponding motor list, if None all motors will be set to 0.
+
+		Returns:
+			-
+		
+		"""
 		if motor_ids is None:
 			motor_ids = [controller.id for controller in self.controllers]
 		if set_points is None:

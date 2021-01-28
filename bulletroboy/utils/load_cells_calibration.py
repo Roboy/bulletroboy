@@ -9,7 +9,7 @@ print("Load Cells calibration...\n")
 
 phidget_serial = int(input("Phidget Serial: "))
 
-load_cells = [LoadCell({'tendon_id': i, 'cal_offset': None, 'cal_factor': None, 'serial': phidget_serial, 'channel': i }) for i in range(1)]
+load_cells = [LoadCell({'tendon_id': i, 'cal_offset': None, 'cal_factor': None, 'serial': phidget_serial, 'channel': i }) for i in range(4)]
 
 weights = [0.0, 5.0]
 
@@ -25,7 +25,7 @@ for load_cell in load_cells:
     load_cell.cal_offset = measurements[0]
     load_cell.cal_factor = (weights[1] - weights[0]) * GRAVITY / (measurements[1] - measurements[0])
 
-calibration_report =    "# Force (N) = cal_factor * (VoltageRatio + cal_offset)\n" \
+calibration_report =    "# Force (Kg) = cal_factor * (VoltageRatio + cal_offset)\n" \
                         f"phidget_serial: {phidget_serial}\n" \
                         f"channels: {[load_cell.getChannel() for load_cell in load_cells]}\n" \
                         f"cal_offset: {[load_cell.cal_offset for load_cell in load_cells]}\n" \

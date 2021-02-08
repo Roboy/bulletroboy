@@ -147,7 +147,7 @@ class ExoforceHW(ExoForce):
 		"""
 		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
 
-		ef = self.decompose_force_link_to_ef(collision_msg.linkid)
+		ef = self.map_link_to_ef(collision_msg.linkid)
 		############ TEMP WORKAROUND
 		# for muscle in self.get_ef_muscle_units(ef):
 		# 	muscle.end_effector.world_point = np.array([0.5, -0.5, -0.3])

@@ -43,7 +43,10 @@ class OperatorHW(Operator):
 			human_name = self.link_map[key]
 			roboy_name = key
 			dims = self.get_parameter("operator_link_dimentions." + human_name).get_parameter_value().double_array_value
-			self.links.append(Link(i, human_name, roboy_name, dims))
+			if human_name == "neck":
+				self.links.append(Link(i, human_name, roboy_name, dims, [[.0,.0,1.5],[.0,.0,.0,.0]]))
+			else:
+				self.links.append(Link(i, human_name, roboy_name, dims))
 
 	def pull(self):
 		"""Pulls operator to simulate connection to the roboy.

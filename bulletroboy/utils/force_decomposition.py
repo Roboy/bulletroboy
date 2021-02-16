@@ -2,13 +2,13 @@ import numpy as np
 from scipy.optimize import minimize
 
 
-def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, params):
+def decompose_force_ef_to_tendons(force_value, force_direction, end_effector, params):
     """Decomposes force applied to end effector to the tendons connected to it.
     
     Args:
         force_value (float): Value of the applied force.
 		force_direction (3darray(float)): Force direction in world space coordinates.
-        muscle_units (list[MuscleUnit]): List of the muscle units conected to the end effector.
+        end_effector (EndEffector): End effector for which the force must be decomposed.
         params (dict): Decomposition params.
 
     Returns:
@@ -18,9 +18,9 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, pa
     """
     force_value = np.clip(force_value, 0 , params['max_collision_force'])
 
-    max_forces = [muscle.max_force for muscle in muscle_units]
-    motor_attachments = np.array([muscle.motor.via_point.world_point for muscle in muscle_units])
-    tendon_attachments = np.array([muscle.end_effector.world_point for muscle in muscle_units])
+    max_forces = [muscle.max_force for muscle in end_effector.muscle_units]
+    motor_attachments = np.array([muscle.motor.via_point.world_point for muscle in end_effector.muscle_units])
+    tendon_attachments = np.array([end_effector.position for _ in end_effector.muscle_units])
 
     forces = {}
     message = ""
@@ -50,7 +50,7 @@ def decompose_force_ef_to_tendons(force_value, force_direction, muscle_units, pa
             if solution.success:
                 final_forces = np.zeros(len(tendon_vectors))
                 final_forces[active_mask] = solution.x
-                forces = {muscle.id: force for muscle, force in zip(muscle_units, final_forces)}
+                forces = {muscle.id: force for muscle, force in zip(end_effector.muscle_units, final_forces)}
             else:
                 message = solution.message
     

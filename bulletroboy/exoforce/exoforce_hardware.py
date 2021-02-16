@@ -69,16 +69,16 @@ class ExoforceHW(ExoForce):
 		choice = input("\nInitialize tendons? (Yes/no): ")
 		if choice in YES_OPTIONS:
 			for ef in self.end_effectors:
-				input("\n- Press enter to initialize " + ef + " tendons...")
+				input("\n- Press enter to initialize " + ef.name + " tendons...")
 				motor_ids = []
 				set_points = []
-				for muscle in self.get_ef_muscle_units(ef):
+				for muscle in ef.muscle_units:
 					motor_ids.append(muscle.id)
 					set_points.append(float(FAST_PWM_TENSION * muscle.direction))
 				self.send_motor_commands(motor_ids, set_points)
 				input("- Press enter to finish")
 				set_points = []
-				for muscle in self.get_ef_muscle_units(ef):
+				for muscle in ef.muscle_units:
 					set_points.append(float(MIN_PWM_TENSION * muscle.direction))
 				self.send_motor_commands(motor_ids, set_points)
 			self.send_motor_commands([16],[float(MIN_PWM_TENSION)])
@@ -100,15 +100,14 @@ class ExoforceHW(ExoForce):
 	# 		print("\nTendons ready!\n")
 
 	def calibration(self):
-		print(self.end_effectors.values())
-		if np.any([ef["position"] is None for ef in self.end_effectors.values()]):
+		if np.any([ef.position is None for ef in self.end_effectors]):
 			print("Waiting for end effector initial poses...")
 			return
 
 		print("\nInitializing motor position calibration:")
 		for muscle in self.muscle_units:
-			input("- Touch attachment point " + str(muscle.id) + " with the right hand tracker and press enter...")
-			muscle.motor.via_point.world_point = self.end_effectors["right_wrist"]["position"]
+			input("- Touch attachment point " + str(muscle.id) + f" with the '{self.end_effectors[0].name}'' hand tracker and press enter...")
+			muscle.motor.via_point.world_point = self.end_effectors[0].position
 			print("Motor " + str(muscle.id) + " position updated to: " + str(muscle.motor.via_point.world_point))
 
 		print("\nMotor positions updated!\n")
@@ -118,7 +117,7 @@ class ExoforceHW(ExoForce):
 
 	def print_distance(self):
 		for muscle in self.muscle_units:
-			dist = np.linalg.norm(muscle.motor.via_point.world_point - self.end_effectors["right_wrist"]["position"])
+			dist = np.linalg.norm(muscle.motor.via_point.world_point - self.end_effectors[0].position)
 			if dist < 0.1:
 				self.get_logger().info("Motor " + str(muscle.id) + " touched!")
 			if muscle.id == 3:
@@ -144,12 +143,12 @@ class ExoforceHW(ExoForce):
 
 		ef = self.map_link_to_ef(collision_msg.linkid)
 		############ TEMP WORKAROUND
-		# for muscle in self.get_ef_muscle_units(ef):
+		# for muscle in ef.muscle_units:
 		# 	muscle.end_effector.world_point = np.array([0.5, -0.5, -0.3])
 		##########################################################################
 		collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
 
-		quaternion = Quaternion(self.end_effectors[ef]["orientation"])
+		quaternion = Quaternion(ef.orientation)
 		force_direction = quaternion.rotation_matrix.dot(collision_direction)
 
 		forces = self.decompose(collision_msg.linkid, collision_msg.normalforce, force_direction)
@@ -160,7 +159,7 @@ class ExoforceHW(ExoForce):
 
 		motor_ids = []
 		set_points = []
-		for muscle in self.get_ef_muscle_units(ef):
+		for muscle in ef.muscle_units:
 			motor_ids.append(muscle.id)
 			if forces[muscle.id] == 0:
 				#set_points.append(float(MIN_PWM_TENSION * muscle.direction * -1))
@@ -183,29 +182,26 @@ class ExoforceHW(ExoForce):
 		Returns:
 			-
 		"""
-		end_effector = ef_pose.header.frame_id
+		ef_name = ef_pose.header.frame_id
 		################### TEMPORAL MAPPING ############
-		if end_effector == "hand_right":
-			end_effector = "right_wrist"
-		elif end_effector == "hand_left":
-			end_effector = "left_wrist"
+		if ef_name == "hand_right":
+			ef_name = "right_wrist"
+		elif ef_name == "hand_left":
+			ef_name = "left_wrist"
 		else:
 			return
 		############################################
-		#self.get_logger().info("Received pose for " + end_effector)
-		if end_effector not in self.end_effectors:
-			self.get_logger().warn(end_effector + " is not an end effector!")
+		#self.get_logger().info("Received pose for " + ef_name)
+		end_effector = self.get_ef_name(ef_name)
+		if end_effector is None:
+			self.get_logger().warn(ef_name + " is not an end effector!")
 			return
-
-		muscles = self.get_ef_muscle_units(end_effector)
 
 		link_pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
 		link_orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
-		for muscle in muscles:
-			muscle.end_effector.world_point = link_pos
 
-		self.end_effectors[end_effector]["position"] = link_pos
-		self.end_effectors[end_effector]["orientation"] = link_orn
+		end_effector.position = link_pos
+		end_effector.orientation = link_orn
 
 	def update(self):
 		"""Updates ExoForce's state.

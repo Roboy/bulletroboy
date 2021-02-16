@@ -254,19 +254,18 @@ class ExoForceSim(ExoForce):
 			-
 			
 		"""
-		end_effector = ef_pose.header.frame_id
-		#self.get_logger().info("Received pose for " + end_effector)
-		if end_effector not in self.end_effectors:
-			self.get_logger().warn(end_effector + " is not an end effector!")
+		ef_name = ef_pose.header.frame_id
+		#self.get_logger().info("Received pose for " + ef_name)
+		end_effector = self.get_ef_name(ef_name)
+		if end_effector is None:
+			self.get_logger().warn(ef_name + " is not an end effector!")
 			return
 
 		link_pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
 		link_orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
-		# for muscle in muscles:
-		# 	muscle.end_effector.world_point = link_pos
 
-		self.end_effectors[end_effector]["position"] = link_pos
-		self.end_effectors[end_effector]["orientation"] = link_orn
+		end_effector.position = link_pos
+		end_effector.orientation = link_orn
 
 class TendonSim():
 	"""This class handles the simulation of each tendon attached to the operator.

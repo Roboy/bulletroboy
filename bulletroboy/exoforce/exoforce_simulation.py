@@ -11,8 +11,6 @@ from ..operator.operator_simulation import Moves
 
 from ..utils.utils import Topics
 
-POS_CONTROL_THRESHOLD = 0.2
-
 class ExoForceSim(ExoForce):
 	"""ExoForce Child class. This class handles the simulation of the exoforce.
 
@@ -25,7 +23,7 @@ class ExoForceSim(ExoForce):
 			mode (string): Mode in which the ExoForceSim will we executed.
 		
 		"""
-		super().__init__(cage_conf, "exoforce", POS_CONTROL_THRESHOLD)
+		super().__init__(cage_conf, "exoforce")
 	
 		self.mode = mode
 		self.operator = operator

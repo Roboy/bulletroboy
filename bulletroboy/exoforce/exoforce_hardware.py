@@ -15,8 +15,6 @@ FAST_PWM_TENSION = 300
 MIN_PWM_TENSION = 150
 YES_OPTIONS = ["Yes","yes","y",""]
 
-POS_CONTROL_THRESHOLD = 0.1
-
 class ExoforceHW(ExoForce):
 	def __init__(self, cage_conf):
 		"""
@@ -24,7 +22,7 @@ class ExoforceHW(ExoForce):
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
 		
 		"""
-		super().__init__(cage_conf, "exoforce", POS_CONTROL_THRESHOLD)
+		super().__init__(cage_conf, "exoforce")
 		self.callback_group = ReentrantCallbackGroup()
 
 		self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)
@@ -66,9 +64,6 @@ class ExoforceHW(ExoForce):
 
 	def start_exoforce(self):
 		self.create_timer(0.5, self.update)
-		choice = input("\nInitialize position control? (Yes/no): ")
-		if choice in YES_OPTIONS:
-			self.init_pos_control()
 
 	def init_tendons(self):
 		choice = input("\nInitialize tendons? (Yes/no): ")

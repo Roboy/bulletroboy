@@ -46,8 +46,6 @@ def main():
 	spin_thread = Thread(target=executor.spin)
 
 	spin_thread.start()
-	# input("Start position control?")
-	# exoforce.init_pos_control()
 
 	# RUN SIM
 	try:

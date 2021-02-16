@@ -326,7 +326,7 @@ class ExoForce(Node, ABC):
 	"""Main ExoForce class. It handles the muscle units and the cage itself.
 	
 	"""
-	def __init__(self, cage_conf, node_name, threshold):
+	def __init__(self, cage_conf, node_name):
 		"""
 		Args:
 			cage_conf (CageConfiguration): Cage configuration defined in the configuration file.
@@ -343,8 +343,6 @@ class ExoForce(Node, ABC):
 
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
-		#self.create_subscription(PoseStamped, Topics.ROBOY_EF_POSES, self.roboy_ef_pos_listener, 10)
-		self.threshold = threshold
 
 	def init_end_effectors(self):
 		"""Initializes end effectors list.
@@ -544,39 +542,3 @@ class ExoForce(Node, ABC):
 				break
 		return end_effector
 
-	# TODO: the following code for the position control was a workaround
-	# for the locking on collision requirement and did not work,
-	# it will be fixed during the semester.
-
-	def init_pos_control(self):
-		self.create_timer(0.5, self.pos_control)
-
-	def pos_control(self):
-		for o_ef, r_ef in zip(self.end_effectors, self.roboy_end_effectors):
-			if self.end_effectors[o_ef] is None or self.roboy_end_effectors[r_ef] is None:
-				continue
-			o_pos = self.end_effectors[o_ef]["position"]
-			r_pos = self.roboy_end_effectors[r_ef]["position"]
-			diff = o_pos - r_pos
-			diff_mask = np.absolute(diff > self.threshold)
-			direction = [0,0,0]
-			if np.any(diff_mask):
-				if diff_mask[0]:
-					direction[0] = -1 if diff[0] > 0 else 1
-				if diff_mask[1]:
-					direction[1] = -1 if diff[1] > 0 else 1
-				if diff_mask[2]:
-					direction[2] = -1 if diff[2] > 0 else 1
-				collision = Collision()
-				collision.linkid = 8 if "left" in o_ef else 5
-				collision.contactnormal.x, collision.contactnormal.y, collision.contactnormal.z = np.asarray(direction, dtype=float)
-				collision.normalforce = 30.0
-
-				self.collision_listener(collision)
-
-	# def roboy_ef_pos_listener(self, ef_pose):
-	# 	if ef_pose.header.frame_id in self.link_names_map:
-	# 		oper_link = self.link_names_map[ef_pose.header.frame_id]
-	# 		pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
-	# 		orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
-	# 		self.roboy_end_effectors[oper_link] = {"position": pos, "orientation:": orn}

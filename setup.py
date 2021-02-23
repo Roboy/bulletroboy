@@ -1,4 +1,6 @@
 from setuptools import setup
+import os
+from glob import glob
 
 package_name = 'bulletroboy'
 
@@ -10,6 +12,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,11 +24,13 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'roboy_simulation = bulletroboy.roboy_simulation:main',
-            'cage_simulation = bulletroboy.cage_simulation:main',
-            'test_publisher = bulletroboy.test_publisher:main',
-            'forces_mapper = bulletroboy.forces_mapper:main',
-            'test_client = bulletroboy.test_client:main'
+            'roboy_sim      = bulletroboy.nodes.roboy_node:main',
+            'cage_sim       = bulletroboy.nodes.cage_simulation_node:main',
+            'state_mapper   = bulletroboy.nodes.state_mapper_node:main',
+            'operator       = bulletroboy.nodes.operator_node:main',
+            'exoforce       = bulletroboy.nodes.exoforce_node:main',
+            'test_publisher = bulletroboy.tests.test_publisher:main',
+            'test_client    = bulletroboy.tests.test_client:main'
         ],
     },
 )

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import pybullet as p
 import time
 import math
 import numpy as np
@@ -8,14 +7,19 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 from rclpy.node import Node
-from roboy_control_msgs.msg import CageState, EndEffector, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
+from roboy_control_msgs.msg import CageState, EndEffector as EndEffectorMsg, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
 from roboy_control_msgs.srv import GetCageEndEffectors
+from roboy_simulation_msgs.msg import Collision
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Point
 
+from ..utils.force_decomposition import decompose_force_ef_to_tendons
+from ..utils.utils import Topics, Services
 
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
 		It reads and writes from a XML file.
+
 	"""
 	def __init__(self, filepath=None):
 		"""
@@ -26,6 +30,7 @@ class CageConfiguration():
 		self.filepath = filepath
 		self.cage_structure = {}
 		self.muscle_units = []
+		self.end_effectors = []
 		
 		if self.filepath:
 			self.load(filepath)
@@ -57,6 +62,10 @@ class CageConfiguration():
 			muscle_dict['parameters'] = {}
 			for parameter in muscle.find('parameters'):
 				muscle_dict['parameters'][parameter.tag] = parameter.text
+			ef_name = muscle_dict['viaPoints'][-1]['link']
+			if ef_name not in [ef['name'] for ef in self.end_effectors]:
+				self.end_effectors.append({'id': len(self.end_effectors), 'name': ef_name})
+			muscle_dict['end_effector'] = list(filter(lambda ef: ef['name'] == ef_name, self.end_effectors))[0]['id']
 			self.muscle_units.append(muscle_dict)
 
 	def save(self, filepath=None):
@@ -106,12 +115,17 @@ class CageConfiguration():
 		for muscle in self.muscle_units:
 			msg += "\t-----------------\n"
 			msg += f"\tid: {muscle['id']}\n"
+			msg += f"\tend effector: {muscle['end_effector']}\n"
 			msg += "\tvia points:\n"
 			for via_point in muscle['viaPoints']:
 				msg += f"\t\t{via_point['id']} link: {via_point['link']:<20}\tpoint: {via_point['point']}\n"
 			msg += "\tparameters:\n"
 			for k, v in muscle['parameters'].items():
 				msg += f"\t\t{k}: {v}\n"
+		msg += "End Effectors:\n"
+		for ef in self.end_effectors:
+			msg += f"\t- id: {ef['id']}\n"
+			msg += f"\t\tname: {ef['name']}\n"
 		return msg
 
 
@@ -128,7 +142,7 @@ class ViaPoint():
 		self.id = via_point['id']
 		self.link = via_point['link']
 		self.link_point = via_point['point']
-		self.world_point = via_point['point']
+		self.world_point = via_point['point'] if self.link == "cage" else None
 
 	def to_msg(self, init_conf=False):
 		"""Returns via point data as a ROS message.
@@ -179,7 +193,7 @@ class Tendon():
 
 		"""
 		for via_point in self.via_points:
-			via_point.world_point = operator.get_link_center(via_point.link) + via_point.link_point
+			via_point.world_point = operator.get_link(via_point.link).get_center() + via_point.link_point
 
 
 class Motor():
@@ -231,21 +245,26 @@ class MuscleUnit():
 	"""This class handles a muscle unit including it's tendon and motor.
 
 	"""
-	def __init__(self, id, via_points, parameters):
+	def __init__(self, id, via_points, parameters, ef_id):
 		"""
 		Args:
 			id (int): Id of the motor.
 			via_points (List[dict]): Via points' configuration defined in the configuration file.
 			parameters (dict): Muscle unit's parameters defined in the configuration file.
+			ef_id (int): Id of the end effector to which the motor is attached.
 		
 		"""
 		self.id = id
 		self.via_points = [ViaPoint(via_point) for via_point in via_points]
 		self.motor = Motor(self.id, self.via_points[0])
 		self.tendon = Tendon(self.id, self.motor, self.via_points[1:])
-		self.end_effector = self.via_points[-1]
+		self.end_effector = ef_id
 		# parameters
 		self.max_force = float(parameters['max_force'])
+		if parameters.get('direction', None):
+			self.direction = int(parameters['direction'])
+		self.displacement = None
+		self.speed = None
 
 	def set_motor_force(self, force):
 		"""Sets motor's current applied force.
@@ -314,6 +333,19 @@ class Cage():
 		self.angle = new_angle
 
 
+class EndEffector():
+	"""This class handles the end effectors.
+
+	"""
+	def __init__(self, ef_id, name, muscle_units, position=None, orientation=None, map_to_ef=None):
+		self.id = ef_id
+		self.name = name
+		self.muscle_units = muscle_units
+		self.position = position
+		self.orientation = orientation
+		self.map_to_ef = map_to_ef
+
+
 class ExoForce(Node, ABC):
 	"""Main ExoForce class. It handles the muscle units and the cage itself.
 	
@@ -326,17 +358,19 @@ class ExoForce(Node, ABC):
 		
 		"""
 		super().__init__(node_name)
-		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'])
+		self.muscle_units = [ MuscleUnit(muscle['id'], muscle['viaPoints'], muscle['parameters'], muscle['end_effector'])
 								for muscle in cage_conf.muscle_units ]
 		self.cage = Cage(cage_conf.cage_structure['height'], cage_conf.cage_structure['radius'], self.get_motors())
+		
+		self.end_effectors = [ EndEffector(ef['id'], ef['name'], self.get_ef_muscle_units(ef['id'])) for ef in cage_conf.end_effectors ]
 
-		self.init_end_effectors()
+		self.init_force_decomp_params()
 
-		self.cage_state_publisher = self.create_publisher(CageState, '/roboy/simulation/cage_state', 1)
-		self.initial_conf_service = self.create_service(GetCageEndEffectors, '/roboy/configuration/end_effectors', self.get_end_effectors_callback)
-	
-	def init_end_effectors(self):
-		"""Initializes end effectors list.
+		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
+		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
+
+	def init_force_decomp_params(self):
+		"""Reads force decomposition params.
 		
 		Args:
 			-
@@ -345,10 +379,21 @@ class ExoForce(Node, ABC):
 		   -
 
 		"""
-		self.end_effectors = []
-		for muscle in self.muscle_units:
-			ef = muscle.end_effector.link
-			if ef not in self.end_effectors: self.end_effectors.append(ef)
+		self.declare_parameters(
+			namespace='',
+			parameters=[
+				('force_decomposition.min_tendon_force', None),
+				('force_decomposition.max_collision_force', None)] + 
+				[('map_link_to_ef.' + ef.name, None) for ef in self.end_effectors]
+			)
+		
+		self.force_decomp_params = {
+			'min_tendon_force': self.get_parameter("force_decomposition.min_tendon_force").get_parameter_value().double_value,
+			'max_collision_force': self.get_parameter("force_decomposition.max_collision_force").get_parameter_value().double_value
+		}
+
+		for ef in self.end_effectors:
+			ef.map_to_ef = self.get_parameter("map_link_to_ef." + ef.name).get_parameter_value().integer_array_value
 
 	@abstractmethod
 	def update(self):
@@ -383,21 +428,31 @@ class ExoForce(Node, ABC):
 				break
 		return unit
 	
-	def get_ef_muscle_units(self, end_effector):
+	def get_ef_muscle_units(self, ef_id):
 		"""Gets ExoForce's muscle units by end effector.
 		
 		Args:
-			end_effector (string): End effector name's to search for muscle units.
+			ef_id (int): End effector's index to search for muscle units.
 
 		Returns:
 		   	List[MuscleUnit]: Muscle units with tendons attached to the given end effector.
 
 		"""
-		muscle_units = []
-		for muscle in self.muscle_units:
-			if muscle.end_effector.link == end_effector:
-				muscle_units.append(muscle)
-		return muscle_units
+		muscles = [muscle for muscle in self.muscle_units if muscle.end_effector == ef_id]
+		return muscles if muscles else None
+
+	def get_ef_name(self, ef_name):
+		"""Gets ExoForce's end effector by name.
+		
+		Args:
+			ef_name (string): End effector's name to search for.
+
+		Returns:
+		   	EndEffector: End effectors object with the given name.
+
+		"""
+		ef = [ef for ef in self.end_effectors if ef.name == ef_name]
+		return ef[0] if ef else None
 
 	def get_motors(self):
 		"""Gets ExoForce's motors.
@@ -458,11 +513,51 @@ class ExoForce(Node, ABC):
 
 		"""
 		for ef in self.end_effectors:
-			end_effector_msg = EndEffector()
-			end_effector_msg.name = ef
-			for muscle in self.get_ef_muscle_units(ef):
+			end_effector_msg = EndEffectorMsg()
+			end_effector_msg.name = ef.name
+			for muscle in ef.muscle_units:
 				muscle_msg = muscle.to_msg(init_conf=True)
 				end_effector_msg.muscle_units.append(muscle_msg)
 			response.end_effectors.append(end_effector_msg)
 
 		return response
+
+	def decompose(self, link_id, collision_force, collision_direction):
+		"""Decomposes force applied to link in operator.
+		
+		Args:
+			link_id (int): Link id of the operator where the force is applied.
+			collision_force (float): Value of the applied force.
+			collision_direction array[3]: Force direction in world space coordinates.
+
+		Returns:
+		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
+
+		"""
+		ef = self.map_link_to_ef(link_id)
+		self.get_logger().info("Force mapped to ef: " + ef.name)
+
+		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, ef, self.force_decomp_params) if link_id is not None else {}
+		
+		if not forces:
+			self.get_logger().warn(f"Force was not decomposed: force[{collision_force}] ef[{ef.name}] [{msg}]")
+		
+		return forces
+		
+	def map_link_to_ef(self, link_id):
+		"""Maps operator's link to an end effector.
+		
+		Args:
+			link_id (int): Index of the link to map.
+
+		Returns:
+			int: Index of the end effector.
+
+		"""
+		end_effector = None
+		for ef in self.end_effectors:
+			if link_id in ef.map_to_ef:
+				end_effector = ef
+				break
+		return end_effector
+

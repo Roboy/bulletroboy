@@ -1,17 +1,16 @@
 import pybullet as p
 import time
 import numpy as np
-
+from math import pi
 from rclpy.node import Node
-
-from pyquaternion import Quaternion
+from rcl_interfaces.srv import GetParameters
 
 from sensor_msgs.msg import JointState
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-import bulletroboy.utils as utils
+from ..utils.utils import call_service, call_service_async, Topics, Services
 
 class BulletRoboy(Node):
     """
@@ -20,48 +19,100 @@ class BulletRoboy(Node):
     def __init__(self, body_id):
         super().__init__("bullet_roboy")
         self.body_id = body_id
-        self.t = 0.
+        self.ready = False
+        self.links = []
+        self.freeJoints = []
+        self.end_effectors = {}
+        self.mapped_links = []
+        self.joint_names = []
+        for i in range(p.getNumJoints(self.body_id)):
+            ji = p.getJointInfo(self.body_id,i)
+            self.joint_names.append(ji[1].decode("utf-8"))
 
-        # VARIABLES FOR DEBUG LINES
+        # Variables for debug lines
         self.prevPose = [0, 0, 0]
         self.prevPose1 = [0, 0, 0]
         self.hasPrevPose = 0
         #trailDuration is duration (in seconds) after debug lines will be removed automatically
         #use 0 for no-removal
         self.trailDuration = 5
-        self.roboy_to_human_link_names_map = utils.load_roboy_to_human_link_name_map()
-        self.human_to_roboy_link_names_map = {v: k for k, v in self.roboy_to_human_link_names_map.items()}
 
-        self.links = []
-        self.freeJoints = []
-        self.endEffectors = {}
-        self.init_urdf_info()
+        # Joint state publisher
+        self.joint_publisher = self.create_publisher(JointState, Topics.JOINT_STATES, 1)
+        # EF pose  publisher
+        self.ef_pose_publisher = self.create_publisher(PoseStamped, Topics.ROBOY_EF_POSES, 1)
+        # Collision publisher
+        self.collision_publisher = self.create_publisher(Collision, Topics.ROBOY_COLLISIONS, 1)
+        self.collision_for_hw_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision_hw', 1)
+        # Operator EF pose subscriber
+        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_REF_POSE, self.ef_pose_callback, 1)
+        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_LEF_POSE, self.ef_pose_callback, 1)
+
+        # Initial head pose client
+        self.operator_initial_head_pose_client = self.create_client(GetLinkPose, Services.INITIAL_HEAD_POSE)
+        # State Mapper node parameters client
+        self.state_mapper_parameters_client = self.create_client(GetParameters, Services.STATE_MAPPER_GET)
         
-        #Publishers and subscribers
+        request = GetParameters.Request()
+        request.names = ['roboy_link_names']
+        call_service_async(self.state_mapper_parameters_client, request, self.mapped_links_callback, self.get_logger())
+        call_service_async(self.operator_initial_head_pose_client, GetLinkPose.Request(), self.initialize, self.get_logger())
+        
+    def mapped_links_callback(self, future):
+        try:
+            result = future.result()
+        except Exception as e:
+            self.get_logger().warn("mapped_links not initialized, service call failed %r" % (e,))
+        else:
+            param = result.values[0]
+            self.mapped_links = param.string_array_value
 
-        #Joint state publisher
+    def initialize(self, future):
+        """Initial head pose service callback, once the head initial pose is received, the node is initiliazed.
+        """
+        try:
+            result = future.result()
+        except Exception as e:
+            self.get_logger().error("initial head pose service call failed %r" % (e,))
+        else:
+            self.init_roboy_pose(result)
+            self.init_urdf_info()
+            self.start_node()
+
+    def init_roboy_pose(self, resp, head_id=37, front_to_x_rotation=pi/2):
+        '''Resets roboy pose according to operator pose received from forces_mapper.
+            This function assumes that the operator's "front" is the x-axis in world frame.
+            Args:
+                head_id: id of head of roboy (defaults to 37)
+                front_to_x_rotation: rotation from the current "front" of roboy to the x-axis in world frame
+            Returns:
+                -
+        '''
+        self.get_logger().info("Initializing roboy pose...")
+        
+        pos = [resp.pose.position.x, resp.pose.position.y, resp.pose.position.z]
+        orn = [resp.pose.orientation.x,resp.pose.orientation.y, resp.pose.orientation.z, resp.pose.orientation.w]
+        
+        base_pos = p.getBasePositionAndOrientation(self.body_id)[0]
+        base_orn = p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.body_id)[1])
+        
+        new_base_pos = np.array(pos) - (np.array(p.getLinkState(self.body_id, head_id)[0]) - np.array(base_pos))
+        new_base_orn = p.getQuaternionFromEuler([base_orn[0], base_orn[1], p.getEulerFromQuaternion(orn)[2] + front_to_x_rotation])
+        
+        p.resetBasePositionAndOrientation(self.body_id, new_base_pos, new_base_orn)
+        self.get_logger().info("Roboy pose initialized")
+
+    def start_node(self):
         timer_period = 0.1 # seconds
-        self.joint_names = []
-        for i in range(p.getNumJoints(self.body_id)):
-            ji = p.getJointInfo(self.body_id,i)
-            self.joint_names.append(ji[1].decode("utf-8"))
-        self.joint_publisher = self.create_publisher(JointState, '/roboy/simulation/joint_state', 1)
-        self.timer = self.create_timer(timer_period, self.joint_state_timer_callback)
-        
-        #Collision publisher
-        self.collision_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision', 1)
+        self.joint_state_timer = self.create_timer(timer_period, self.joint_state_timer_callback)
+        self.ef_pose_timer = self.create_timer(timer_period, self.ef_pose_timer_callback)
 
-        #Operator EF pose subscriber
-        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/right', self.ef_pose_callback, 1)
-        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, '/roboy/exoforce/pose/endeffector/left', self.ef_pose_callback, 1)
+        # LinkNameFromId service
+        self.link_info_service = self.create_service(LinkInfoFromId, Services.LINK_INFO_FROM_ID, self.link_info_from_id_callback)
+        # Initial pose service
+        self.initial_pose_service = self.create_service(GetLinkPose, Services.ROBOY_INITIAL_LINK_POSE, self.initial_link_pose_callback)
 
-        #Services and clients
-
-        #LinkNameFromId service
-        self.link_info_service = self.create_service(LinkInfoFromId, '/roboy/simulation/roboy/link_info_from_id', self.link_info_from_id_callback)
-        
-        #Initial pose service
-        self.initial_pose_service = self.create_service(GetLinkPose, '/roboy/simulation/roboy/initial_link_pose', self.initial_link_pose_callback)
+        self.ready = True
 
     def init_urdf_info(self):
         """Gets links, free joints, endeffectors and initial link poses in roboy's body.
@@ -76,6 +127,7 @@ class BulletRoboy(Node):
         link['init_pose'] = p.getBasePositionAndOrientation(self.body_id)
         link['id'] = -1 
         self.links.append(link)
+        # self.draw_LF_coordinate_system(-1)
         for i in range(p.getNumJoints(self.body_id)):
             info = p.getJointInfo(self.body_id,i)
             link = {}
@@ -89,25 +141,31 @@ class BulletRoboy(Node):
             if info[2] == p.JOINT_REVOLUTE:
                 self.freeJoints.append(i)
             if name == 'hand_left':
-                self.endEffectors['hand_left'] = i
-                self.get_logger().info("EF hand_left id: " + str(i))
-                self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
+                self.end_effectors[name] = i
+
+                self.get_logger().debug("EF hand_left id: " + str(i))
+                self.get_logger().debug("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 
                                                 + "   " + str(link['init_pose'][1][2]) 
                                                 + "   " + str(link['init_pose'][1][3]))
                 
             if name == 'hand_right':
-                self.endEffectors['hand_right'] = i
-                self.get_logger().info("EF hand_right id: " + str(i))
-                self.get_logger().info("Initial orientation: " + str(link['init_pose'][1][0]) 
+                self.end_effectors[name] = i
+
+                self.get_logger().debug("EF hand_right id: " + str(i))
+                self.get_logger().debug("Initial orientation: " + str(link['init_pose'][1][0]) 
                                                 + "   " + str(link['init_pose'][1][1]) 
                                                 + "   " + str(link['init_pose'][1][2]) 
                                                 + "   " + str(link['init_pose'][1][3]))
             if name == 'head':
-                self.get_logger().info("EF head id: " + str(i))
+                self.get_logger().debug("EF head id: " + str(i))
+            if name == 'lowerarm_right':
+                self.get_logger().debug("EF lowerarm_right id: " + str(i))
+            if name == 'lowerarm_left':
+                self.get_logger().debug("EF lowerarm_left id: " + str(i))
 
-            if name in self.roboy_to_human_link_names_map.keys():
-                self.draw_LF_coordinate_system(i) 
+            # if name in self.mapped_links:
+            #     self.draw_LF_coordinate_system(i) 
 
     def get_link_bb_dim(self, link_id):
         """Gets link bounding box dimensions.
@@ -145,7 +203,7 @@ class BulletRoboy(Node):
     def link_info_from_id_callback(self, request, response):
         """ROS service callback to get link info from link id.
         """
-        self.get_logger().info('Link Info From Id Service: received request for id' + str(request.link_id))
+        self.get_logger().debug('Link Info From Id Service: received request for id' + str(request.link_id))
         link = self.get_link_info_from_id(request.link_id)
         response.link_name = link['name']
         response.dimensions.x, response.dimensions.y, response.dimensions.z = link['dims']
@@ -192,7 +250,7 @@ class BulletRoboy(Node):
         Returns:
             the response
         """
-        self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
+        self.get_logger().debug(f"Service Initial Link Pose: request received for {request.link_name}")
         
         link = self.get_link_info_from_name(request.link_name)
         
@@ -221,7 +279,7 @@ class BulletRoboy(Node):
         
         #process message
         ef_name = ef_pose.header.frame_id
-        ef_id = self.endEffectors[ef_name]
+        ef_id = self.end_effectors[ef_name]
         
         link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
         link_orn = [ef_pose.pose.orientation.x, 
@@ -288,20 +346,31 @@ class BulletRoboy(Node):
             msg.name.append(self.joint_names[i])
         self.joint_publisher.publish(msg)
 
-    def call_service(self, client, msg):
-        """Calls a client synchnrnously passing a msg and returns the response
+    
+    def ef_pose_timer_callback(self):
 
-        Parameters:
-            client (RosClient): The client used to communicate with the server
-            msg (Object): A server msg to send to the server as a request
-
-        Returns:
-            response (Object): A response msg from the server
+        """Callback function for the timer, publishes ef pose message every time it gets triggered by timer. 
         """
-        while not client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("service not available, waiting again...")
-        response = client.call(msg)
-        return response
+        for ef in self.end_effectors:
+            self.get_logger().debug('Sending Endeffector pose: ' + ef)
+            msg = PoseStamped()
+            ef_id = self.end_effectors[ef]
+            link_info = p.getLinkState(self.body_id, ef_id)[4:6]
+            link_pos = link_info[0]
+            link_orn = link_info[1]
+
+            msg.header.frame_id = ef
+
+            msg.pose.position.x = link_pos[0]
+            msg.pose.position.y = link_pos[1]
+            msg.pose.position.z = link_pos[2]
+
+            msg.pose.orientation.x = link_orn[0]
+            msg.pose.orientation.y = link_orn[1]
+            msg.pose.orientation.z = link_orn[2]
+            msg.pose.orientation.w = link_orn[3]
+
+            self.ef_pose_publisher.publish(msg)
 
     def get_initial_link_pose(self, link_name, client):
         """Gets initial link pose for a link using its name
@@ -316,7 +385,7 @@ class BulletRoboy(Node):
         self.get_logger().debug('Getting initial' + link_name + ' link pose')
         initial_link_pose_req = GetLinkPose.Request()
         initial_link_pose_req.link_name = link_name
-        response = self.call_service(client, initial_link_pose_req)
+        response = call_service(client, initial_link_pose_req, self.get_logger())
         self.get_logger().debug('service called')
 
         return [[response.pose.position.x, 
@@ -337,7 +406,7 @@ class BulletRoboy(Node):
             -
 
         """
-        if collision[9] > 0:
+        if collision[9] > 0 and self.get_link_info_from_id(collision[3])["name"] in self.mapped_links:
             msg = Collision()
 
             #collision[3] == linkIndexA in PyBullet docu
@@ -368,6 +437,48 @@ class BulletRoboy(Node):
 
             self.collision_publisher.publish(msg)
 
+    def publish_collision_to_decomposer(self, collision):
+        """Publishes collision as a ROS Message.
+
+        Args:
+            collision (list): item of the contact points list output of pybullet getcontactPoints.
+
+        Returns:
+            -
+
+        """
+        if collision[9] > 0 and self.get_link_info_from_id(collision[3])["name"] in self.mapped_links:
+            msg = Collision()
+            link_name = self.get_link_info_from_id(collision[3])["name"]
+            #collision[3] == linkIndexA in PyBullet docu
+            if "right" in link_name:
+                msg.linkid = 5
+            elif "left" in link_name:
+                msg.linkid = 7
+            else:
+                return
+
+            #collision[5] == positionOnA in PyBullet docu
+            msg.position.x = collision[5][0]
+            msg.position.y = collision[5][1]
+            msg.position.z = collision[5][2] - 1.5
+
+            #collision[7] == contactNormalOnB in PyBullet docu
+            msg.contactnormal.x = collision[7][0]
+            msg.contactnormal.y = collision[7][1]
+            msg.contactnormal.z = collision[7][2] - 1.5
+
+            self.draw_force(msg.linkid, msg.position, msg.contactnormal, collision[9])
+
+            #collision[8] == contactDistance in PyBullet docu
+            msg.contactdistance = collision[8]
+
+            #collision[9] == normalForce in PyBullet docu
+            msg.normalforce = collision[9]
+
+            self.get_logger().info("Publishing collision in link %i" % msg.linkid)
+
+            self.collision_for_hw_publisher.publish(msg)
     def draw_force(self, linkid, position, contactnormal, normalforce):
         """Draw collision force as a debugLine.
 
@@ -378,7 +489,7 @@ class BulletRoboy(Node):
             -
         
         """
-        if(self.get_link_name_from_id(linkid) in self.roboy_to_human_link_names_map.keys()):
+        if(self.get_link_name_from_id(linkid) in self.mapped_links):
             pos = np.array([position.x, position.y, position.z])
             direction = np.array([contactnormal.x,contactnormal.y,contactnormal.z]) * normalforce
             p.addUserDebugLine(pos, pos + direction, [1, 0.4, 0.3], 2, 10, self.body_id, linkid)

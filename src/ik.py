@@ -116,8 +116,8 @@ for i in range(numJoints):
         efs["hand_left"] = i
 
 
-height = 240
-width = 320
+height = 240*2
+width = 320*2
 aspect = width/height
 
 fov, nearplane, farplane = 100, 0.1, 100
@@ -290,14 +290,19 @@ def joint_targets_cb(msg):
     for i in range(len(msg.name)):
         id = idFromName(msg.name[i])
         if id is not None:
-            p.setJointMotorControl2(bodyIndex=0,
-                                    jointIndex=id,
-                                    controlMode=p.POSITION_CONTROL,
-                                    targetPosition=msg.position[i],
-                                    targetVelocity=0,
-                                    force=40,
-                                    positionGain=0.1,
-                                    velocityGain=0.1)
+            p.setJointMotorControl2(bodyIndex=ob,
+                                        jointIndex=id,#freeJoints[i],
+                                        controlMode=p.POSITION_CONTROL,
+                                        targetPosition=msg.position[i])
+                                        # maxVelocity=0.5)
+            # p.setJointMotorControl2(bodyIndex=0,
+            #                         jointIndex=id,
+            #                         controlMode=p.POSITION_CONTROL,
+            #                         targetPosition=msg.position[i],
+            #                         targetVelocity=0,
+            #                         force=10,
+            #                         positionGain=0.4,
+            #                         velocityGain=0.1)
 
 def cmdVelCB(msg):
     """callback to receive vel commands from user"""
@@ -309,7 +314,7 @@ joint_target_sub = rospy.Subscriber(topic_root+"/control/joint_targets", JointSt
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
-rate = rospy.Rate(50)
+rate = rospy.Rate(30)
 while not rospy.is_shutdown():
     left = camera(11)
     right = camera(12)

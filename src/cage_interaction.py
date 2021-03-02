@@ -16,47 +16,47 @@ class CageInteraction:
             self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)
             self.links = {}
             self.init_urdf_info()
-		    self.collision_publisher = rospy.Publisher(topic_root+"/collisions", JointState, queue_size=1)
+            self.collision_publisher = rospy.Publisher(topic_root+"/collisions", JointState, queue_size=1)
 
 
     def init_urdf_info(self):
-		"""Gets links, free joints, endeffectors and initial link poses in roboy's body.
-		Args:
-			-
-		Returns:
-			-
-		"""
-		link = {}
-		link['name'] = 'torso'
-		link['dims'] = self.get_link_bb_dim(-1)
-		link['id'] = -1 
-		self.links.append(link)
-		for i in range(p.getNumJoints(self.body_id)):
-			info = p.getJointInfo(self.body_id,i)
-			link = {}
-			name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
-			link['name'] = name
-			link['dims'] = self.get_link_bb_dim(i)
-			link['id'] = i
-			self.links.append(link)
-			if info[2] == p.JOINT_REVOLUTE:
-				self.freeJoints.append(i)
-			if name == 'hand_left':
-				self.end_effectors[name] = i
-				
-			if name == 'hand_right':
-				self.end_effectors[name] = i
+        """Gets links, free joints, endeffectors and initial link poses in roboy's body.
+        Args:
+            -
+        Returns:
+            -
+        """
+        link = {}
+        link['name'] = 'torso'
+        link['dims'] = self.get_link_bb_dim(-1)
+        link['id'] = -1 
+        self.links.append(link)
+        for i in range(p.getNumJoints(self.body_id)):
+            info = p.getJointInfo(self.body_id,i)
+            link = {}
+            name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+            link['name'] = name
+            link['dims'] = self.get_link_bb_dim(i)
+            link['id'] = i
+            self.links.append(link)
+            if info[2] == p.JOINT_REVOLUTE:
+                self.freeJoints.append(i)
+            if name == 'hand_left':
+                self.end_effectors[name] = i
+                
+            if name == 'hand_right':
+                self.end_effectors[name] = i
 
     def get_link_info_from_id(self, link_id):
-		"""Returns the item in the links list that contains information about the link with the id given.
-		Args:
-			link_id: id of link
-		Returns:
-			link from links list
-		"""
-		link = list(filter(lambda link: link['id'] == link_id, self.links))
-		assert len(link) == 1, "Found result length is not 1 : link_id = {}, result_length = {}".format(link_id, len(link))
-		return link[0]
+        """Returns the item in the links list that contains information about the link with the id given.
+        Args:
+            link_id: id of link
+        Returns:
+            link from links list
+        """
+        link = list(filter(lambda link: link['id'] == link_id, self.links))
+        assert len(link) == 1, "Found result length is not 1 : link_id = {}, result_length = {}".format(link_id, len(link))
+        return link[0]
 
     def get_link_info_from_name(self, link_name):
         """Returns the item in the links list that contains information about the link with the name given.
@@ -82,7 +82,7 @@ class CageInteraction:
         """
         if collision[9] > 0:
             link = self.get_link_info_from_id(collision[3])
-            if	link['parent_name'] == link['name']:
+            if    link['parent_name'] == link['name']:
                 link_id = collision[3]
 
             else :

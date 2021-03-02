@@ -2,6 +2,7 @@ import rospy
 from roboy_simulation_msgs.msg import Collision
 from sensor_msgs.msg import JointState
 import pybullet as p
+import yaml
 
 CONF_PATH = r'conf.yml'
 
@@ -10,13 +11,13 @@ class CageInteraction:
     '''
     This Class manages all the interactions between the Roboy simulation and the cage 
     '''
-    def __init__(self, roboy_body_id):
+    def __init__(self, roboy_body_id, topic_root):
         with open(CONF_PATH) as file:
-            self.body_id = roboy_body_id
             self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)
-            self.links = {}
-            self.init_urdf_info()
-            self.collision_publisher = rospy.Publisher(topic_root+"/collisions", JointState, queue_size=1)
+        self.body_id = roboy_body_id
+        self.links = []
+        self.init_urdf_info()
+        self.collision_publisher = rospy.Publisher(topic_root+"/collisions", JointState, queue_size=1)
 
 
     def init_urdf_info(self):
@@ -28,7 +29,6 @@ class CageInteraction:
         """
         link = {}
         link['name'] = 'torso'
-        link['dims'] = self.get_link_bb_dim(-1)
         link['id'] = -1 
         self.links.append(link)
         for i in range(p.getNumJoints(self.body_id)):
@@ -36,16 +36,8 @@ class CageInteraction:
             link = {}
             name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
             link['name'] = name
-            link['dims'] = self.get_link_bb_dim(i)
             link['id'] = i
             self.links.append(link)
-            if info[2] == p.JOINT_REVOLUTE:
-                self.freeJoints.append(i)
-            if name == 'hand_left':
-                self.end_effectors[name] = i
-                
-            if name == 'hand_right':
-                self.end_effectors[name] = i
 
     def get_link_info_from_id(self, link_id):
         """Returns the item in the links list that contains information about the link with the id given.
@@ -115,7 +107,7 @@ class CageInteraction:
 
             self.collision_publisher.publish(msg)
 
-    def get_vector_in_link_frame(py, link, vector):
+    def get_vector_in_link_frame(self, link, vector):
         """Transforms a vector from world's coordinates system to link frame.
 
         Args:
@@ -127,14 +119,14 @@ class CageInteraction:
         
         """
         if(link == -1):
-            frame_pos, frame_orn = (py.getBasePositionAndOrientation(self.body_id))[:2]
+            frame_pos, frame_orn = (p.getBasePositionAndOrientation(self.body_id))[:2]
         else:
             #[0] == linkWorldPosition in PyBullet docu
             #[1] == linkWorldOrientation in PyBullet docu
-            frame_pos, frame_orn = (py.getLinkState(self.body_id, link))[:2]
+            frame_pos, frame_orn = (p.getLinkState(self.body_id, link))[:2]
 
-        pos_in_LF, orn_in_LF = py.invertTransform(frame_pos, frame_orn)
+        pos_in_LF, orn_in_LF = p.invertTransform(frame_pos, frame_orn)
 
-        pos_in_LF, orn_in_LF = py.multiplyTransforms(pos_in_LF,orn_in_LF,vector,[0,0,0,1])
+        pos_in_LF, orn_in_LF = p.multiplyTransforms(pos_in_LF,orn_in_LF,vector,[0,0,0,1])
 
         return pos_in_LF

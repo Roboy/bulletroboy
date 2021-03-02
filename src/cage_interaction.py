@@ -3,16 +3,16 @@ from roboy_simulation_msgs.msg import Collision
 from sensor_msgs.msg import JointState
 import pybullet as p
 import yaml
-
-CONF_PATH = r'conf.yml'
-
+from rospkg import RosPack
 
 class CageInteraction:
     '''
     This Class manages all the interactions between the Roboy simulation and the cage 
     '''
     def __init__(self, roboy_body_id, topic_root):
-        with open(CONF_PATH) as file:
+        rp = RosPack()
+        conf_path = rp.get_path('bulletroboy') + "conf.yml"
+        with open(conf_path) as file:
             self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)
         self.body_id = roboy_body_id
         self.links = []

@@ -12,6 +12,7 @@ sudo pip3 install rospkg catkin_pkg
 
 # install other requirements
 pip3 install --user pyquaternion
+pip3 install pyyaml
 
 # Create ROS workspace
 mkdir -p roboy_ws/src

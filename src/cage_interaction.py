@@ -1,4 +1,5 @@
 import rospy
+
 from roboy_simulation_msgs.msg import Collision, ContactPoint
 from sensor_msgs.msg import JointState
 import pybullet as p
@@ -29,6 +30,7 @@ class CageInteraction:
         """
         link = {}
         link['name'] = 'torso'
+        link['dims'] = self.get_link_bb_dim(-1)
         link['id'] = -1 
         parent_name = self.parent_link_map.get(link['name'])
         if not parent_name :
@@ -41,6 +43,7 @@ class CageInteraction:
             link = {}
             name = str(info[12], 'utf-8')
             link['name'] = name
+            link['dims'] = self.get_link_bb_dim(i)
             link['id'] = i
             parent_name = self.parent_link_map.get(name)
             if not parent_name :
@@ -59,6 +62,7 @@ class CageInteraction:
         link = list(filter(lambda link: link['id'] == link_id, self.links))
         assert len(link) == 1, "Found result length is not 1 : link_id = {}, result_length = {}".format(link_id, len(link))
         return link[0]
+
 
     def get_link_info_from_name(self, link_name):
         """Returns the item in the links list that contains information about the link with the name given.

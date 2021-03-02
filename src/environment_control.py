@@ -1,6 +1,6 @@
 import pybullet as p
 import pybullet_data
-import rclpy
+import rospy
 import math
 
 import time
@@ -136,7 +136,7 @@ class EnvironmentCtrl():
                 try:
                     self.objects.append(p.loadURDF(model, pos, orn, globalScaling = scale))
                 except:
-                    rclpy.logging._root_logger.error("The model " , model, " does not exist.")
+                    rospy.logerr("The model " , model, " does not exist.")
 
             
             count = p.readUserDebugParameter(self.delete_obj_id)

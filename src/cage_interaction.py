@@ -11,7 +11,7 @@ class CageInteraction:
     '''
     def __init__(self, roboy_body_id, topic_root):
         rp = RosPack()
-        conf_path = rp.get_path('bulletroboy') + "conf.yml"
+        conf_path = rp.get_path('bulletroboy') + "/conf.yml"
         with open(conf_path) as file:
             self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)
         self.body_id = roboy_body_id

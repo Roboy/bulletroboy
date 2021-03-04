@@ -49,19 +49,8 @@ class BulletRoboy(Node):
 
 		# Initial head pose client
 		self.operator_initial_head_pose_client = self.create_client(GetLinkPose, Services.INITIAL_HEAD_POSE)
-		# State Mapper node parameters client
-		self.state_mapper_parameters_client = self.create_client(GetParameters, Services.STATE_MAPPER_GET)
 		
 		call_service_async(self.operator_initial_head_pose_client, GetLinkPose.Request(), self.initialize, self.get_logger())
-		
-	# def mapped_links_callback(self, future):
-	# 	try:
-	# 		result = future.result()
-	# 	except Exception as e:
-	# 		self.get_logger().warn("mapped_links not initialized, service call failed %r" % (e,))
-	# 	else:
-	# 		param = result.values[0]
-	# 		self.mapped_links = param.string_array_value
 
 	def set_node_param(self):
 		'''Declares and gets parameters, then sets the parent_name attribute for each link.

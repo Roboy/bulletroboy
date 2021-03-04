@@ -21,13 +21,16 @@ class Topics:
 	MOTOR_COMMAND 			= "/roboy/middleware/MotorCommand"
 
 	# collision
-	ROBOY_COLLISIONS 		= "roboy/simulation/roboy/collision"
-	MAPPED_COLLISIONS 		= "/roboy/simulation/exoforce/operator/collisions"
+	ROBOY_COLLISIONS 		= "/roboy/simulation/collision"
+	MAPPED_COLLISIONS 		= "/exoforce/simulation/collision"
 
 	# cage
-	CAGE_STATE				= "/roboy/simulation/cage_state"
-	CAGE_ROTATION 			= "/roboy/simulation/cage_rotation"
-	CAGE_END_EFFECTORS		= "/roboy/configuration/end_effectors"
+	CAGE_STATE				= "/exoforce/simulation/cage_state"
+	CAGE_ROTATION 			= "/exoforce/simulation/cage_rotation"
+	CAGE_END_EFFECTORS		= "/exoforce/configuration/end_effectors"
+
+	# force
+	TARGET_FORCE			= "/exoforce/forces/target"
 
 
 class Services:

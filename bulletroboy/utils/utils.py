@@ -30,7 +30,7 @@ class Topics:
 	CAGE_END_EFFECTORS		= "/exoforce/configuration/end_effectors"
 
 	# force
-	TARGET_FORCE			= "/exoforce/forces/target"
+	TARGET_FORCE			= "/exoforce/force/target"
 
 
 class Services:
@@ -48,6 +48,10 @@ class Services:
 
 	# parameters
 	STATE_MAPPER_GET		= "/state_mapper/get_parameters"
+
+	# force
+	START_FORCE_CONTROL		= "/exoforce/force/start"
+	STOP_FORCE_CONTROL		= "/exoforce/force/stop"
 
 
 def parse_launch_arg(arg, default_value, logger):
@@ -82,13 +86,13 @@ def call_service(client, request, logger):
 		SrvTypeResponse: Response msg from the call
 	"""
 	while not client.wait_for_service(timeout_sec=1.0):
-		logger.info("service not available, waiting again...")
+		logger.info(f"'{client.srv_name}' service not available, waiting again...")
 	response = client.call(request)
 	return response
 		
 def call_service_async(client, request, callback, logger):
 	while not client.wait_for_service(timeout_sec=1.0):
-		logger.info("service not available, waiting again...")
+		logger.info(f"'{client.srv_name}' service not available, waiting again...")
 	future = client.call_async(request)
 	future.add_done_callback(callback)
 

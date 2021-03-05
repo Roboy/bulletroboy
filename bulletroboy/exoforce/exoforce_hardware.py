@@ -5,15 +5,15 @@ from geometry_msgs.msg import PoseStamped
 from pyquaternion import Quaternion
 from rclpy.callback_groups import ReentrantCallbackGroup
 from roboy_simulation_msgs.msg import Collision, TendonUpdate
+from std_srvs.srv import Trigger
 
-from ..utils.utils import Services, Topics
+from ..utils.utils import Services, Topics, call_service
 from .exoforce import ExoForce
 
 # This constants need to be defined in a conf file
-INIT_FORCE = 20	# in Newtons
-MIN_FORCE = 5	# in Newtons
-FORCE_APPLY_TIME = 1 # in seconds
-INIT_TIME_WAIT = 3 # in seconds
+MIN_FORCE = 5	# minimal force applied to avoid slack
+INIT_TIME_WAIT = 3 # time to wait to pull initial slack
+FORCE_APPLY_TIME = 1
 
 class ExoforceHW(ExoForce):
 	def __init__(self, cage_conf):
@@ -36,8 +36,10 @@ class ExoforceHW(ExoForce):
 		
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)
 
+		self.start_force_control_client = self.create_client(Trigger, Services.START_FORCE_CONTROL)
+		self.stop_force_control_client = self.create_client(Trigger, Services.STOP_FORCE_CONTROL)
+
 		self.start_exoforce()
-		self.stop_exoforce()
 
 	def start_exoforce(self):
 		"""Starts exoforce.
@@ -49,9 +51,10 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
-		self.set_target_force(MIN_FORCE)
-		time.sleep(INIT_TIME_WAIT)
-		self.active = True
+		if self.start_force_control():
+			self.set_target_force(MIN_FORCE)
+			time.sleep(INIT_TIME_WAIT)
+			self.active = True
 
 	def stop_exoforce(self):
 		"""Stops exoforce.
@@ -65,7 +68,37 @@ class ExoforceHW(ExoForce):
 		"""
 		self.active = False
 		self.apply_min_force_timer.cancel()
-		self.set_target_force(0)
+		self.stop_force_control()
+
+	def start_force_control(self):
+		"""Requests force control node to start.
+		
+		Args:
+			-
+
+		Returns:
+			bool success
+
+		"""
+		res = call_service(self.start_force_control_client, Trigger.Request(), self.get_logger())
+		if not res.success:
+			self.get_logger().error("Unable to start force control node!")
+		return res.success
+
+	def stop_force_control(self):
+		"""Requests force control node to stop.
+		
+		Args:
+			-
+
+		Returns:
+			bool success
+
+		"""
+		res = call_service(self.stop_force_control_client, Trigger.Request(), self.get_logger())
+		if not res.success:
+			self.get_logger().warn("Unable to stop force control node")
+		return res.success
 
 	def set_target_force(self, force):
 		"""Sets a target force to all the tendons.

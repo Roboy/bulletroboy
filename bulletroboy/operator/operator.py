@@ -108,7 +108,7 @@ class Operator(Node, ABC):
 	def start_node(self):
 		pass
 
-	def start_publishing(self, period=0.1):
+	def start_publishing(self, period=0.02):
 		self.timer = self.create_timer(period, self.publish_ef_state)
 
 	def init_end_effectors(self, efs):

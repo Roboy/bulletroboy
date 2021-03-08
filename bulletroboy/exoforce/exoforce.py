@@ -19,7 +19,7 @@ from ..utils.utils import Topics, Services
 class CageConfiguration():
 	"""This class handles the initial cage configuration.
 		It reads and writes from a XML file.
-y
+
 	"""
 	def __init__(self, filepath=None):
 		"""

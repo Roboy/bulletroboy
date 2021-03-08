@@ -19,11 +19,9 @@ class OperatorHW(Operator):
 	"""
 
 	def start_node(self):
-		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)
-		
-		input("\nStand in initial position and press enter...")
+		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
 		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
-		
+
 		self.pull()
 		self.start_publishing()
 
@@ -57,9 +55,13 @@ class OperatorHW(Operator):
 			-
 			
 		"""
-		self.target_force_publisher.publish(TendonUpdate(PULL_MOTOR, PULL_FORCE))
+		msg = TendonUpdate()
+		msg.tendon_id = PULL_MOTOR
+		msg.force = float(PULL_FORCE)
+		self.target_force_publisher.publish(msg)
 		time.sleep(PULL_TIME)
-		self.target_force_publisher.publish(TendonUpdate(PULL_MOTOR, MIN_FORCE))
+		msg.force = float(MIN_FORCE)
+		self.target_force_publisher.publish(msg)
 
 	def vr_pose_listener(self, link_pose):
 		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.

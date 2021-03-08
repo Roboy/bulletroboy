@@ -5,7 +5,7 @@ from math import pi
 from rclpy.node import Node
 from rcl_interfaces.srv import GetParameters
 
-from sensor_msgs.msg import JointState
+from sensor_msgs.msg import JointState, CompressedImage
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
@@ -43,6 +43,7 @@ class BulletRoboy(Node):
 		# Collision publisher
 		self.collision_publisher = self.create_publisher(Collision, Topics.ROBOY_COLLISIONS, 1)
 		self.collision_for_hw_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision_hw', 1)
+		
 		# Operator EF pose subscriber
 		self.right_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_REF_POSE, self.ef_pose_callback, 1)
 		self.left_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_LEF_POSE, self.ef_pose_callback, 1)
@@ -51,6 +52,10 @@ class BulletRoboy(Node):
 		self.operator_initial_head_pose_client = self.create_client(GetLinkPose, Services.INITIAL_HEAD_POSE)
 		
 		call_service_async(self.operator_initial_head_pose_client, GetLinkPose.Request(), self.initialize, self.get_logger())
+
+		# camera members
+		self.caml_pub = self.create_publisher(CompressedImage, TOPICS.CAMERA_LEFT, queue_size=1)
+		self.camr_pub = self.create_publisher(CompressedImage, TOPICS.CAMERA_RIGHT, queue_size=1)
 
 	def set_node_param(self):
 		'''Declares and gets parameters, then sets the parent_name attribute for each link.

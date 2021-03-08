@@ -15,6 +15,8 @@ class Topics:
 
 	# roboy
 	JOINT_STATES			= "/roboy/simulation/joint_state"
+	CAMERA_LEFT				= "/roboy/simulation/sensors/caml/compressed"
+	CAMERA_RIGHT			= "/roboy/simulation/sensors/camr/compressed"
 
 	# roboy plexus
 	MOTOR_STATE 			= "/roboy/middleware/MotorState"

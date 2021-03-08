@@ -12,7 +12,7 @@ from .exoforce import ExoForce
 
 # This constants need to be defined in a conf file
 MIN_FORCE = 5	# minimal force applied to avoid slack
-INIT_TIME_WAIT = 3 # time to wait to pull initial slack
+INIT_TIME_WAIT = 5 # time to wait to pull initial slack
 FORCE_APPLY_TIME = 1
 
 class ExoforceHW(ExoForce):
@@ -124,7 +124,9 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
-		force_msg = TendonUpdate(tendon_id, float(force))
+		force_msg = TendonUpdate()
+		force_msg.tendon_id = tendon_id
+		force_msg.force = float(force)
 		self.target_force_publisher.publish(force_msg)
 	
 	def collision_listener(self, collision_msg):

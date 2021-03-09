@@ -6,8 +6,9 @@ from pyquaternion import Quaternion
 from rclpy.callback_groups import ReentrantCallbackGroup
 from roboy_simulation_msgs.msg import Collision, TendonUpdate
 from std_srvs.srv import Trigger
+from roboy_middleware_msgs.srv import InitExoforce
 
-from ..utils.utils import Services, Topics, call_service
+from ..utils.utils import Services, Topics, call_service, call_service_async
 from .exoforce import ExoForce
 
 # This constants need to be defined in a conf file
@@ -29,17 +30,60 @@ class ExoforceHW(ExoForce):
 		self.apply_min_force_timer = self.create_timer(FORCE_APPLY_TIME, lambda: self.set_target_force(MIN_FORCE))
 		self.apply_min_force_timer.cancel()
 
+		# Define subscriptions
 		self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)
 		self.create_subscription(Collision, 'roboy/simulation/roboy/collision_hw', self.collision_listener, 1)
 		# self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.ef_pos_listener, 1)
 		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
 		
+		# Define publishers
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)
 
+		# Define clients
 		self.start_force_control_client = self.create_client(Trigger, Services.START_FORCE_CONTROL)
 		self.stop_force_control_client = self.create_client(Trigger, Services.STOP_FORCE_CONTROL)
+		self.start_operator_client = self.create_client(InitExoforce, Services.START_OPERATOR)
+
+		# Define services
+		self.init_exoforce_service = self.create_service(InitExoforce, Services.INIT_EXOFORCE, self.init_exoforce_callback)
+		self.stop_exoforce_service = self.create_service(Trigger, Services.STOP_EXOFORCE, self.stop_exoforce_callback)
 
 		self.start_exoforce()
+
+	def init_exoforce_callback(self, request, response):
+		"""Callback for ROS service to initialize exoforce.
+
+		Args:
+			request: 
+			response: 
+
+		Returns:
+			the response.
+
+		"""
+		# TODO: implement init procedure
+		self.start_exoforce()
+		call_service_async(self.start_operator_client, request, None, self.get_logger())
+		response.success = True
+
+		return response
+
+	def stop_exoforce_callback(self, request, response):
+		"""Callback for ROS service to stop exoforce.
+
+		Args:
+			request: 
+			response: 
+
+		Returns:
+			the response.
+
+
+		"""
+		# TODO
+		self.stop_exoforce()
+		response.success = True
+		return response
 
 	def start_exoforce(self):
 		"""Starts exoforce.

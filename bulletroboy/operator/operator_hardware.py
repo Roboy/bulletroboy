@@ -2,6 +2,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.msg import TendonUpdate
+from roboy_middleware_msgs.srv import InitExoforce
 from .operator import Operator, Link
 from ..utils.utils import Topics, Services
 
@@ -21,6 +22,7 @@ class OperatorHW(Operator):
 	def start_node(self):
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
 		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
+		self.start_service = self.create_service(InitExoforce, Services.INIT_EXOFORCE, self.start_callback)
 
 		self.pull()
 		self.start_publishing()
@@ -44,6 +46,23 @@ class OperatorHW(Operator):
 				self.links.append(Link(i, human_name, roboy_name, dims, [[.0,.0,1.5],[.0,.0,.0,.0]]))
 			else:
 				self.links.append(Link(i, human_name, roboy_name, dims))
+
+	def start_callback(self, request, response):
+		"""Callback for ROS service for initial exoforce for the operator.
+
+		Args:
+			request: 
+			response: 
+
+		Returns:
+			the response.
+
+
+		"""
+		#TODO
+		print("Hello")
+		response.success = False
+		return response
 
 	def pull(self):
 		"""Pulls operator to simulate connection to the roboy.

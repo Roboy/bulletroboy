@@ -53,6 +53,11 @@ class Services:
 	START_FORCE_CONTROL		= "/exoforce/force/start"
 	STOP_FORCE_CONTROL		= "/exoforce/force/stop"
 
+	# construct interface
+	INIT_EXOFORCE			= "/exoforce/control/initialize"
+	STOP_EXOFORCE			= "/exoforce/control/stop"
+	START_OPERATOR			= "/operator/control/start"
+
 
 def parse_launch_arg(arg, default_value, logger):
 	"""Parse node args received from ros launcher.

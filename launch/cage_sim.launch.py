@@ -30,6 +30,10 @@ def generate_launch_description():
         Node(
             package='bulletroboy',
             executable='roboy_sim',
+            parameters = [os.path.join(
+                get_package_share_directory('bulletroboy'),
+                'config',
+                'conf.yaml')],
             arguments = [LaunchConfiguration('roboy_urdf')]
         ),
         Node(

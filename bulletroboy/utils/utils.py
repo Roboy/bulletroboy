@@ -89,7 +89,7 @@ def call_service_async(client, request, callback, logger):
 	future = client.call_async(request)
 	future.add_done_callback(callback)
 
-def draw_AABB(pybullet, aabb):
+def draw_AABB(pybullet, aabb, link_name):
 	aabbMin = aabb[0]
 	aabbMax = aabb[1]
 	f = [aabbMin[0], aabbMin[1], aabbMin[2]]
@@ -128,14 +128,14 @@ def draw_AABB(pybullet, aabb):
 
 	f = [aabbMax[0], aabbMax[1], aabbMax[2]]
 	t = [aabbMin[0], aabbMax[1], aabbMax[2]]
-	pybullet.addUserDebugLine(f, t, [1.0, 0.5, 0.5])
+	pybullet.addUserDebugLine(f, t, [0, 0, 0])
 	f = [aabbMax[0], aabbMax[1], aabbMax[2]]
 	t = [aabbMax[0], aabbMin[1], aabbMax[2]]
 	pybullet.addUserDebugLine(f, t, [1, 1, 1])
 	f = [aabbMax[0], aabbMax[1], aabbMax[2]]
 	t = [aabbMax[0], aabbMax[1], aabbMin[2]]
 	pybullet.addUserDebugLine(f, t, [1, 1, 1])
-
+	pybullet.addUserDebugText(link_name, [x + 0.005 for x in f], [0, 0, 0])	
 
 # The following functions where replaced with a param file
 

@@ -139,40 +139,41 @@ class ExoforceHW(ExoForce):
 			-
 		
 		"""
-		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
-
-		ef = self.map_link_to_ef(collision_msg.linkid)
-		############ TEMP WORKAROUND
-		# for muscle in ef.muscle_units:
-		# 	muscle.end_effector.world_point = np.array([0.5, -0.5, -0.3])
-		##########################################################################
-		collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
-
-		quaternion = Quaternion(ef.orientation)
-		force_direction = quaternion.rotation_matrix.dot(collision_direction)
-
-		forces = self.decompose(collision_msg.linkid, collision_msg.normalforce, force_direction)
-		print(forces)
+		self.get_logger().info(f"Received collision: {collision_msg.header.seq}")
 		
-		for muscle in forces:
-			self.get_muscle_unit(muscle).set_motor_force(forces[muscle])
+		for contact_pt in collision_msg.contact_points:
+			ef = self.map_link_to_ef(contact_pt.linkid)
+			############ TEMP WORKAROUND
+			# for muscle in ef.muscle_units:
+			# 	muscle.end_effector.world_point = np.array([0.5, -0.5, -0.3])
+			##########################################################################
+			contact_direction = np.array([contact_pt.contactnormal.x, contact_pt.contactnormal.y, contact_pt.contactnormal.z])
 
-		motor_ids = []
-		set_points = []
-		for muscle in ef.muscle_units:
-			motor_ids.append(muscle.id)
-			if forces[muscle.id] == 0:
-				#set_points.append(float(MIN_PWM_TENSION * muscle.direction * -1))
-				set_points.append(0.0)
-			else:
-				set_points.append(self.get_set_point(forces[muscle.id]) * muscle.direction)
+			quaternion = Quaternion(ef.orientation)
+			force_direction = quaternion.rotation_matrix.dot(contact_direction)
 
-		for id, points in zip(motor_ids, set_points):
-			self.get_logger().info("motor " + str(id) + ": " + str(points))
+			forces = self.decompose(contact_pt.linkid, contact_pt.normalforce, force_direction)
+			print(forces)
+			
+			for muscle in forces:
+				self.get_muscle_unit(muscle).set_motor_force(forces[muscle])
 
-		self.send_motor_commands(motor_ids, set_points)
-		self.applying_force = True
-		self.applying_force_timer.reset()
+			motor_ids = []
+			set_points = []
+			for muscle in ef.muscle_units:
+				motor_ids.append(muscle.id)
+				if forces[muscle.id] == 0:
+					#set_points.append(float(MIN_PWM_TENSION * muscle.direction * -1))
+					set_points.append(0.0)
+				else:
+					set_points.append(self.get_set_point(forces[muscle.id]) * muscle.direction)
+
+			for id, points in zip(motor_ids, set_points):
+				self.get_logger().info("motor " + str(id) + ": " + str(points))
+
+			self.send_motor_commands(motor_ids, set_points)
+			self.applying_force = True
+			self.applying_force_timer.reset()
 
 	def operator_ef_pos_listener(self, ef_pose):
 		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.

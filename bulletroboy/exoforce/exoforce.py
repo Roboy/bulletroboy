@@ -522,13 +522,13 @@ class ExoForce(Node, ABC):
 
 		return response
 
-	def decompose(self, link_id, collision_force, collision_direction):
+	def decompose(self, link_id, contact_force, contact_direction):
 		"""Decomposes force applied to link in operator.
 		
 		Args:
 			link_id (int): Link id of the operator where the force is applied.
-			collision_force (float): Value of the applied force.
-			collision_direction array[3]: Force direction in world space coordinates.
+			contact_force (float): Value of the applied force.
+			contact_direction array[3]: Force direction in world space coordinates.
 
 		Returns:
 		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
@@ -537,10 +537,10 @@ class ExoForce(Node, ABC):
 		ef = self.map_link_to_ef(link_id)
 		self.get_logger().info("Force mapped to ef: " + ef.name)
 
-		forces, msg = decompose_force_ef_to_tendons(collision_force, collision_direction, ef, self.force_decomp_params) if link_id is not None else {}
+		forces, msg = decompose_force_ef_to_tendons(contact_force, contact_direction, ef, self.force_decomp_params) if link_id is not None else {}
 		
 		if not forces:
-			self.get_logger().warn(f"Force was not decomposed: force[{collision_force}] ef[{ef.name}] [{msg}]")
+			self.get_logger().warn(f"Force was not decomposed: force[{contact_force}] ef[{ef.name}] [{msg}]")
 		
 		return forces
 		

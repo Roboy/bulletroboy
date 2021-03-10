@@ -7,7 +7,7 @@ from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 from ..utils.utils import Topics, Services
-from roboy_simulation_msgs.msg import Collision
+from roboy_simulation_msgs.msg import Collision, ContactPoint
 from roboy_simulation_msgs.srv import LinkInfoFromName
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
@@ -185,50 +185,61 @@ class StateMapper(Node):
 		"""Collision subscriber handler.
 
 		"""
-		self.get_logger().info(f"Mapping collision: {msg.normalforce} N dir: {msg.contactnormal}")
-		operator_collision = self.map_collision_to_operator(msg)
-		if operator_collision is None:
+		self.get_logger().info("Mapping collision.")
+		op_contact_pts = []
+		for pt in msg.contact_points:
+			op_contact_point = self.map_contact_point_to_operator(pt)
+
+			if op_contact_point is None:
+				continue
+			op_contact_pts.append(op_contact_point)
+		if not op_contact_pts:
 			return
+
+		operator_collision = Collision()
+		operator_collision.header.stamp = self.get_clock().now().to_msg()
+		operator_collision.contact_points = op_contact_pts
+
 		self.get_logger().debug("publishing")
 		self.exoforce_collision_publisher.publish(operator_collision)
 
-	def map_collision_to_operator(self, roboy_collision):
-		"""Maps roboy link id in collision to the operator corresponding link id.
+	def map_contact_point_to_operator(self, roboy_contact_pt):
+		"""Maps roboy link id in contact_pt to the operator corresponding link id.
 
 		Args:
-			roboy_collision (Collision): The roboy collision.
+			roboy_contact_pt (ContactPoint): The roboy contact_pt.
 
 		Returns:
-			Collision: The collision with mapped linkid.
+			ContactPoint: The contact_pt with mapped linkid.
 
 		"""
 		self.get_logger().debug('mapping start')
-		roboy_link_info = self.get_roboy_link_info(roboy_collision.linkid)
+		roboy_link_info = self.get_roboy_link_info(roboy_contact_pt.linkid)
 		operator_link_name = self.get_operator_link_name(roboy_link_info.link_name)
 		if operator_link_name is None:
 			return None
 		operator_link_info = self.get_operator_link_info(operator_link_name)
 		self.get_logger().debug('responses')
 
-		operator_collision = Collision()
-		operator_collision = roboy_collision
-		operator_collision.linkid = operator_link_info.link_id
+		operator_contact_pt = ContactPoint()
+		operator_contact_pt = roboy_contact_pt
+		operator_contact_pt.linkid = operator_link_info.link_id
 		self.get_logger().debug('responses2')
 
 		position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
-		operator_collision = self.scale_to_operator(operator_collision, position_scale)
-		new_position = self.adapt_vector_to_orientation(roboy_link_info.link_name, [operator_collision.position.x, operator_collision.position.y, operator_collision.position.z])
-		operator_collision.position.x = new_position[0]
-		operator_collision.position.y = new_position[1]
-		operator_collision.position.z = new_position[2]
+		operator_contact_pt = self.scale_to_operator(operator_contact_pt, position_scale)
+		new_position = self.adapt_vector_to_orientation(roboy_link_info.link_name, [operator_contact_pt.position.x, operator_contact_pt.position.y, operator_contact_pt.position.z])
+		operator_contact_pt.position.x = new_position[0]
+		operator_contact_pt.position.y = new_position[1]
+		operator_contact_pt.position.z = new_position[2]
 		self.get_logger().debug("mapping done")
 
-		new_contact_normal = self.adapt_vector_to_orientation(roboy_link_info.link_name, [roboy_collision.contactnormal.x, roboy_collision.contactnormal.y, roboy_collision.contactnormal.z])
-		operator_collision.contactnormal.x = new_contact_normal[0]
-		operator_collision.contactnormal.y = new_contact_normal[1]
-		operator_collision.contactnormal.z = new_contact_normal[2]
+		new_contact_normal = self.adapt_vector_to_orientation(roboy_link_info.link_name, [roboy_contact_pt.contactnormal.x, roboy_contact_pt.contactnormal.y, roboy_contact_pt.contactnormal.z])
+		operator_contact_pt.contactnormal.x = new_contact_normal[0]
+		operator_contact_pt.contactnormal.y = new_contact_normal[1]
+		operator_contact_pt.contactnormal.z = new_contact_normal[2]
 
-		return operator_collision
+		return operator_contact_pt
 
 	def get_roboy_link_info(self, roboy_link_id):
 		"""Gets the roboy link name from roboy link id by calling the corresponding servicce synchronously.
@@ -281,22 +292,22 @@ class StateMapper(Node):
 
 		return [x_scale, y_scale, z_scale]
 	
-	def scale_to_operator(self, collision, scale):
-		"""Scales down the collision from robot to human.
+	def scale_to_operator(self, contact_pt, scale):
+		"""Scales down the contact_pt from robot to human.
 
 		Args:
-			collision (Collision):The collision that happened on the robot side.
+			contact_pt (ContactPoint):The contact_pt that happened on the robot side.
 			scale (3darray(float)): The position scale from roboy to operator
 
 		Returns:
-			Collision: Collision scaled to human
+			contact_pt (ContactPoint): contact_pt scaled to human
 
 		"""
-		collision.position.x = collision.position.x / scale[0]
-		collision.position.y = collision.position.y / scale[1]
-		collision.position.z = collision.position.z / scale[2]
+		contact_pt.position.x = contact_pt.position.x / scale[0]
+		contact_pt.position.y = contact_pt.position.y / scale[1]
+		contact_pt.position.z = contact_pt.position.z / scale[2]
 
-		return collision
+		return contact_pt
 
 	def get_initial_link_pose(self, link_name, client):
 		"""Gets initial link pose for a link using its name.

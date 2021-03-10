@@ -38,11 +38,11 @@ def main():
                 #update the environement parameters with each step
                 env.update()
                 p.stepSimulation()
-                contactPts = p.getContactPoints(body)
+                contact_pts = p.getContactPoints(body)
 
-                for point in contactPts:
-                    bb.publish_collision(point)
-                    bb.publish_collision_to_decomposer(point)
+                if contact_pts:
+                    bb.publish_collision(contact_pts)
+                # bb.publish_collision_to_decomposer(point)
 
         except KeyboardInterrupt:
             env.stop()

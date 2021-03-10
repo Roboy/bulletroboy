@@ -155,7 +155,9 @@ class ExoForceSim(ExoForce):
 
 		elif self.mode == "tendon":
 
-			forces = self.decompose(collision_msg.contact_points)
+			contact_points = [{'link_id': cp.linkid, 'force_vector': cp.normalforce * np.array([cp.contactnormal.x, cp.contactnormal.y, cp.contactnormal.z])} for cp in collision_msg.contact_points]
+
+			forces = self.decompose(contact_points)
 			
 			for tendon in self.sim_tendons:
 				if tendon.tendon.id in forces:

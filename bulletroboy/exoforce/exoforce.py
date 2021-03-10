@@ -527,42 +527,39 @@ class ExoForce(Node, ABC):
 		"""Decomposes force applied to link in operator.
 		
 		Args:
-			contact_points: contact_points that constitute the last collision
+			contact_points (dict): Dictionary with controller configuration:
+							'link_id' (int)				: Id of the operator link.
+							'force_vector' (float[3])	: Force vector of the contact point.
+
 		Returns:
 		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
 
 		"""
-
-		# for contact_pt in contact_points:
-		grouped = {k: list(g) for k, g in groupby(contact_points, lambda contact_pt: self.map_link_to_ef(contact_pt.linkid))}
 		forces = {}
-		for ef in grouped:
-			self.get_logger().info("Contact points mapped to ef: " + ef.name)
 
-			contact_pts_per_ef = grouped[ef]
-			resultant_force_direction = np.array([sum([contact_pt.contactnormal.x for contact_pt in contact_pts_per_ef]),
-					sum([contact_pt.contactnormal.y for contact_pt in contact_pts_per_ef]),
-					sum([contact_pt.contactnormal.z  for contact_pt in contact_pts_per_ef])])
-			self.get_logger().info(f"resultant_force_direction: {resultant_force_direction}")
+		for ef, ef_contact_points in groupby(contact_points, lambda point: self.map_link_to_ef(point['link_id'])):
+			if ef is None:
+				self.get_logger().warn(f"The following contact points could not be mapped to an end effector: {[cp for cp in ef_contact_points]}")
+			else:
+				self.get_logger().debug("Contact points mapped to ef: " + ef.name)
 
-			resultant_force = np.array([sum([contact_pt.contactnormal.x * contact_pt.normalforce for contact_pt in contact_pts_per_ef]),
-					sum([contact_pt.contactnormal.y * contact_pt.normalforce for contact_pt in contact_pts_per_ef]),
-					sum([contact_pt.contactnormal.z  * contact_pt.normalforce for contact_pt in contact_pts_per_ef])])
-			
-			self.get_logger().info(f"resultant_force: {resultant_force}")
+				force_vectors = [point['force_vector'] for point in ef_contact_points]
+				resultant_force_vector = np.sum(force_vectors, axis=0)
 
-			forces_per_ef, msg = decompose_force_ef_to_tendons(resultant_force, resultant_force_direction, ef, self.force_decomp_params)
-			
-			
-			self.get_logger().info(f"forces_per_ef: {forces_per_ef}")
+				resultant_force_magnitude = np.linalg.norm(resultant_force_vector)
+				resultant_force_direction = resultant_force_vector / resultant_force_magnitude
 
-			if not forces_per_ef:
-				self.get_logger().warn(f"Force was not decomposed: force[{resultant_force}] ef[{ef.name}] [{msg}]")
-			
-			assert len(list(set(forces.keys()).intersection(forces_per_ef.keys()))) == 0, "forces for each ef overlap"
-			
-			forces.update(forces_per_ef)
-		
+				force_msg = f"ef:{ef.name} force:{resultant_force_magnitude:.2f} direction:{np.around(resultant_force_direction, decimals=3)}"
+
+				self.get_logger().info(f"Decomposing force-> {force_msg}")
+
+				ef_forces, msg = decompose_force_ef_to_tendons(resultant_force_magnitude, resultant_force_direction, ef, self.force_decomp_params)
+
+				if not ef_forces:
+					self.get_logger().warn(f"Force was not decomposed-> {force_msg} error: [{msg}]")
+				else:
+					forces.update(ef_forces)
+
 		return forces
 		
 	def map_link_to_ef(self, link_id):

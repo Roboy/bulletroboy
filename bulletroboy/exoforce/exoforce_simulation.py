@@ -142,24 +142,9 @@ class ExoForceSim(ExoForce):
 		
 		"""
 		self.get_logger().info("Received collision.")
-		for contact_pt in collision_msg.contact_points:
-			self.draw_force(contact_pt)
-			if self.mode == "tendon":
-				contact_direction = np.array([contact_pt.contactnormal.x, contact_pt.contactnormal.y, contact_pt.contactnormal.z])
-				
-				_, rotation = p.getLinkState(self.operator.body_id, contact_pt.linkid)[:2]
-				rotation = np.array(p.getMatrixFromQuaternion(rotation)).reshape(3,3)
-				
-				force_direction = rotation.dot(contact_direction)
-				forces = self.decompose(contact_pt.linkid, contact_pt.normalforce, force_direction)
-				
-				for tendon in self.sim_tendons:
-					if tendon.tendon.id in forces:
-						force = forces[tendon.tendon.id]
-					else:
-						force = 0
-					self.update_tendon(tendon.tendon.id, force)
-			elif self.mode == "forces":
+		if self.mode == "forces":
+			for contact_pt in collision_msg.contact_points:
+				self.draw_force(contact_pt)
 				force = contact_pt.normalforce
 				vector = contact_pt.contactnormal
 
@@ -167,6 +152,17 @@ class ExoForceSim(ExoForce):
 				position_vec = [contact_pt.position.x, contact_pt.position.y, contact_pt.position.z]
 				
 				p.applyExternalForce(self.operator.body_id, contact_pt.linkid, force_vec, position_vec, p.LINK_FRAME)
+
+		elif self.mode == "tendon":
+
+			forces = self.decompose(collision_msg.contact_points)
+			
+			for tendon in self.sim_tendons:
+				if tendon.tendon.id in forces:
+					force = forces[tendon.tendon.id]
+				else:
+					force = 0
+				self.update_tendon(tendon.tendon.id, force)
 
 	def draw_force(self, contact_pt):
 		"""Draw force as a debugLine.

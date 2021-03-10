@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import time
 import math
 import numpy as np
+from itertools import groupby
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
@@ -522,25 +523,45 @@ class ExoForce(Node, ABC):
 
 		return response
 
-	def decompose(self, link_id, contact_force, contact_direction):
+	def decompose(self, contact_points):
 		"""Decomposes force applied to link in operator.
 		
 		Args:
-			link_id (int): Link id of the operator where the force is applied.
-			contact_force (float): Value of the applied force.
-			contact_direction array[3]: Force direction in world space coordinates.
-
+			contact_points: contact_points that constitute the last collision
 		Returns:
 		   	dict: Dictionary with the decomposed forces, the key is the tendon id.
 
 		"""
-		ef = self.map_link_to_ef(link_id)
-		self.get_logger().info("Force mapped to ef: " + ef.name)
 
-		forces, msg = decompose_force_ef_to_tendons(contact_force, contact_direction, ef, self.force_decomp_params) if link_id is not None else {}
-		
-		if not forces:
-			self.get_logger().warn(f"Force was not decomposed: force[{contact_force}] ef[{ef.name}] [{msg}]")
+		# for contact_pt in contact_points:
+		grouped = {k: list(g) for k, g in groupby(contact_points, lambda contact_pt: self.map_link_to_ef(contact_pt.linkid))}
+		forces = {}
+		for ef in grouped:
+			self.get_logger().info("Contact points mapped to ef: " + ef.name)
+
+			contact_pts_per_ef = grouped[ef]
+			resultant_force_direction = np.array([sum([contact_pt.contactnormal.x for contact_pt in contact_pts_per_ef]),
+					sum([contact_pt.contactnormal.y for contact_pt in contact_pts_per_ef]),
+					sum([contact_pt.contactnormal.z  for contact_pt in contact_pts_per_ef])])
+			self.get_logger().info(f"resultant_force_direction: {resultant_force_direction}")
+
+			resultant_force = np.array([sum([contact_pt.contactnormal.x * contact_pt.normalforce for contact_pt in contact_pts_per_ef]),
+					sum([contact_pt.contactnormal.y * contact_pt.normalforce for contact_pt in contact_pts_per_ef]),
+					sum([contact_pt.contactnormal.z  * contact_pt.normalforce for contact_pt in contact_pts_per_ef])])
+			
+			self.get_logger().info(f"resultant_force: {resultant_force}")
+
+			forces_per_ef, msg = decompose_force_ef_to_tendons(resultant_force, resultant_force_direction, ef, self.force_decomp_params)
+			
+			
+			self.get_logger().info(f"forces_per_ef: {forces_per_ef}")
+
+			if not forces_per_ef:
+				self.get_logger().warn(f"Force was not decomposed: force[{resultant_force}] ef[{ef.name}] [{msg}]")
+			
+			assert len(list(set(forces.keys()).intersection(forces_per_ef.keys()))) == 0, "forces for each ef overlap"
+			
+			forces.update(forces_per_ef)
 		
 		return forces
 		

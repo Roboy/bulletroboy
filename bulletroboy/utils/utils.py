@@ -59,7 +59,7 @@ class Services:
 	STOP_FORCE_CONTROL		= "/exoforce/force/stop"
 
 	# operator
-	START_OPERATOR			= "/operator/control/start"
+	INIT_OPERATOR			= "/operator/control/initialize"
 
 
 def parse_launch_arg(arg, default_value, logger):

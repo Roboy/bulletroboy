@@ -61,8 +61,8 @@ class ExoforceHW(ExoForce):
 		self.start_force_control_client = self.create_client(Trigger, Services.START_FORCE_CONTROL)
 		self.stop_force_control_client = self.create_client(Trigger, Services.STOP_FORCE_CONTROL)
 
-		# Start operator client
-		self.start_operator_client = self.create_client(InitExoforce, Services.START_OPERATOR)
+		# Init operator client
+		self.init_operator_client = self.create_client(InitExoforce, Services.INIT_OPERATOR)
 
 		# Start exoforce topics
 		self.create_subscription(InitExoforceRequest, Topics.INIT_EXOFORCE_REQ, self.start_exoforce, 1)
@@ -142,12 +142,12 @@ class ExoforceHW(ExoForce):
 				self.active = True
 				self.get_logger().info("Exoforce succesfully started.")
 
-				self.start_operator(init_msg)
+				self.init_operator(init_msg)
 
 				self.send_exoforce_response(self.init_response_publisher, True)
 
-	def start_operator(self, init_msg):
-		"""Starts operator node.
+	def init_operator(self, init_msg):
+		"""Inits operator node.
 		
 		Args:
 			init_msg (InitExoforceRequest): Initialization message.
@@ -156,17 +156,17 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
-		self.get_logger().info("Starting operator node...")
+		self.get_logger().info("Initializing operator node...")
 
 		request = InitExoforce.Request()
 		request.ef_name = init_msg.ef_name
 		request.ef_enabled = init_msg.ef_enabled
 		request.ef_init_pose = init_msg.ef_init_pose
 
-		call_service_async(self.start_operator_client, request, self.start_operator_callback, self.get_logger())
+		call_service_async(self.init_operator_client, request, self.init_operator_callback, self.get_logger())
 
-	def start_operator_callback(self, future):
-		"""Start operator callback.
+	def init_operator_callback(self, future):
+		"""Init operator callback.
 		
 		Args:
 			future: Service future var.
@@ -178,12 +178,12 @@ class ExoforceHW(ExoForce):
 		try:
 			result = future.result()
 		except Exception as e:
-			self.get_logger().error(f"{self.start_operator_client.srv_name} service call failed {e}")
+			self.get_logger().error(f"{self.init_operator_client.srv_name} service call failed {e}")
 		else:
 			if result.success:
-				self.get_logger().info("Operator node succesfully started.")
+				self.get_logger().info("Operator node succesfully initialized.")
 			else:
-				self.get_logger().error(f"Operator node could not be started: {res.message}")
+				self.get_logger().error(f"Operator node could not be initialized: {result.message}")
 
 	def stop_exoforce(self):
 		"""Stops exoforce.

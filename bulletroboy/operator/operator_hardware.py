@@ -27,7 +27,7 @@ class OperatorHW(Operator):
 
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
 		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
-		self.start_service = self.create_service(InitExoforce, Services.START_OPERATOR, self.start_callback)
+		self.init_service = self.create_service(InitExoforce, Services.INIT_OPERATOR, self.init_callback)
 
 	def init_links(self):
 		"""Initiates the links in operator class.
@@ -54,11 +54,11 @@ class OperatorHW(Operator):
 			else:
 				self.links.append(Link(i, human_name, roboy_name, dims))
 
-	def start_callback(self, request, response):
-		"""Callback for ROS service to start the operator.
+	def init_callback(self, request, response):
+		"""Callback for ROS service to init the operator.
 
 		"""
-		self.get_logger().info("Starting operator node...")
+		self.get_logger().info("Initializing operator node...")
 
 		ef_names = [name for name in request.ef_name]
 		init_positions = [[pose.position.x, pose.position.y, pose.position.z] for pose in request.ef_init_pose]
@@ -66,7 +66,7 @@ class OperatorHW(Operator):
 
 		if not self.init_end_effectors(ef_names, init_positions, init_orientations):
 			err_msg = "Failed to initialize end effectors!"
-			self.get_logger().error(f"Operator node could not be started: {err_msg}")
+			self.get_logger().error(f"Operator node could not be initialized: {err_msg}")
 			response.success = False
 			response.message = err_msg
 			return response
@@ -74,7 +74,7 @@ class OperatorHW(Operator):
 		self.pull()
 		self.start_publishing()
 
-		self.get_logger().info("Operator node started.")
+		self.get_logger().info("Operator node initialized.")
 		response.success = True
 
 		return response

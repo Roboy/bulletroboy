@@ -35,7 +35,7 @@ class ExoforceHW(ExoForce):
 		
 		# state variables
 		self.active = False
-		self.starting = False
+		self.processing_flag = False
 
 		# Initial parameters
 		self.no_slack_force = self.get_parameter("no_slack_force").get_parameter_value().double_value
@@ -69,7 +69,7 @@ class ExoforceHW(ExoForce):
 		self.init_response_publisher = self.create_publisher(ExoforceResponse, Topics.INIT_EXOFORCE_RES, 1)
 
 		# Stop exoforce topics
-		self.create_subscription(Empty, Topics.STOP_EXOFORCE_REQ, self.start_exoforce, 1)
+		self.create_subscription(Empty, Topics.STOP_EXOFORCE_REQ, self.stop_exoforce, 1)
 		self.stop_response_publisher = self.create_publisher(ExoforceResponse, Topics.STOP_EXOFORCE_RES, 1)
 
 	def send_exoforce_response(self, publisher, success, message=""):
@@ -88,7 +88,7 @@ class ExoforceHW(ExoForce):
 		msg.success = success
 		msg.message = message
 		publisher.publish(msg)
-		self.starting = False
+		self.processing_flag = False
 
 	def start_exoforce(self, init_msg):
 		"""Starts exoforce.
@@ -100,9 +100,10 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
-		if self.starting:
+		if self.processing_flag:
 			return
-		self.starting = True
+
+		self.processing_flag = True
 		self.get_logger().info("Starting Exoforce...")
 
 		for ef_name in init_msg.ef_name:
@@ -185,7 +186,7 @@ class ExoforceHW(ExoForce):
 			else:
 				self.get_logger().error(f"Operator node could not be initialized: {result.message}")
 
-	def stop_exoforce(self):
+	def stop_exoforce(self, _):
 		"""Stops exoforce.
 		
 		Args:
@@ -195,8 +196,15 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
+		if self.processing_flag:
+			return
+		
+		self.get_logger().info("Stopping Exoforce...")
+		self.processing_flag = True
 		self.active = False
 		self.apply_min_force_timer.cancel()
+		self.set_target_force(0.0)
+		self.get_logger().info("Stopping Force Control node...")
 		call_service_async(self.stop_force_control_client, Trigger.Request(), self.stop_force_control_callback, self.get_logger())
 
 	def stop_force_control_callback(self, future):
@@ -215,9 +223,13 @@ class ExoforceHW(ExoForce):
 			self.get_logger().error(f"{self.stop_force_control_client.srv_name} service call failed {e}")
 		else:
 			if not result.success:
-				self.get_logger().error(f"Failed to stop force control node: {result.message}")
+				err_msg = f"Failed to stop force control node: {result.message}"
+				self.get_logger().error(f"Cannot stop Exoforce: {err_msg}")
+				self.send_exoforce_response(self.stop_response_publisher, False, err_msg)
 			else:
 				self.get_logger().info("Force Control node stopped.")
+				self.get_logger().info("Exoforce stopped.")
+				self.send_exoforce_response(self.stop_response_publisher, True)
 
 	def set_target_force(self, force):
 		"""Sets a target force to all the tendons.

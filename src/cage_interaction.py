@@ -18,7 +18,7 @@ class CageInteraction:
         self.body_id = roboy_body_id
         self.links = []
         self.init_urdf_info()
-        self.collision_publisher = rospy.Publisher("/roboy/simulation/collision", JointState, queue_size=1)
+        self.collision_publisher = rospy.Publisher("/roboy/simulation/collision", Collision, queue_size=1)
 
 
     def init_urdf_info(self):

@@ -25,8 +25,8 @@ class ExoforceHW(ExoForce):
 			namespace='',
 			parameters=[
 				('no_slack_force', 4.0),
-				('tendon_init_time', 5),
-				('max_force_apply_time', 1)]
+				('tendon_init_time', 5.0),
+				('max_force_apply_time', 1.0)]
 			)
 		
 		self.no_slack_force = self.get_parameter("no_slack_force").get_parameter_value().double_value

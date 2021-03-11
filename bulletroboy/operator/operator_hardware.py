@@ -7,18 +7,23 @@ from ..utils.utils import Topics, Services
 
 import time
 
-# This constants need to be defined in a conf file
-PULL_TIME = 1 # in seconds
-PULL_MOTOR = 16
-PULL_FORCE = 40 # in Newtons
-MIN_FORCE = 4 # in Newtons
-
 class OperatorHW(Operator):
 	"""This class handles operator related functions and communicates directly with the TeleportVR app.
 
 	"""
 
 	def start_node(self):
+		self.declare_parameters(
+			namespace='',
+			parameters=[('pull_motor', -1),
+						('pull_force', 30.0),
+						('pull_time', 1.0)]
+			)
+		
+		self.pull_motor = self.get_parameter("pull_motor").get_parameter_value().integer_value
+		self.pull_force = self.get_parameter("pull_force").get_parameter_value().double_value
+		self.pull_time = self.get_parameter("pull_time").get_parameter_value().double_value
+
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
 		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
 
@@ -55,13 +60,16 @@ class OperatorHW(Operator):
 			-
 			
 		"""
-		msg = TendonUpdate()
-		msg.tendon_id = PULL_MOTOR
-		msg.force = float(PULL_FORCE)
-		self.target_force_publisher.publish(msg)
-		time.sleep(PULL_TIME)
-		msg.force = float(MIN_FORCE)
-		self.target_force_publisher.publish(msg)
+		if self.pull_motor < 0:
+			self.get_logger().warn("Cannot pull, pull_motor not set!")
+		else:
+			msg = TendonUpdate()
+			msg.tendon_id = self.pull_motor
+			msg.force = float(self.pull_force)
+			self.target_force_publisher.publish(msg)
+			time.sleep(self.pull_time)
+			msg.force = 0.0
+			self.target_force_publisher.publish(msg)
 
 	def vr_pose_listener(self, link_pose):
 		"""Callback of the pose subscriber. Sets the pose of the link given in the msg.

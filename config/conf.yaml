@@ -22,6 +22,9 @@ state_mapper:
 
 exoforce:
   ros__parameters:
+    no_slack_force: 4.0     # (Newtons) Minimal force applied to the tendons to avoid slack
+    tendon_init_time: 3     # (seconds) Time to wait after starting force controllers to pull the initial slack
+    max_force_apply_time: 1 # (seconds) Max time the last decomposed force will be applied
     force_decomposition:
       min_tendon_force: 0.5
       max_collision_force: 50.0

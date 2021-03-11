@@ -10,10 +10,6 @@ from std_srvs.srv import Trigger
 from ..utils.utils import Services, Topics, call_service
 from .exoforce import ExoForce
 
-# This constants need to be defined in a conf file
-MIN_FORCE = 5	# minimal force applied to avoid slack
-INIT_TIME_WAIT = 5 # time to wait to pull initial slack
-FORCE_APPLY_TIME = 1
 
 class ExoforceHW(ExoForce):
 	def __init__(self, cage_conf):
@@ -25,8 +21,20 @@ class ExoforceHW(ExoForce):
 		super().__init__(cage_conf, "exoforce")
 		self.callback_group = ReentrantCallbackGroup()
 
+		self.declare_parameters(
+			namespace='',
+			parameters=[
+				('no_slack_force', 4.0),
+				('tendon_init_time', 5),
+				('max_force_apply_time', 1)]
+			)
+		
+		self.no_slack_force = self.get_parameter("no_slack_force").get_parameter_value().double_value
+		self.tendon_init_time = self.get_parameter("tendon_init_time").get_parameter_value().double_value
+		self.max_force_apply_time = self.get_parameter("max_force_apply_time").get_parameter_value().double_value
+
 		self.active = False
-		self.apply_min_force_timer = self.create_timer(FORCE_APPLY_TIME, lambda: self.set_target_force(MIN_FORCE))
+		self.apply_min_force_timer = self.create_timer(self.max_force_apply_time, lambda: self.set_target_force(self.no_slack_force))
 		self.apply_min_force_timer.cancel()
 
 		self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)
@@ -52,8 +60,8 @@ class ExoforceHW(ExoForce):
 
 		"""
 		if self.start_force_control():
-			self.set_target_force(MIN_FORCE)
-			time.sleep(INIT_TIME_WAIT)
+			self.set_target_force(self.no_slack_force)
+			time.sleep(self.tendon_init_time)
 			self.active = True
 
 	def stop_exoforce(self):

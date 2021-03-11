@@ -13,7 +13,8 @@ class CageInteraction:
         rp = RosPack()
         conf_path = rp.get_path('bulletroboy') + "/src/conf.yml"
         with open(conf_path) as file:
-            self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)
+            self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)['parent_link_map']
+        rospy.loginfo(self.parent_link_map)
         self.body_id = roboy_body_id
         self.links = []
         self.init_urdf_info()
@@ -37,7 +38,8 @@ class CageInteraction:
             name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
             link['name'] = name
             link['id'] = i
-            link['parent_name'] = self.parent_link_map[name]
+            if self.parent_link_map.get(name) :
+                link['parent_name'] = self.parent_link_map.get(name)
             self.links.append(link)
 
     def get_link_info_from_id(self, link_id):
@@ -77,14 +79,17 @@ class CageInteraction:
         for pt in collision:
             if pt[9] > 0:
                 link = self.get_link_info_from_id(pt[3])
-                if link['parent_name'] == link['name']:
-                    link_id = pt[3]
-                    debug_line_color = [1,0,1]
-        
-                else :
-                    link_id = self.get_link_info_from_name(link['parent_name'])["id"]
-                    debug_line_color = [0,1,1]
-                
+                if link.get('parent_name'):
+                    if link.get('parent_name') == link['name']:
+                        link_id = pt[3]
+                        debug_line_color = [1,0,1]
+            
+                    else :
+                        link_id = self.get_link_info_from_name(link['parent_name'])["id"]
+                        debug_line_color = [0,1,1]
+                else:
+                    return
+
                 contact_pt = ContactPoint()
 
                 #pt[3] == linkIndexA in PyBullet docu
@@ -102,10 +107,6 @@ class CageInteraction:
                 contact_pt.contactnormal.y = normal_in_lf[1]
                 contact_pt.contactnormal.z = normal_in_lf[2]
                 
-                # self.draw_force(pt[5], pt[7], pt[9], color=debug_line_color)
-
-                self.draw_force([contact_pt.position.x, contact_pt.position.y, contact_pt.position.z], [contact_pt.contactnormal.x, contact_pt.contactnormal.y, contact_pt.contactnormal.z], pt[9], contact_pt.linkid, [1,0,0])
-
                 #pt[8] == contactDistance in PyBullet docu
                 contact_pt.contactdistance = pt[8]
 
@@ -118,11 +119,8 @@ class CageInteraction:
             return
         
         msg = Collision()
-        msg.header.stamp = self.get_clock().now().to_msg()
         msg.contact_points = contact_pts
-            
-        self.get_logger().info("Publishing collision.")
-
+        
         self.collision_publisher.publish(msg)
 
     def get_vector_in_link_frame(self, link, vector):

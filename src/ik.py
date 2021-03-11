@@ -7,6 +7,8 @@ from sensor_msgs.msg import JointState, CompressedImage
 from geometry_msgs.msg import PoseStamped, Twist
 from visualization_msgs.msg import InteractiveMarkerUpdate
 import numpy as np
+from environment_control import EnvironmentCtrl
+from cage_interaction import CageInteraction
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
@@ -54,6 +56,7 @@ roboy = ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, ba
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 castle = p.loadURDF("samurai.urdf", 0,2,0)
+env = EnvironmentCtrl()
 
 p.setGravity(0,0,-10)
 t = 0.
@@ -63,6 +66,8 @@ hasPrevPose = 0
 useNullSpace = 0
 
 useOrientation = 0
+
+cage_interac = CageInteraction(roboy, topic_root)
 
 #This can be used to test the IK result accuracy.
 ikSolver = 0
@@ -324,6 +329,14 @@ while not rospy.is_shutdown():
     vis = np.concatenate((left_pic, right_pic), axis=1)
     cv2.imshow('window', vis)
     cv2.waitKey(1)
+
+    #update the environement parameters with each step
+    env.update()
+    #publish collisions
+    contact_pts = p.getContactPoints(roboy)
+    if contact_pts:
+        cage_interac.publish_collision(contact_pts)
+
     # msg.position = []
     # msg.velocity = []
     # msg.effort = []

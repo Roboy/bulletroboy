@@ -32,6 +32,11 @@ class Topics:
 	# force
 	TARGET_FORCE			= "/exoforce/force/target"
 
+	# construct interface
+	INIT_EXOFORCE_REQ		= "/exoforce/control/initialize_request"
+	INIT_EXOFORCE_RES		= "/exoforce/control/initialize_response"
+	STOP_EXOFORCE_REQ		= "/exoforce/control/stop_request"
+	STOP_EXOFORCE_RES		= "/exoforce/control/stop_response"
 
 class Services:
 
@@ -52,6 +57,9 @@ class Services:
 	# force
 	START_FORCE_CONTROL		= "/exoforce/force/start"
 	STOP_FORCE_CONTROL		= "/exoforce/force/stop"
+
+	# operator
+	START_OPERATOR			= "/operator/control/start"
 
 
 def parse_launch_arg(arg, default_value, logger):

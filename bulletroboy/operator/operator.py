@@ -62,13 +62,13 @@ class Operator(Node, ABC):
 	"""This class handles the operator's ROS node.
 
 	"""
-	def __init__(self):
+	def __init__(self, node_name="operator"):
 		"""
 		Args:
 			-
 
 		"""
-		super().__init__("operator")
+		super().__init__(node_name)
 		self.ready = False
 
 		# State Mapper node parameters client
@@ -87,18 +87,12 @@ class Operator(Node, ABC):
 			operator_link_names = result.values[1].string_array_value
 			self.link_map = {k: v for k, v in zip(roboy_link_names, operator_link_names)}
 
-			self.declare_parameters(
-				namespace='',
-				parameters=[('operator_link_dimentions.' + link_name, None) for link_name in operator_link_names]
-				)
-
 			self.init_node()
 			self.start_node()
 			self.ready = True
 
 	def init_node(self):
 		self.init_links()
-		self.init_end_effectors(["left_wrist", "right_wrist"])
 		
 		self.ef_publisher = self.create_publisher(PoseStamped, Topics.OP_EF_POSES, 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, self.link_info_from_name_callback)
@@ -111,22 +105,36 @@ class Operator(Node, ABC):
 	def start_publishing(self, period=0.02):
 		self.timer = self.create_timer(period, self.publish_ef_state)
 
-	def init_end_effectors(self, efs):
+	def init_end_effectors(self, efs, init_pos=[None], init_orn=[None]):
 		"""Initilizes operator's end effector.
 		
 		Args:
 			efs (list[string]): Names of the end effectors link.
+			init_pos (list[float[3]]): Initial positions of the end effectors.
+			init_orn (list[float[4]]): Initial orientations of the end effectors.
 
 		Returns:
 		   	-
 
 		"""
 		self.end_effectors = []
-		for link in self.links:
-			if link.human_name in efs:
-				self.end_effectors.append(link)
-				self.get_logger().info("EF " + link.human_name + ": " + str(link.id))
+
+		if len(efs) != len(init_pos): init_pos *= len(efs)
+		if len(efs) != len(init_orn): init_orn *= len(efs)
 		
+		for ef, pos, orn in zip(efs, init_pos, init_orn):
+			ef_link = self.get_link(ef)
+			if ef_link is None:
+				self.get_logger().error(f"EF {ef} is not a link of the operator!")
+				return False
+			
+			if pos is not None and orn is not None:
+				ef_link.init_pose = [pos, orn]
+
+			self.end_effectors.append(ef_link)
+			self.get_logger().info("EF " + ef_link.human_name + ": " + str(ef_link.id))
+		
+		return True
 
 	def get_human_link(self, roboy_link_name):
 		"""Gets link object given the roboy's link name that maps to it.

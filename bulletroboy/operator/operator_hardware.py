@@ -2,6 +2,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.msg import TendonUpdate
+from roboy_middleware_msgs.srv import InitExoforce
 from .operator import Operator, Link
 from ..utils.utils import Topics, Services
 
@@ -26,9 +27,7 @@ class OperatorHW(Operator):
 
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
 		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
-
-		self.pull()
-		self.start_publishing()
+		self.start_service = self.create_service(InitExoforce, Services.START_OPERATOR, self.start_callback)
 
 	def init_links(self):
 		"""Initiates the links in operator class.
@@ -40,6 +39,11 @@ class OperatorHW(Operator):
 			-
 
 		"""
+		self.declare_parameters(
+			namespace='',
+			parameters=[('operator_link_dimentions.' + link_name, None) for link_name in self.link_map.values()]
+			)
+				
 		self.links = []
 		for i, key in enumerate(self.link_map):
 			human_name = self.link_map[key]
@@ -49,6 +53,31 @@ class OperatorHW(Operator):
 				self.links.append(Link(i, human_name, roboy_name, dims, [[.0,.0,1.5],[.0,.0,.0,.0]]))
 			else:
 				self.links.append(Link(i, human_name, roboy_name, dims))
+
+	def start_callback(self, request, response):
+		"""Callback for ROS service to start the operator.
+
+		"""
+		self.get_logger().info("Starting operator node...")
+
+		ef_names = [name for name in request.ef_name]
+		init_positions = [[pose.position.x, pose.position.y, pose.position.z] for pose in request.ef_init_pose]
+		init_orientations = [[pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w] for pose in request.ef_init_pose]
+
+		if not self.init_end_effectors(ef_names, init_positions, init_orientations):
+			err_msg = "Failed to initialize end effectors!"
+			self.get_logger().error(f"Operator node could not be started: {err_msg}")
+			response.success = False
+			response.message = err_msg
+			return response
+		
+		self.pull()
+		self.start_publishing()
+
+		self.get_logger().info("Operator node started.")
+		response.success = True
+
+		return response
 
 	def pull(self):
 		"""Pulls operator to simulate connection to the roboy.
@@ -82,7 +111,7 @@ class OperatorHW(Operator):
 
 		"""
 		self.get_logger().debug("Received pose for " + link_pose.header.frame_id)
-		link = self.get_human_link(link_pose.header.frame_id)
+		link = self.get_link(link_pose.header.frame_id)
 		if link is None:
 			self.get_logger().warn(link_pose.header.frame_id + "has no mapping!")
 			return

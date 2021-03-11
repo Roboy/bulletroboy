@@ -17,7 +17,7 @@ class OperatorSim(Operator):
 			body_id (int): Pybullet body indentifier.
 
 		"""
-		super().__init__()
+		super().__init__("operator_sim")
 		self.body_id = body_id
 
 	def start_node(self):
@@ -30,6 +30,8 @@ class OperatorSim(Operator):
 		   -
 
 		"""
+		self.init_end_effectors(self.sim_link_map.keys())
+
 		self.movements = Movements(self)
 		self.prevPose = [0, 0, 0]
 		self.trailDuration = 5
@@ -77,6 +79,16 @@ class OperatorSim(Operator):
 		   	-
 
 		"""
+		self.declare_parameters(
+			namespace='',
+			parameters=[('cage_efs', None),
+						('urdf_links', None)]
+			)
+
+		cage_efs = self.get_parameter("cage_efs").get_parameter_value().string_array_value
+		urdf_links = self.get_parameter("urdf_links").get_parameter_value().string_array_value
+		self.sim_link_map = {k: v for k, v in zip(cage_efs, urdf_links)}
+
 		self.links = []
 		for key in self.link_map:
 			human_name = self.link_map[key]
@@ -100,6 +112,10 @@ class OperatorSim(Operator):
 		   	int: Index of the given link.
 
 		"""
+		# mapping to match operator urdf to end effectors
+		if link_name in self.sim_link_map:
+			link_name = self.sim_link_map[link_name]
+			
 		index = None
 		for i in range(p.getNumJoints(self.body_id)):
 			if link_name == str(p.getJointInfo(self.body_id,i)[12], 'utf-8'):

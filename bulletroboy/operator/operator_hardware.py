@@ -58,7 +58,7 @@ class OperatorHW(Operator):
 		"""Callback for ROS service to init the operator.
 
 		"""
-		self.get_logger().info("Initializing operator node...")
+		self.get_logger().info("Initializing...")
 
 		ef_names = [name for name in request.ef_name]
 		init_positions = [[pose.position.x, pose.position.y, pose.position.z] for pose in request.ef_init_pose]
@@ -66,7 +66,7 @@ class OperatorHW(Operator):
 
 		if not self.init_end_effectors(ef_names, init_positions, init_orientations):
 			err_msg = "Failed to initialize end effectors!"
-			self.get_logger().error(f"Operator node could not be initialized: {err_msg}")
+			self.get_logger().error(f"Could not be initialized: {err_msg}")
 			response.success = False
 			response.message = err_msg
 			return response
@@ -74,7 +74,7 @@ class OperatorHW(Operator):
 		self.pull()
 		self.start_publishing()
 
-		self.get_logger().info("Operator node initialized.")
+		self.get_logger().info("Successfully initialized.")
 		response.success = True
 
 		return response

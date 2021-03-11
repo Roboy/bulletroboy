@@ -113,7 +113,7 @@ class ExoforceHW(ExoForce):
 				self.send_exoforce_response(self.init_response_publisher, False, err_msg)
 				return
 
-		self.get_logger().info("Starting Force Control node...")
+		self.get_logger().info("Requesting Force Control node to start...")
 		call_service_async(self.start_force_control_client, Trigger.Request(), partial(self.start_exoforce_callback, init_msg), self.get_logger())
 
 	def start_exoforce_callback(self, init_msg, future):
@@ -157,7 +157,7 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
-		self.get_logger().info("Initializing operator node...")
+		self.get_logger().info("Requesting operator node to initialize...")
 
 		request = InitExoforce.Request()
 		request.ef_name = init_msg.ef_name

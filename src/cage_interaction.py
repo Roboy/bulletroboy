@@ -1,5 +1,5 @@
 import rospy
-from roboy_simulation_msgs.msg import Collision
+from roboy_simulation_msgs.msg import Collision, ContactPoint
 from sensor_msgs.msg import JointState
 import pybullet as p
 import yaml
@@ -72,40 +72,57 @@ class CageInteraction:
             -
 
         """
-        if collision[9] > 0:
-            link = self.get_link_info_from_id(collision[3])
-            if    link['parent_name'] == link['name']:
-                link_id = collision[3]
+        contact_pts = []
+        for pt in collision:
+            if pt[9] > 0:
+                link = self.get_link_info_from_id(pt[3])
+                if    link['parent_name'] == link['name']:
+                    link_id = pt[3]
+                    debug_line_color = [1,0,1]
+        
+                else :
+                    link_id = self.get_link_info_from_name(link['parent_name'])["id"]
+                    debug_line_color = [0,1,1]
+                
+                contact_pt = ContactPoint()
 
-            else :
-                link_id = self.get_link_info_from_name(link['parent_name'])['id']
+                #pt[3] == linkIndexA in PyBullet docu
+                contact_pt.linkid = link_id
+
+                #pt[5] == positionOnA in PyBullet docu
+                pos_in_lf = self.get_vector_in_link_frame(link_id, pt[5])
+                contact_pt.position.x = pos_in_lf[0]
+                contact_pt.position.y = pos_in_lf[1]
+                contact_pt.position.z = pos_in_lf[2]
+
+                #pt[7] == contactNormalOnB in PyBullet docu
+                normal_in_lf = self.get_vector_in_link_frame(link_id, pt[7])
+                contact_pt.contactnormal.x = normal_in_lf[0]
+                contact_pt.contactnormal.y = normal_in_lf[1]
+                contact_pt.contactnormal.z = normal_in_lf[2]
+                
+                # self.draw_force(pt[5], pt[7], pt[9], color=debug_line_color)
+
+                self.draw_force([contact_pt.position.x, contact_pt.position.y, contact_pt.position.z], [contact_pt.contactnormal.x, contact_pt.contactnormal.y, contact_pt.contactnormal.z], pt[9], contact_pt.linkid, [1,0,0])
+
+                #pt[8] == contactDistance in PyBullet docu
+                contact_pt.contactdistance = pt[8]
+
+                #pt[9] == normalForce in PyBullet docu
+                contact_pt.normalforce = pt[9]
+
+                contact_pts.append(contact_pt)
+
+        if not contact_pts:
+            return
+        
+        msg = Collision()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.contact_points = contact_pts
             
-            msg = Collision()
+        self.get_logger().info("Publishing collision.")
 
-            #collision[3] == linkIndexA in PyBullet docu
-            msg.linkid = link_id
-
-            #collision[5] == positionOnA in PyBullet docu
-            pos_in_lf = self.get_vector_in_link_frame(link_id, collision[5])
-            msg.position.x = pos_in_lf[0]
-            msg.position.y = pos_in_lf[1]
-            msg.position.z = pos_in_lf[2]
-
-            #collision[7] == contactNormalOnB in PyBullet docu
-            normal_in_lf = self.get_vector_in_link_frame(link_id, collision[7])
-            msg.contactnormal.x = normal_in_lf[0]
-            msg.contactnormal.y = normal_in_lf[1]
-            msg.contactnormal.z = normal_in_lf[2]
-
-            #collision[8] == contactDistance in PyBullet docu
-            msg.contactdistance = collision[8]
-
-            #collision[9] == normalForce in PyBullet docu
-            msg.normalforce = collision[9]
-
-            rospy.loginfo("Publishing collision in link %i" % msg.linkid)
-
-            self.collision_publisher.publish(msg)
+        self.collision_publisher.publish(msg)
 
     def get_vector_in_link_frame(self, link, vector):
         """Transforms a vector from world's coordinates system to link frame.

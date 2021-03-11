@@ -37,7 +37,6 @@ parent_link_map:
   rh_thhub: hand_right
   rh_thmiddle: hand_right
   upperarm_left: upperarm_left
-  upperarm_left: upperarm_left
   shoulder_left_link1: upperarm_left
   shoulder_left_link2: upperarm_left
   lowerarm_left: lowerarm_left

@@ -7,7 +7,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from roboy_simulation_msgs.msg import Collision, TendonUpdate
 from std_srvs.srv import Trigger
 
-from ..utils.utils import Services, Topics, call_service
+from ..utils.utils import Services, Topics, call_service_async
 from .exoforce import ExoForce
 
 
@@ -59,10 +59,33 @@ class ExoforceHW(ExoForce):
 			-
 
 		"""
-		if self.start_force_control():
-			self.set_target_force(self.no_slack_force)
-			time.sleep(self.tendon_init_time)
-			self.active = True
+		self.get_logger().info("Starting Exoforce...")
+		call_service_async(self.start_force_control_client, Trigger.Request(), self.start_exoforce_callback, self.get_logger())
+
+	def start_exoforce_callback(self, future):
+		"""Start exoforce callback.
+		
+		Args:
+			-
+
+		Returns:
+			-
+
+		"""
+		try:
+			result = future.result()
+		except Exception as e:
+			self.get_logger().error(f"{self.start_force_control_client.srv_name} service call failed {e}")
+		else:
+			if not result.success:
+				self.get_logger().error(f"Failed to start force control node: {result.message}")
+				self.get_logger().error(f"Failed to start Exoforce!")
+			else:
+				self.get_logger().info("Force Control node started.")
+				self.set_target_force(self.no_slack_force)
+				time.sleep(self.tendon_init_time)
+				self.active = True
+				self.get_logger().info("Exoforce succesfully started.")
 
 	def stop_exoforce(self):
 		"""Stops exoforce.
@@ -76,24 +99,9 @@ class ExoforceHW(ExoForce):
 		"""
 		self.active = False
 		self.apply_min_force_timer.cancel()
-		self.stop_force_control()
+		call_service_async(self.stop_force_control_client, Trigger.Request(), self.stop_force_control_callback, self.get_logger())
 
-	def start_force_control(self):
-		"""Requests force control node to start.
-		
-		Args:
-			-
-
-		Returns:
-			bool success
-
-		"""
-		res = call_service(self.start_force_control_client, Trigger.Request(), self.get_logger())
-		if not res.success:
-			self.get_logger().error("Unable to start force control node!")
-		return res.success
-
-	def stop_force_control(self):
+	def stop_force_control_callback(self, future):
 		"""Requests force control node to stop.
 		
 		Args:
@@ -103,10 +111,15 @@ class ExoforceHW(ExoForce):
 			bool success
 
 		"""
-		res = call_service(self.stop_force_control_client, Trigger.Request(), self.get_logger())
-		if not res.success:
-			self.get_logger().warn("Unable to stop force control node")
-		return res.success
+		try:
+			result = future.result()
+		except Exception as e:
+			self.get_logger().error(f"{self.stop_force_control_client.srv_name} service call failed {e}")
+		else:
+			if not result.success:
+				self.get_logger().error(f"Failed to stop force control node: {result.message}")
+			else:
+				self.get_logger().info("Force Control node stopped.")
 
 	def set_target_force(self, force):
 		"""Sets a target force to all the tendons.

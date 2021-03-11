@@ -14,8 +14,11 @@ class EnvironmentCtrl():
         """
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.loadURDF("plane.urdf")
-        p.loadURDF("samurai.urdf")
+        self.castle = p.loadURDF("samurai.urdf")
         
+        self.o = 0
+        self.sig = 1
+
         #Size parameter
         self.size_id = p.addUserDebugParameter("Size " , 1, 25, 8.2)
 
@@ -138,7 +141,7 @@ class EnvironmentCtrl():
                 try:
                     self.objects.append(p.loadURDF(model, pos, orn, globalScaling = scale))
                 except:
-                    rclpy.logging._root_logger.error("The model " , model, " does not exist.")
+                    rclpy.logging._root_logger.error("The model " + model + " does not exist.")
 
             
             count = p.readUserDebugParameter(self.delete_obj_id)
@@ -171,7 +174,13 @@ class EnvironmentCtrl():
                                                             p.getQuaternionFromEuler([or_x * math.pi / 180, 
                                                             or_y * math.pi / 180, 
                                                             or_z * math.pi / 180]))
-        
+        self.update_castle_pos()
+
+    def update_castle_pos(self):
+        if abs(self.o) > math.pi:
+            self.sig = -1 * self.sig
+        p.resetBasePositionAndOrientation(self.castle, [0,2,0], (0,0,self.o,1))  
+   
     def weight_test(self, mass, scale=8.2, pos=[0.6, 0.0, 1.8], orn=[14, 0.0, 0.0]): 
         for o in self.objects:
                 p.removeBody(o)

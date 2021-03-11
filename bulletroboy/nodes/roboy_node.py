@@ -6,6 +6,7 @@ import rclpy
 from threading import Thread
 from ..roboy.roboy import BulletRoboy
 from ..roboy.environment_control import EnvironmentCtrl
+from ..roboy.camera_handler import CameraHandler
 from ..utils.utils import parse_launch_arg
 
 MODEL_DEFAULT_PATH =  os.path.dirname(os.path.realpath(__file__)) + "/" + "../../../roboy3_models/upper_body/bullet.urdf"
@@ -29,6 +30,9 @@ def main():
     rclpy.init()
     
     bb = BulletRoboy(body)
+
+    cam = CameraHandler(body, bb.caml_pub, bb.camr_pub)
+
     spin_thread = Thread(target=rclpy.spin, args=(bb,))
     spin_thread.start()
 
@@ -37,6 +41,7 @@ def main():
             if bb.ready:
                 #update the environement parameters with each step
                 env.update()
+                cam.publish_next_pics()
                 p.stepSimulation()
                 contactPts = p.getContactPoints(body)
 

@@ -54,8 +54,8 @@ class BulletRoboy(Node):
 		call_service_async(self.operator_initial_head_pose_client, GetLinkPose.Request(), self.initialize, self.get_logger())
 
 		# camera members
-		self.caml_pub = self.create_publisher(CompressedImage, TOPICS.CAMERA_LEFT, queue_size=1)
-		self.camr_pub = self.create_publisher(CompressedImage, TOPICS.CAMERA_RIGHT, queue_size=1)
+		self.caml_pub = self.create_publisher(CompressedImage, Topics.CAMERA_LEFT, 1)
+		self.camr_pub = self.create_publisher(CompressedImage, Topics.CAMERA_RIGHT, 1)
 
 	def set_node_param(self):
 		'''Declares and gets parameters, then sets the parent_name attribute for each link.
@@ -161,12 +161,15 @@ class BulletRoboy(Node):
 												+ "   " + str(link['init_pose'][1][2]) 
 												+ "   " + str(link['init_pose'][1][3]))
 			if name == 'head':
-				self.get_logger().debug("EF head id: " + str(i))
+				self.get_logger().debug("head id: " + str(i))
 			if name == 'lowerarm_right':
-				self.get_logger().debug("EF lowerarm_right id: " + str(i))
+				self.get_logger().debug("lowerarm_right id: " + str(i))
 			if name == 'lowerarm_left':
-				self.get_logger().debug("EF lowerarm_left id: " + str(i))
-
+				self.get_logger().debug("lowerarm_left id: " + str(i))
+			if name == 'camera_left':
+				self.get_logger().debug("camera_left id: " + str(i))
+			if name == 'camera_right':
+				self.get_logger().debug("camera_right id: " + str(i))
 			# self.draw_LF_coordinate_system(i) 
 
 	def get_link_bb_dim(self, link_id):

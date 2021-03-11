@@ -30,18 +30,23 @@ class CageInteraction:
         link = {}
         link['name'] = 'torso'
         link['id'] = -1 
+        parent_name = self.parent_link_map.get(link['name'])
+        if not parent_name :
+            rospy.loginfo("Link torso is not mapped to a parent link. Will be mapped to itself.")
+            parent_name = link['name']
+        link['parent_name'] = parent_name
         self.links.append(link)
         for i in range(p.getNumJoints(self.body_id)):
             info = p.getJointInfo(self.body_id,i)
             link = {}
-            name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
+            name = str(info[12], 'utf-8')
             link['name'] = name
             link['id'] = i
             parent_name = self.parent_link_map.get(name)
             if not parent_name :
                 rospy.loginfo("Link {} with id {} is not mapped to a parent link. Will be mapped to itself.".format(name, i))
                 parent_name = name
-            link['parent_name'] = self.parent_link_map.get(name)
+            link['parent_name'] = parent_name
             self.links.append(link)
 
     def get_link_info_from_id(self, link_id):

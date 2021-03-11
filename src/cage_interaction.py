@@ -37,6 +37,7 @@ class CageInteraction:
             name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
             link['name'] = name
             link['id'] = i
+            link['parent_name'] = self.parent_link_map[name]
             self.links.append(link)
 
     def get_link_info_from_id(self, link_id):
@@ -76,7 +77,7 @@ class CageInteraction:
         for pt in collision:
             if pt[9] > 0:
                 link = self.get_link_info_from_id(pt[3])
-                if    link['parent_name'] == link['name']:
+                if link['parent_name'] == link['name']:
                     link_id = pt[3]
                     debug_line_color = [1,0,1]
         

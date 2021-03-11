@@ -1,6 +1,8 @@
 parent_link_map:
   torso: torso
   upperarm_right: upperarm_right
+  shoulder_right_link1: upperarm_right
+  shoulder_right_link2: upperarm_right
   lowerarm_right: lowerarm_right
   elbow_right: lowerarm_right
   hand_right: hand_right
@@ -35,6 +37,9 @@ parent_link_map:
   rh_thhub: hand_right
   rh_thmiddle: hand_right
   upperarm_left: upperarm_left
+  upperarm_left: upperarm_left
+  shoulder_left_link1: upperarm_left
+  shoulder_left_link2: upperarm_left
   lowerarm_left: lowerarm_left
   elbow_left: lowerarm_left
   hand_left: hand_left

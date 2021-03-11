@@ -14,7 +14,6 @@ class CageInteraction:
         conf_path = rp.get_path('bulletroboy') + "/src/conf.yml"
         with open(conf_path) as file:
             self.parent_link_map = yaml.load(file, Loader=yaml.FullLoader)['parent_link_map']
-        rospy.loginfo(self.parent_link_map)
         self.body_id = roboy_body_id
         self.links = []
         self.init_urdf_info()
@@ -38,8 +37,11 @@ class CageInteraction:
             name = str(p.getJointInfo(self.body_id,i)[12], 'utf-8')
             link['name'] = name
             link['id'] = i
-            if self.parent_link_map.get(name) :
-                link['parent_name'] = self.parent_link_map.get(name)
+            parent_name = self.parent_link_map.get(name)
+            if not parent_name :
+                rospy.loginfo("Link {} with id {} is not mapped to a parent link. Will be mapped to itself.".format(name, i))
+                parent_name = name
+            link['parent_name'] = self.parent_link_map.get(name)
             self.links.append(link)
 
     def get_link_info_from_id(self, link_id):
@@ -79,16 +81,10 @@ class CageInteraction:
         for pt in collision:
             if pt[9] > 0:
                 link = self.get_link_info_from_id(pt[3])
-                if link.get('parent_name'):
-                    if link.get('parent_name') == link['name']:
-                        link_id = pt[3]
-                        debug_line_color = [1,0,1]
-            
-                    else :
-                        link_id = self.get_link_info_from_name(link['parent_name'])["id"]
-                        debug_line_color = [0,1,1]
-                else:
-                    return
+                if link['parent_name'] == link['name']:
+                    link_id = pt[3]            
+                else :
+                    link_id = self.get_link_info_from_name(link['parent_name'])["id"]
 
                 contact_pt = ContactPoint()
 

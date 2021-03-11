@@ -119,6 +119,7 @@ class CageInteraction:
             return
         
         msg = Collision()
+        msg.header.stamp = rospy.Time.now()
         msg.contact_points = contact_pts
         
         self.collision_publisher.publish(msg)

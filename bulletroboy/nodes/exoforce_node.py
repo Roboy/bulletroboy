@@ -1,6 +1,5 @@
 import os
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
 from ..exoforce.exoforce import CageConfiguration
 from ..exoforce.exoforce_hardware import ExoforceHW
 
@@ -12,11 +11,9 @@ def main(args=None):
 	# EXOFORCE SETUP
 	initial_cage_conf = CageConfiguration(CONFIG_DEFAULT_PATH)
 	exoforce = ExoforceHW(initial_cage_conf)
-	executor = MultiThreadedExecutor()
-	rclpy.spin(exoforce, executor)
+	rclpy.spin(exoforce)
 
 	exoforce.destroy_node()
-	executor.shutdown()
 	rclpy.shutdown()
 
 if __name__ == "__main__":

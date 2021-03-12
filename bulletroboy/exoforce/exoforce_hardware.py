@@ -3,7 +3,6 @@ import time
 import numpy as np
 from geometry_msgs.msg import PoseStamped
 from pyquaternion import Quaternion
-from rclpy.callback_groups import ReentrantCallbackGroup
 from roboy_simulation_msgs.msg import Collision, TendonUpdate
 from std_srvs.srv import Trigger
 
@@ -19,7 +18,6 @@ class ExoforceHW(ExoForce):
 		
 		"""
 		super().__init__(cage_conf, "exoforce")
-		self.callback_group = ReentrantCallbackGroup()
 
 		self.declare_parameters(
 			namespace='',
@@ -39,9 +37,7 @@ class ExoforceHW(ExoForce):
 
 		self.create_subscription(Collision, Topics.MAPPED_COLLISIONS, self.collision_listener, 1)
 		self.create_subscription(Collision, 'roboy/simulation/roboy/collision_hw', self.collision_listener, 1)
-		# self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.ef_pos_listener, 1)
-		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
-		
+
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)
 
 		self.start_force_control_client = self.create_client(Trigger, Services.START_FORCE_CONTROL)
@@ -182,37 +178,6 @@ class ExoforceHW(ExoForce):
 			self.set_tendon_target_force(muscle_id, force)
 
 		self.apply_min_force_timer.reset()
-
-	def operator_ef_pos_listener(self, ef_pose):
-		"""Callback of the pose subscriber. Sets the pose of the end effector given in the msg.
-
-		Args:
-			ef_pose: received PoseStamped msg.
-		
-		Returns:
-			-
-
-		"""
-		ef_name = ef_pose.header.frame_id
-		################### TEMPORAL MAPPING ############
-		if ef_name == "hand_right":
-			ef_name = "right_wrist"
-		elif ef_name == "hand_left":
-			ef_name = "left_wrist"
-		else:
-			return
-		############################################
-		#self.get_logger().info("Received pose for " + ef_name)
-		end_effector = self.get_ef_name(ef_name)
-		if end_effector is None:
-			self.get_logger().warn(ef_name + " is not an end effector!")
-			return
-
-		link_pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
-		link_orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
-
-		end_effector.position = link_pos
-		end_effector.orientation = link_orn
 
 	def update(self):
 		"""Updates ExoForce's state.

@@ -154,8 +154,14 @@ class ExoForceSim(ExoForce):
 				p.applyExternalForce(self.operator.body_id, contact_pt.linkid, force_vec, position_vec, p.LINK_FRAME)
 
 		elif self.mode == "tendon":
-
-			contact_points = [{'link_id': cp.linkid, 'force_vector': cp.normalforce * np.array([cp.contactnormal.x, cp.contactnormal.y, cp.contactnormal.z])} for cp in collision_msg.contact_points]
+			contact_points = [{
+				'link_id': cp.linkid, 
+				'force_vector': cp.normalforce * self.get_direction_in_cage_frame(
+						cp.linkid, 
+						np.array([cp.contactnormal.x, cp.contactnormal.y, cp.contactnormal.z])
+						)
+				} 
+				for cp in collision_msg.contact_points]
 
 			forces = self.decompose(contact_points)
 			
@@ -165,6 +171,12 @@ class ExoForceSim(ExoForce):
 				else:
 					force = 0
 				self.update_tendon(tendon.tendon.id, force)
+
+	def get_direction_in_cage_frame(self, link_id, cp_direction):
+		_, rotation = p.getLinkState(self.operator.body_id, link_id)[:2]
+		rotation = np.array(p.getMatrixFromQuaternion(rotation)).reshape(3,3)
+
+		return rotation.dot(cp_direction) #force direction
 
 	def draw_force(self, contact_pt):
 		"""Draw force as a debugLine.

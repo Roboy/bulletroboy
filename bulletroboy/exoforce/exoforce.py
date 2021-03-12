@@ -6,6 +6,7 @@ from itertools import groupby
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
+from std_msgs.msg import Float32
 
 from rclpy.node import Node
 from roboy_control_msgs.msg import CageState, EndEffector as EndEffectorMsg, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
@@ -369,6 +370,7 @@ class ExoForce(Node, ABC):
 
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
+		self.collision_for_plotting = self.create_publisher(Float32, '/exo', 1)
 
 	def init_force_decomp_params(self):
 		"""Reads force decomposition params.
@@ -536,7 +538,7 @@ class ExoForce(Node, ABC):
 
 		"""
 		forces = {}
-
+		total_magnitude = 0
 		for ef, ef_contact_points in groupby(contact_points, lambda point: self.map_link_to_ef(point['link_id'])):
 			if ef is None:
 				self.get_logger().warn(f"The following contact points could not be mapped to an end effector: {[cp for cp in ef_contact_points]}")
@@ -552,6 +554,7 @@ class ExoForce(Node, ABC):
 				force_msg = f"ef:{ef.name} force:{resultant_force_magnitude:.2f} direction:{np.around(resultant_force_direction, decimals=3)}"
 
 				self.get_logger().info(f"Decomposing force-> {force_msg}")
+				total_magnitude += resultant_force_magnitude
 
 				ef_forces, msg = decompose_force_ef_to_tendons(resultant_force_magnitude, resultant_force_direction, ef, self.force_decomp_params)
 
@@ -559,6 +562,7 @@ class ExoForce(Node, ABC):
 					self.get_logger().warn(f"Force was not decomposed-> {force_msg} error: [{msg}]")
 				else:
 					forces.update(ef_forces)
+		self.collision_for_plotting.publish(Float32(data=total_magnitude))
 
 		return forces
 		

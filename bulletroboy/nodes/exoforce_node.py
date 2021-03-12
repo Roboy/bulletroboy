@@ -1,6 +1,5 @@
 import os, sys
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
 from ..exoforce.exoforce import CageConfiguration
 from ..exoforce.exoforce_hardware import ExoforceHW
 from ..utils.utils import parse_launch_arg
@@ -16,8 +15,7 @@ def main(args=None):
 		# EXOFORCE SETUP
 		initial_cage_conf = CageConfiguration(cage_conf_path)
 		exoforce = ExoforceHW(initial_cage_conf)
-		executor = MultiThreadedExecutor()
-		rclpy.spin(exoforce, executor)
+		rclpy.spin(exoforce)
 
 	except KeyboardInterrupt:
 		rclpy.shutdown()

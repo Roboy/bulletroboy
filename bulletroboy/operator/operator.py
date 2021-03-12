@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
 import rclpy
-from rclpy.node import Node
-from rcl_interfaces.srv import GetParameters
-
-from roboy_control_msgs.srv import GetLinkPose
 from geometry_msgs.msg import PoseStamped
+from rcl_interfaces.srv import GetParameters
+from rclpy.node import Node
+from roboy_control_msgs.srv import GetLinkPose
 from roboy_simulation_msgs.srv import LinkInfoFromName
 
-from ..utils.utils import call_service_async, Topics, Services
+from ..utils.utils import Services, Topics, call_service_async
+
 
 class Link():
 	"""This class handles one operator link.

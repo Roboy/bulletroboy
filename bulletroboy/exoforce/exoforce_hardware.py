@@ -4,7 +4,6 @@ from functools import partial
 import numpy as np
 from geometry_msgs.msg import PoseStamped
 from pyquaternion import Quaternion
-from rclpy.callback_groups import ReentrantCallbackGroup
 from roboy_middleware_msgs.msg import ExoforceResponse, InitExoforceRequest
 from roboy_middleware_msgs.srv import InitExoforce
 from roboy_simulation_msgs.msg import Collision, TendonUpdate
@@ -23,7 +22,6 @@ class ExoforceHW(ExoForce):
 		
 		"""
 		super().__init__(cage_conf, "exoforce")
-		self.callback_group = ReentrantCallbackGroup()
 
 		self.declare_parameters(
 			namespace='',
@@ -52,7 +50,7 @@ class ExoforceHW(ExoForce):
 
 		# Operator EF pose subscription
 		# self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.ef_pos_listener, 1)
-		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.operator_ef_pos_listener, 10, callback_group=self.callback_group)
+		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.operator_ef_pos_listener, 10)
 		
 		# Target force publisher
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)

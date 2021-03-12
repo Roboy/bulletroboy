@@ -1,11 +1,13 @@
-import pybullet as p
-import time
 import math
-import numpy as np
+import time
 from enum import Enum
 
+import numpy as np
+import pybullet as p
+
 from ..utils.utils import draw_AABB
-from .operator import Operator, Link
+from .operator import Link, Operator
+
 
 class OperatorSim(Operator):
 	"""This class handles the operator body and its links in the simulation.

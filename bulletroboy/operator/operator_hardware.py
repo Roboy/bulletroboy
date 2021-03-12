@@ -1,12 +1,12 @@
-from rclpy.callback_groups import ReentrantCallbackGroup
+import time
 
 from geometry_msgs.msg import PoseStamped
-from roboy_simulation_msgs.msg import TendonUpdate
 from roboy_middleware_msgs.srv import InitExoforce
-from .operator import Operator, Link
-from ..utils.utils import Topics, Services
+from roboy_simulation_msgs.msg import TendonUpdate
 
-import time
+from ..utils.utils import Services, Topics
+from .operator import Link, Operator
+
 
 class OperatorHW(Operator):
 	"""This class handles operator related functions and communicates directly with the TeleportVR app.
@@ -26,7 +26,7 @@ class OperatorHW(Operator):
 		self.pull_time = self.get_parameter("pull_time").get_parameter_value().double_value
 
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
-		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1, callback_group=ReentrantCallbackGroup())
+		self.create_subscription(PoseStamped, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1)
 		self.init_service = self.create_service(InitExoforce, Services.INIT_OPERATOR, self.init_callback)
 
 	def init_links(self):

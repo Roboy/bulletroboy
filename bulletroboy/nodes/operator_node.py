@@ -1,5 +1,4 @@
 import rclpy
-from rclpy.executors import MultiThreadedExecutor
 from ..operator.operator_hardware import OperatorHW
 
 def main(args=None):
@@ -7,7 +6,7 @@ def main(args=None):
         rclpy.init(args=args)
 
         operator = OperatorHW()
-        rclpy.spin(operator, MultiThreadedExecutor())
+        rclpy.spin(operator)
 
     except KeyboardInterrupt:
         rclpy.shutdown()

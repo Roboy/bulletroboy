@@ -219,6 +219,8 @@ def ik(msg):
             rospy.logwarn_throttle(1, "head: " +  str(pos))
             p.resetBasePositionAndOrientation(0, pos, (0,0,0.7071,0.7071))
             head_initialized = True
+            if not cage_interac.initialized :
+                cage_interac.initialize()
 
     else:#if msg.header.frame_id == "hand_left":
         if not right_initialized and msg.header.frame_id == "hand_right":
@@ -340,7 +342,7 @@ while not rospy.is_shutdown():
     env.update()
     #publish collisions
     contact_pts = p.getContactPoints(roboy)
-    if contact_pts:
+    if contact_pts and cage_interac.initialized:
         cage_interac.publish_collision(contact_pts)
 
     # msg.position = []

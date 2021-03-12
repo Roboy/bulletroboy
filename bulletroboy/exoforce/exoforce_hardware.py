@@ -166,9 +166,13 @@ class ExoforceHW(ExoForce):
 		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
 
 		ef = self.map_link_to_ef(collision_msg.linkid)
-		collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
+		if ef.orientation is None:
+			self.get_logger().warn(f"Orientation for ef '{ef.name}' is not initialized!")
+			return
 
+		collision_direction = np.array([collision_msg.contactnormal.x, collision_msg.contactnormal.y, collision_msg.contactnormal.z])
 		quaternion = Quaternion(ef.orientation)
+		
 		force_direction = quaternion.rotation_matrix.dot(collision_direction)
 
 		forces = self.decompose(collision_msg.linkid, collision_msg.normalforce, force_direction)

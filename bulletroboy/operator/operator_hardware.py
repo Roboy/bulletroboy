@@ -106,6 +106,10 @@ class OperatorHW(Operator):
 	def transform_pose_vr_to_cage(self, position, orientation):
 		"""Transforms pose from vr frame to cage frame.
 
+			The cage frame's origin is at Motor 0.
+			The VR frame's origin is on the ground where Operator stands, under the initial headset position.
+			The VR frame's origin (0 ,0 ,0) is (0.55, -0.85, -0.40) in the cage frame.
+
 		Args:
 			position (3darray[float]): Position in vr frame.
 			orientation (4darray[float]): Orientation in vr frame.
@@ -115,11 +119,13 @@ class OperatorHW(Operator):
 			4darray[float]: Orientation in cage frame.
 
 		"""
-		x_offset = 0.2 # x axis offset, because roboy arms are longer
-		z_offset = 1.5 # height offset, because of how we define the cage frame last semester, this will be address with the frames calibration
+		x_offset =  0.55
+		y_offset = -0.85
+		z_offset = -0.40
 
 		position[0] += x_offset
-		position[2] -= z_offset
+		position[1] += y_offset
+		position[2] += z_offset
 
 		return position, orientation
 

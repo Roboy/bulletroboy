@@ -135,6 +135,10 @@ class ExoforceHW(ExoForce):
 				# Applying no slack force to all tendons
 				self.set_target_force(self.no_slack_force)
 
+				# update position of the body attachments in cage frame relative to the operators position
+				for motor_attachment_point in [muscle_unit.motor.via_point.world_point for muscle_unit in self.muscle_units if muscle_unit.motor.via_point.link == "headset"]:
+					motor_attachment_point[2] += init_msg.operator_height
+
 				# Requesting operator node to start
 				self.init_operator(init_msg)
 

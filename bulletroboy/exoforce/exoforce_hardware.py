@@ -136,14 +136,22 @@ class ExoforceHW(ExoForce):
 				self.send_exoforce_response(self.init_response_publisher, False, err_msg)
 			else:
 				self.get_logger().info("Force Control node started.")
-				self.set_target_force(self.no_slack_force)
-				time.sleep(self.tendon_init_time)
-				self.active = True
-				self.get_logger().info("Exoforce succesfully started.")
 
+				# Applying no slack force to all tendons
+				self.set_target_force(self.no_slack_force)
+
+				# Requesting operator node to start
 				self.init_operator(init_msg)
 
+				# Sending initialization response
+				self.get_logger().info("Exoforce succesfully started.")
 				self.send_exoforce_response(self.init_response_publisher, True)
+
+				# Waiting for pulling slack time
+				time.sleep(self.tendon_init_time)
+
+				# Activating exoforce
+				self.active = True
 
 	def init_operator(self, init_msg):
 		"""Inits operator node.
@@ -157,7 +165,7 @@ class ExoforceHW(ExoForce):
 		"""
 		self.get_logger().info("Requesting operator node to initialize...")
 
-		request = InitExoforce.Request()
+		request = InitExoforce.Request(init_msg)
 		request.ef_name = init_msg.ef_name
 		request.ef_enabled = init_msg.ef_enabled
 		request.ef_init_pose = init_msg.ef_init_pose

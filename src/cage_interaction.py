@@ -188,7 +188,15 @@ class CageInteraction:
             link_info = LinkInformation()
             link_info.id = link['id']
             link_info.name = link['name']
-            link_info.dimensions = link['dims']
-            link_info.init_pose = link['init_pose']
+            link_info.dimensions.x = link['dims'][0]
+            link_info.dimensions.y = link['dims'][1]
+            link_info.dimensions.z = link['dims'][2]
+            link_info.init_pose.position.x = link['init_pose'][0][0]
+            link_info.init_pose.position.y = link['init_pose'][0][1]
+            link_info.init_pose.position.z = link['init_pose'][0][2]
+            link_info.init_pose.orientation.x = link['init_pose'][1][0]
+            link_info.init_pose.orientation.y = link['init_pose'][1][1]
+            link_info.init_pose.orientation.z = link['init_pose'][1][2]
+            link_info.init_pose.orientation.w = link['init_pose'][1][3]
             body_information.link_information.append(link_info)
         return GetBodyInformationResponse(body_information)

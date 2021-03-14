@@ -70,7 +70,7 @@ useNullSpace = 0
 
 useOrientation = 0
 
-cage_interac = CageInteraction(roboy, topic_root)
+cage_interac = CageInteraction(roboy)
 
 #This can be used to test the IK result accuracy.
 ikSolver = 0

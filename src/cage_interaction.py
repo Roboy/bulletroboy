@@ -1,6 +1,6 @@
 import rospy
 from roboy_simulation_msgs.msg import Collision, ContactPoint, LinkInformation, BodyInformation
-from roboy_simulation_msgs.msgsrv import GetBodyInformation, GetBodyInformationResponse
+from roboy_simulation_msgs.srv import GetBodyInformation, GetBodyInformationResponse
 from sensor_msgs.msg import JointState
 import pybullet as p
 import yaml

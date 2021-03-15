@@ -13,7 +13,7 @@ mkdir -p roboy_ws/src
 cd roboy_ws/src
 git clone https://github.com/Roboy/roboy3_models.git -b bullet
 git clone https://github.com/Roboy/roboy_communication.git -b dashing
-git clone https://github.com/Roboy/bulletroboy.git
+git clone https://github.com/Roboy/bulletroboy.git -b exoforce
 
 # Building packages in workspace
 cd roboy_ws
@@ -34,10 +34,7 @@ Run the system with the operator simulation.
 ros2 launch bulletroboy cage_sim.launch.py  # use -s to list arguments
 ```
 
-Run the system with the real exoforce cage. 
-(Each command must be executed in a new terminal. Operator and exoforce nodes require interaction through the terminal and cannot be added to the launch file yet.)
+Run the system with the real exoforce cage.
 ```bash
 ros2 launch bulletroboy exoforce.launch.py # use -s to list arguments
-ros2 run bulletroboy operator
-ros2 run bulletroboy exoforce
 ```

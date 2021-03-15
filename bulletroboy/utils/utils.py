@@ -7,8 +7,8 @@ import warnings
 class Topics:
 
 	# link poses topics
-	VR_HEADSET_POSES 		= "/bullet_ik"
-	OP_EF_POSES 			= "/roboy/simulation/operator/pose/endeffector"
+	VR_HEADSET_POSES 		= "/operator/pose"
+	OP_EF_POSES 			= "/exoforce/operator/pose"
 	MAPPED_OP_REF_POSE 		= "/roboy/exoforce/pose/endeffector/right"
 	MAPPED_OP_LEF_POSE 		= "/roboy/exoforce/pose/endeffector/left"
 	ROBOY_EF_POSES 			= "/roboy/simulation/roboy/ef_pose"

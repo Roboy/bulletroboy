@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import rclpy
-from geometry_msgs.msg import PoseStamped
+from roboy_middleware_msgs.msg import EFPose
 from rcl_interfaces.srv import GetParameters
 from rclpy.node import Node
 from roboy_control_msgs.srv import GetLinkPose
@@ -71,6 +71,7 @@ class Operator(Node, ABC):
 		"""
 		super().__init__(node_name)
 		self.ready = False
+		self.links = None
 
 		# State Mapper node parameters client
 		self.state_mapper_parameters_client = self.create_client(GetParameters, Services.STATE_MAPPER_GET)
@@ -95,7 +96,7 @@ class Operator(Node, ABC):
 	def init_node(self):
 		self.init_links()
 		
-		self.ef_publisher = self.create_publisher(PoseStamped, Topics.OP_EF_POSES, 1)
+		self.ef_publisher = self.create_publisher(EFPose, Topics.OP_EF_POSES, 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, Services.OP_INITIAL_LINK_POSE, self.initial_link_pose_callback)
 
@@ -195,17 +196,18 @@ class Operator(Node, ABC):
 				continue
 		#    self.get_logger().info('Sending Endeffector pose: ' + ef_link.human_name)
 			ef_pos, ef_orn = ef_link.pose
-			msg = PoseStamped()
-			msg.header.frame_id = ef_link.human_name
 
-			msg.pose.position.x = ef_pos[0]
-			msg.pose.position.y = ef_pos[1]
-			msg.pose.position.z = ef_pos[2]
+			msg = EFPose()
+			msg.ef_name = ef_link.human_name
 
-			msg.pose.orientation.x = ef_orn[0]
-			msg.pose.orientation.y = ef_orn[1]
-			msg.pose.orientation.z = ef_orn[2]
-			msg.pose.orientation.w = ef_orn[3]
+			msg.ef_pose.position.x = ef_pos[0]
+			msg.ef_pose.position.y = ef_pos[1]
+			msg.ef_pose.position.z = ef_pos[2]
+
+			msg.ef_pose.orientation.x = ef_orn[0]
+			msg.ef_pose.orientation.y = ef_orn[1]
+			msg.ef_pose.orientation.z = ef_orn[2]
+			msg.ef_pose.orientation.w = ef_orn[3]
 
 			self.ef_publisher.publish(msg)
 

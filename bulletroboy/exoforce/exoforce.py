@@ -10,7 +10,7 @@ from rclpy.node import Node
 from roboy_control_msgs.msg import CageState, EndEffector as EndEffectorMsg, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
 from roboy_control_msgs.srv import GetCageEndEffectors
 from roboy_simulation_msgs.msg import Collision
-from geometry_msgs.msg import PoseStamped
+from roboy_middleware_msgs.msg import EFPose
 from geometry_msgs.msg import Point
 
 from ..utils.force_decomposition import decompose_force_ef_to_tendons
@@ -369,7 +369,7 @@ class ExoForce(Node, ABC):
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
 
-		self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.operator_ef_pos_listener, 1)
+		self.create_subscription(EFPose, Topics.OP_EF_POSES, self.operator_ef_pos_listener, 1)
 
 	def init_force_decomp_params(self):
 		"""Reads force decomposition params.
@@ -528,21 +528,21 @@ class ExoForce(Node, ABC):
 		"""Callback of the pose subscriber. Sets the pose of the end effector given in the msg.
 
 		Args:
-			ef_pose: received PoseStamped msg.
+			ef_pose: received EFPose msg.
 		
 		Returns:
 			-
 
 		"""
-		ef_name = ef_pose.header.frame_id
+		ef_name = ef_pose.ef_name
 		#self.get_logger().info("Received pose for " + ef_name)
 		end_effector = self.get_ef_name(ef_name)
 		if end_effector is None:
 			self.get_logger().warn(ef_name + " is not an end effector!")
 			return
 
-		link_pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
-		link_orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
+		link_pos = np.array([ef_pose.ef_pose.position.x, ef_pose.ef_pose.position.y, ef_pose.ef_pose.position.z])
+		link_orn = np.array([ef_pose.ef_pose.orientation.x, ef_pose.ef_pose.orientation.y, ef_pose.ef_pose.orientation.z, ef_pose.ef_pose.orientation.w])
 
 		end_effector.position = link_pos
 		end_effector.orientation = link_orn

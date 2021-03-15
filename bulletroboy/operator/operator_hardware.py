@@ -141,7 +141,9 @@ class OperatorHW(Operator):
 			self.get_logger().warn(ef_pose.ef_name + " is not an operator link.")
 			return
 
-		link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
-		link_orn = [ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w]
+		link_pos = [ef_pose.ef_pose.position.x, ef_pose.ef_pose.position.y, ef_pose.ef_pose.position.z]
+		link_orn = [ef_pose.ef_pose.orientation.x, ef_pose.ef_pose.orientation.y, ef_pose.ef_pose.orientation.z, ef_pose.ef_pose.orientation.w]
 
-		link.set_pose(self.transform_pose_vr_to_cage(link_pos, link_orn))
+		link_pos, link_orn = self.transform_pose_vr_to_cage(link_pos, link_orn)
+
+		link.set_pose(link_pos, link_orn)

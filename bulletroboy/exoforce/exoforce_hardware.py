@@ -2,7 +2,6 @@ import time
 from functools import partial
 
 import numpy as np
-from geometry_msgs.msg import PoseStamped
 from pyquaternion import Quaternion
 from roboy_middleware_msgs.msg import ExoforceResponse, InitExoforceRequest
 from roboy_middleware_msgs.srv import InitExoforce
@@ -161,10 +160,10 @@ class ExoforceHW(ExoForce):
 		"""
 		self.get_logger().info("Requesting operator node to initialize...")
 
-		request = InitExoforce.Request(init_msg)
-		request.ef_name = init_msg.ef_name
-		request.ef_enabled = init_msg.ef_enabled
-		request.ef_init_pose = init_msg.ef_init_pose
+		request = InitExoforce.Request(ef_name=init_msg.ef_name,
+										ef_enabled=init_msg.ef_enabled,
+										ef_init_pose=init_msg.ef_init_pose,
+										operator_height=init_msg.operator_height)
 
 		call_service_async(self.init_operator_client, request, self.init_operator_callback, self.get_logger())
 

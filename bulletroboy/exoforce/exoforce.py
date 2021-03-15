@@ -369,6 +369,8 @@ class ExoForce(Node, ABC):
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
 
+		self.create_subscription(PoseStamped, Topics.OP_EF_POSES, self.operator_ef_pos_listener, 1)
+
 	def init_force_decomp_params(self):
 		"""Reads force decomposition params.
 		
@@ -521,6 +523,29 @@ class ExoForce(Node, ABC):
 			response.end_effectors.append(end_effector_msg)
 
 		return response
+
+	def operator_ef_pos_listener(self, ef_pose):
+		"""Callback of the pose subscriber. Sets the pose of the end effector given in the msg.
+
+		Args:
+			ef_pose: received PoseStamped msg.
+		
+		Returns:
+			-
+
+		"""
+		ef_name = ef_pose.header.frame_id
+		#self.get_logger().info("Received pose for " + ef_name)
+		end_effector = self.get_ef_name(ef_name)
+		if end_effector is None:
+			self.get_logger().warn(ef_name + " is not an end effector!")
+			return
+
+		link_pos = np.array([ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z])
+		link_orn = np.array([ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, ef_pose.pose.orientation.z, ef_pose.pose.orientation.w])
+
+		end_effector.position = link_pos
+		end_effector.orientation = link_orn
 
 	def decompose(self, link_id, collision_force, collision_direction):
 		"""Decomposes force applied to link in operator.

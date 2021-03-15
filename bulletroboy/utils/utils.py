@@ -16,10 +16,6 @@ class Topics:
 	# roboy
 	JOINT_STATES			= "/roboy/simulation/joint_state"
 
-	# roboy plexus
-	MOTOR_STATE 			= "/roboy/middleware/MotorState"
-	MOTOR_COMMAND 			= "/roboy/middleware/MotorCommand"
-
 	# collision
 	ROBOY_COLLISIONS 		= "/roboy/simulation/collision"
 	MAPPED_COLLISIONS 		= "/exoforce/simulation/collision"
@@ -34,9 +30,6 @@ class Topics:
 
 
 class Services:
-
-	# roboy plexus services
-	CONTROL_MODE 			= "/roboy/middleware/ControlMode"
 
 	# links services
 	LINK_INFO_FROM_NAME 	= "/roboy/simulation/operator/link_info_from_name"

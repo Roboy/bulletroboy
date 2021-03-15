@@ -4,13 +4,11 @@ from scipy.spatial.transform import Rotation as R
 from pyquaternion import Quaternion
 
 from rclpy.node import Node
-from rclpy.callback_groups import ReentrantCallbackGroup
 
 from ..utils.utils import Topics, Services
 from roboy_simulation_msgs.msg import Collision, ContactPoint
 from roboy_middleware_msgs.msg import EFPose
-from roboy_simulation_msgs.srv import LinkInfoFromName
-from roboy_simulation_msgs.srv import LinkInfoFromId
+from roboy_middleware_msgs.srv import InitStateMapper
 from roboy_control_msgs.srv import GetLinkPose
 
 class StateMapper(Node):
@@ -22,46 +20,82 @@ class StateMapper(Node):
 				('roboy_link_names', None),
 				('operator_link_names', None)
 			])
-		
-		self.callback_group = ReentrantCallbackGroup()
 
 		self.roboy_link_names = self.get_parameter("roboy_link_names").get_parameter_value().string_array_value
 		self.operator_link_names = self.get_parameter("operator_link_names").get_parameter_value().string_array_value
 		
 		assert len(self.roboy_link_names) == len(self.operator_link_names), "Roboy and operator links list have different lenghts"
 
-		self.roboy_initial_link_poses = {}
-		self.operator_initial_link_poses = {}
-		
-		#to avoid deadlocks in services
-		self.roboy_is_ready = False
-
-		# Define clients
-		self.roboy_link_info_from_id_client = self.create_client(LinkInfoFromId, Services.LINK_INFO_FROM_ID, callback_group=self.callback_group)
-		self.operator_link_info_from_name_client = self.create_client(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, callback_group=self.callback_group)
-		self.roboy_initial_link_pose_client = self.create_client(GetLinkPose, Services.ROBOY_INITIAL_LINK_POSE, callback_group=self.callback_group)
-		self.operator_initial_link_pose_client = self.create_client(GetLinkPose, Services.OP_INITIAL_LINK_POSE, callback_group=self.callback_group)
+		self.roboy_link_info = []
+		self.operator_link_info = []
 
 		# Define subscriptions
-		self.robot_collision_subscription = self.create_subscription(
-			Collision,
-			Topics.ROBOY_COLLISIONS,
-			self.collision_listener,
-			1)
+		self.robot_collision_subscription = self.create_subscription(Collision,	Topics.ROBOY_COLLISIONS, self.collision_listener, 1)
+
 		# Operator EF pose subscriber
-		self.operator_movement_subscription = self.create_subscription(
-			EFPose, 
-			Topics.OP_EF_POSES, 
-			self.operator_movement_listener, 
-			1)
+		# self.operator_movement_subscription = self.create_subscription(EFPose, Topics.OP_EF_POSES, self.operator_movement_listener, 1)
+
 		# Define publishers
 		self.exoforce_collision_publisher = self.create_publisher(Collision, Topics.MAPPED_COLLISIONS, 1)
-		self.right_ef_publisher = self.create_publisher(EFPose, Topics.MAPPED_OP_REF_POSE, 1)
-		self.left_ef_publisher = self.create_publisher(EFPose, Topics.MAPPED_OP_LEF_POSE, 1)
+		# self.right_ef_publisher = self.create_publisher(EFPose, Topics.MAPPED_OP_REF_POSE, 1)
+		# self.left_ef_publisher = self.create_publisher(EFPose, Topics.MAPPED_OP_LEF_POSE, 1)
 
 		# Define service
-		self.operator_initial_head_pose = self.create_service(GetLinkPose, Services.INITIAL_HEAD_POSE, self.operator_initial_head_pose_callback)
+		# self.operator_initial_head_pose = self.create_service(GetLinkPose, Services.INITIAL_HEAD_POSE, self.operator_initial_head_pose_callback)
+		
+		# Init service
+		self.init_service = self.create_service(InitStateMapper, Services.INIT_STATE_MAPPER, self.init_callback)
 	
+	def init_callback(self, request, response):
+		"""Callback for ROS service to init the state mapper.
+
+		"""
+		self.get_logger().info("Initializing...")
+		err_msg = ""
+		response.success = True
+
+		self.roboy_link_info = self.get_link_info_dict(request.roboy_link_information)
+		self.operator_link_info = self.get_link_info_dict(request.operator_link_information)
+
+		roboy_link_without_mapping = [link_name for link_name in self.roboy_link_names if self.get_roboy_link_info_name(link_name) is None]
+		operator_link_without_mapping = [link_name for link_name in self.operator_link_names if self.get_operator_link_info_name(link_name) is None]
+
+		if roboy_link_without_mapping:
+			err_msg = f"The following roboy links have no mapping {roboy_link_without_mapping}"
+		elif operator_link_without_mapping:
+			err_msg = f"The following operator links have no mapping {operator_link_without_mapping}"
+
+		if err_msg:
+			self.get_logger().error(f"Cannot start the state mapper node [{err_msg}]")
+			response.success = False
+			response.message = err_msg
+		else:
+			self.get_logger().info("Successfully initialized.")
+
+		return response
+
+	def get_link_info_dict(self, link_info_list):
+		"""Converts link info msg to dict.
+		
+		Args:
+			link_info_list (LinkInformation[]): Link Information msg object.
+
+		Returns:
+		   	list: List of link information in dict format.
+
+		"""
+		links_info = []
+		for link_info in link_info_list:
+			link_id = link_info.id
+			link_name = link_info.name
+			link_dimensions = np.array([link_info.dimensions.x, link_info.dimensions.y, link_info.dimensions.z])
+			link_init_pos = np.array([link_info.init_pose.position.x, link_info.init_pose.position.y, link_info.init_pose.position.z])
+			link_init_orn = np.array([link_info.init_pose.orientation.x, link_info.init_pose.orientation.y, link_info.init_pose.orientation.z, link_info.init_pose.orientation.w])
+
+			links_info.append({'id': link_id, 'name': link_name, 'dimensions': link_dimensions, 'init_pose': {'position': link_init_pos, 'orientation': link_init_orn}})
+
+		return links_info
+
 	def get_roboy_link_name(self, operator_link):
 		"""Gets corresponding roboy link's name to the given operator link's name.
 		
@@ -96,114 +130,69 @@ class StateMapper(Node):
 				break
 		return operator_link
 
-	def operator_initial_head_pose_callback(self, request, response, link_name="neck"):
-		"""Callback for ROS service for initial head pose of the operator.
+	def get_roboy_link_info_id(self, roboy_link_id):
+		"""Return roboy links info.
 
 		Args:
-			request: the GetLinkPose service request contains a link name,
-					but we do not need it for this service.
-			response: the response that would be sent back.
-			link_name: name of the head link for the current operator.
+			roboy_link_id (int): Roboy link id
 
 		Returns:
-			the response.
-
-
-		"""
-		self.get_logger().info("Service operator initial head pose: request received")
-
-		head_pos, head_orn = self.get_initial_link_pose(link_name, self.operator_initial_link_pose_client)[:2]
-
-		response.pose.position.x = head_pos[0]
-		response.pose.position.y = head_pos[1]
-		response.pose.position.z = head_pos[2]
-
-		response.pose.orientation.x = head_orn[0]
-		response.pose.orientation.y = head_orn[1]
-		response.pose.orientation.z = head_orn[2]
-		response.pose.orientation.w = head_orn[3]
-		self.get_logger().debug("Responding")
-
-		self.roboy_is_ready = True
-
-		return response
-
-	def operator_movement_listener(self, ef_pose):
-		"""Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
-
-		Args:
-			ef_pose: end effector pose received from the operator.
+			dict: Roboy link info.
 
 		"""
-		self.get_logger().debug('Endeffector pose received: ' + ef_pose.ef_name)
-
-		if not self.roboy_is_ready:
-			#self.get_logger().info('Roboy simulation is not ready.')
-
-			return
-
-		#process message
-		self.get_logger().debug('got frame-id' + ef_pose.ef_name)
+		roboy_link_info = list(filter(lambda link_info: link_info['id'] == roboy_link_id, self.roboy_link_info))
 		
-		ef_pose.ef_name = self.get_roboy_link_name(ef_pose.ef_name)
-		
-		ef_pose.ef_pose.position.x += 0.2
-		ef_pose.ef_pose.position.y += 0
-		ef_pose.ef_pose.position.z += 1.5
+		return None if len(roboy_link_info) == 0 else roboy_link_info[0]
 
-		orn = [ef_pose.ef_pose.orientation.x, 
-				ef_pose.ef_pose.orientation.y, 
-				ef_pose.ef_pose.orientation.z, 
-				ef_pose.ef_pose.orientation.w]
-		
-		link_orn = self.adapt_orientation_to_roboy(ef_pose.ef_name, orn)
-		ef_pose.ef_pose.orientation.x = link_orn[0]
-		ef_pose.ef_pose.orientation.y = link_orn[1]
-		ef_pose.ef_pose.orientation.z = link_orn[2]
-		ef_pose.ef_pose.orientation.w = link_orn[3]
-		
-		self.get_logger().debug('Publishing EF-Pose')
-
-		if ef_pose.ef_name.find("right") != -1:
-			self.right_ef_publisher.publish(ef_pose)
-		else:
-			self.left_ef_publisher.publish(ef_pose)
-		  
-	def call_service(self, client, msg):
-		"""Calls a client synchnrnously passing a msg and returns the response
+	def get_roboy_link_info_name(self, roboy_link_name):
+		"""Return roboy links info.
 
 		Args:
-			client (RosClient): The client used to communicate with the server
-			msg (Object): A server msg to send to the server as a request
+			roboy_link_name (string): Roboy link name
 
 		Returns:
-			response (Object): A response msg from the server
+			dict: Roboy link info.
 
 		"""
-		while not client.wait_for_service(timeout_sec=1.0):
-			self.get_logger().info(f"{client.srv_name} service not available, waiting again...")
-		response = client.call(msg)
-		return response
+		roboy_link_info = list(filter(lambda link_info: link_info['name'] == roboy_link_name, self.roboy_link_info))
+		
+		return None if len(roboy_link_info) == 0 else roboy_link_info[0]
+
+	def get_operator_link_info_name(self, operator_link_name):
+		"""Return operator links info.
+
+		Args:
+			operator_link_name (string): Operator link name
+
+		Returns:
+			dict: Operator link info.
+
+		"""
+		operator_link_info = list(filter(lambda link_info: link_info['name'] == operator_link_name, self.operator_link_info))
+		
+		return None if len(operator_link_info) == 0 else operator_link_info[0]
 
 	def collision_listener(self, msg):
 		"""Collision subscriber handler.
 
 		"""
 		self.get_logger().info(f"Mapping collision with {len(msg.contact_points)} contact points")
+
 		op_contact_pts = []
-		for pt in msg.contact_points:
-			op_contact_point = self.map_contact_point_to_operator(pt)
+		for roboy_contact_point in msg.contact_points:
+			op_contact_point = self.map_contact_point_to_operator(roboy_contact_point)
 
 			if op_contact_point is None:
 				continue
+
 			op_contact_pts.append(op_contact_point)
+
 		if not op_contact_pts:
 			return
 
 		operator_collision = Collision()
 		operator_collision.contact_points = op_contact_pts
-
-		self.get_logger().debug("publishing")
+		
 		self.exoforce_collision_publisher.publish(operator_collision)
 
 	def map_contact_point_to_operator(self, roboy_contact_pt):
@@ -216,184 +205,200 @@ class StateMapper(Node):
 			ContactPoint: The contact_pt with mapped linkid.
 
 		"""
-		self.get_logger().debug('mapping start')
-		roboy_link_info = self.get_roboy_link_info(roboy_contact_pt.linkid)
-		operator_link_name = self.get_operator_link_name(roboy_link_info.link_name)
-		if operator_link_name is None:
+
+		# Getting roboy link info
+		roboy_link_info = self.get_roboy_link_info_id(roboy_contact_pt.linkid)
+		if roboy_link_info is None:
+			self.get_logger().error(f"No link info found for roboy link {roboy_contact_pt.linkid}")
 			return None
-		operator_link_info = self.get_operator_link_info(operator_link_name)
-		self.get_logger().debug('responses')
 
-		operator_contact_pt = ContactPoint()
+		# Getting mapped operator link name
+		operator_link_name = self.get_operator_link_name(roboy_link_info['name'])
+		if operator_link_name is None:
+			self.get_logger().error(f"No mapping found for roboy link {roboy_link_info['name']}")
+			return None
+
+		# Getting mapped operator link info
+		operator_link_info = self.get_operator_link_info_name(operator_link_name)
+		if operator_link_info is None:
+			self.get_logger().error(f"No link info found for operator link {operator_link_name}")
+			return None
+
+		# Getting ratio between link sizes
+		link_size_ratio = np.divide(roboy_link_info['dimensions'], operator_link_info['dimensions'])
+		scaled_collision_position = np.divide(np.array([roboy_contact_pt.position.x, roboy_contact_pt.position.y, roboy_contact_pt.position.z]), link_size_ratio)
+
+		# Transforming collision between link frames
+		new_position = self.rotate_vector(roboy_link_info, operator_link_info, scaled_collision_position)
+		new_contact_normal = self.rotate_vector(roboy_link_info, operator_link_info, np.array([roboy_contact_pt.contactnormal.x, roboy_contact_pt.contactnormal.y, roboy_contact_pt.contactnormal.z]))
+
+		# Building operator collision msg
 		operator_contact_pt = roboy_contact_pt
-		operator_contact_pt.linkid = operator_link_info.link_id
-		self.get_logger().debug('responses2')
+		operator_contact_pt.linkid = operator_link_info['id']
 
-		position_scale = self.roboy_to_operator_link_ratio(roboy_link_info.dimensions, operator_link_info.dimensions)
-		operator_contact_pt = self.scale_to_operator(operator_contact_pt, position_scale)
-		new_position = self.adapt_vector_to_orientation(roboy_link_info.link_name, [operator_contact_pt.position.x, operator_contact_pt.position.y, operator_contact_pt.position.z])
 		operator_contact_pt.position.x = new_position[0]
 		operator_contact_pt.position.y = new_position[1]
 		operator_contact_pt.position.z = new_position[2]
-		self.get_logger().debug("mapping done")
 
-		new_contact_normal = self.adapt_vector_to_orientation(roboy_link_info.link_name, [roboy_contact_pt.contactnormal.x, roboy_contact_pt.contactnormal.y, roboy_contact_pt.contactnormal.z])
 		operator_contact_pt.contactnormal.x = new_contact_normal[0]
 		operator_contact_pt.contactnormal.y = new_contact_normal[1]
 		operator_contact_pt.contactnormal.z = new_contact_normal[2]
 
 		return operator_contact_pt
 
-	def get_roboy_link_info(self, roboy_link_id):
-		"""Gets the roboy link name from roboy link id by calling the corresponding servicce synchronously.
-
-		Args:
-			roboy_link_id (uint8): The link id of roboy.
-
-		Returns:
-			LinkInfoFromId: The link info of the passed link id.
-
-		"""
-		self.get_logger().debug('Getting roboy link info')
-		roboy_link_info_from_id_req = LinkInfoFromId.Request()
-		roboy_link_info_from_id_req.link_id = roboy_link_id
-		response = self.call_service(self.roboy_link_info_from_id_client, roboy_link_info_from_id_req)
-		self.get_logger().debug("received response")
-		return response
-
-	def get_operator_link_info(self, operator_link_name):
-		"""Gets the operator link id from the operator link name by calling the corresponding servicce synchronously.
-
-		Args:
-			operator_link_name (string): The link name of the operator.
-
-		Returns:
-			LinkInfoFromName: The link info of the passed link name.
-
-		"""
-		self.get_logger().debug('Getting operator link info')
-		operator_link_info_from_id_req = LinkInfoFromName.Request()
-		operator_link_info_from_id_req.link_name = operator_link_name
-		response = self.call_service(self.operator_link_info_from_name_client, operator_link_info_from_id_req)
-		self.get_logger().debug('Got operator link info')
-		return response
-
-	def roboy_to_operator_link_ratio(self, roboy_dimensions, operator_dimensions):
-		"""Calculates the ratio between robot link and human link.
-
-		Args:
-			roboy_dimensions (Vector3): The bounding box of the link whose ratio needs to be calculated.
-			operator_dimensions (Vector3): The bounding box of the link whose ratio is needed
-
-		Returns:
-			3darray(float): ratio on the three dimensions
-
-		"""
-		x_scale = roboy_dimensions.x / operator_dimensions.x
-		y_scale = roboy_dimensions.y / operator_dimensions.y
-		z_scale = roboy_dimensions.z / operator_dimensions.z
-
-		return [x_scale, y_scale, z_scale]
-	
-	def scale_to_operator(self, contact_pt, scale):
-		"""Scales down the contact_pt from robot to human.
-
-		Args:
-			contact_pt (ContactPoint):The contact_pt that happened on the robot side.
-			scale (3darray(float)): The position scale from roboy to operator
-
-		Returns:
-			contact_pt (ContactPoint): contact_pt scaled to human
-
-		"""
-		contact_pt.position.x = contact_pt.position.x / scale[0]
-		contact_pt.position.y = contact_pt.position.y / scale[1]
-		contact_pt.position.z = contact_pt.position.z / scale[2]
-
-		return contact_pt
-
-	def get_initial_link_pose(self, link_name, client):
-		"""Gets initial link pose for a link using its name.
-
-		Args:
-			link_name (string): The name of the link.
-			client (RosClient): The client used to pass a request and get a response from service.
-
-		Returns:
-			[3darray(float), 4darray(float)]: A array containing two vectors, first is position and second is orientation.
-
-		"""
-		self.get_logger().info('Getting initial ' + link_name + ' link pose...')
-		initial_link_pose_req = GetLinkPose.Request()
-		initial_link_pose_req.link_name = link_name
-		response = self.call_service(client, initial_link_pose_req)
-		self.get_logger().debug('service called')
-
-		return [[response.pose.position.x, 
-			response.pose.position.y, 
-			response.pose.position.z], 
-			[response.pose.orientation.x, 
-			response.pose.orientation.y, 
-			response.pose.orientation.z, 
-			response.pose.orientation.w]]
-
-	def adapt_orientation_to_roboy(self, roboy_link_name, orientation):
-		"""Adapts the orientation received to roboy's link according to roboy's and operators initial links.
-
-		Args:
-			roboy_link_name (string): link name according to roboy's urfd.
-			orientation (4darray(float)): received target orientation from operator.
-		
-		Returns:
-			4darray(float): The adapted target orientation.
-
-		"""
-		
-		diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
-		quat = diff * orientation 
-
-		return [quat[0], quat[1], quat[2], quat[3]]
-
-	def adapt_vector_to_orientation(self, roboy_link_name, vector):
+	def rotate_vector(self, roboy_link_info, operator_link_info, vector):
 		"""Adapts the vector's direction received to roboy's link according to roboy's and operators initial links.
 
 		Args:
-			roboy_link_name (string): link name according to roboy's urfd.
-			vector (3darray(float)): received target orientation from operator.
+			roboy_link_info (dict): Roboy link information
+			operator_link_info (dict): Operator link information
+			vector (3darray(float)): Vector in roboy link frame.
 
 		Returns:
-			4darray(float): The adapted target orientation.
+			3darray(float): Rotated vector.
 
 		"""
-
-		diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
+		diff = self.roboy_to_operator_orientation_diff(roboy_link_info, operator_link_info)
 		R = diff.rotation_matrix
 
 		return R.dot(vector)
 
-	def roboy_to_operator_orientation_diff(self, roboy_link_name):
+	def roboy_to_operator_orientation_diff(self, roboy_link_info, operator_link_info):
 		"""Calculates the orientation difference between the roboy link frame and the operator link frame
 
 		Args:
-			roboy_link_name (string): The name of the roboy link
+			roboy_link_info (dict): Roboy link information
+			operator_link_info (dict): Operator link information
 
 		Returns:
 			Quaternion: The difference of quaternions between roboy and operator links
 
 		"""
-		if self.roboy_initial_link_poses.get(roboy_link_name) == None :
-			self.roboy_initial_link_poses[roboy_link_name] = self.get_initial_link_pose(roboy_link_name, self.roboy_initial_link_pose_client)
-			self.get_logger().debug("Got roboy initial pose for link " + roboy_link_name + " : " + str(self.roboy_initial_link_poses[roboy_link_name]))
-		roboy_init_orn = Quaternion(np.array(self.roboy_initial_link_poses[roboy_link_name][1]))
-		operator_link_name = self.get_operator_link_name(roboy_link_name)
-		if self.operator_initial_link_poses.get(operator_link_name) == None :
-			self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
-			self.get_logger().debug("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
-		if np.sum(self.operator_initial_link_poses[operator_link_name][1]) == 0:
-			op_init_orn = roboy_init_orn
-		else:
-			op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
+		roboy_link_init_orn = Quaternion(roboy_link_info['init_pose']['orientation'])
+		op_link_init_orn = Quaternion(operator_link_info['init_pose']['orientation'])
 
-		diff = roboy_init_orn / op_init_orn
+		return roboy_link_init_orn / op_link_init_orn
 
-		return diff
+	# def operator_initial_head_pose_callback(self, request, response):
+	# 	"""Callback for ROS service for initial head pose of the operator.
+
+	# 	Args:
+	# 		request: the GetLinkPose service request contains a link name
+	# 		response: the response that would be sent back.
+
+	# 	Returns:
+	# 		response
+
+	# 	"""
+	# 	self.get_logger().info("Service operator initial head pose: request received")
+
+	# 	head_pos, head_orn = self.get_initial_link_pose(link_name, self.operator_initial_link_pose_client)[:2]
+
+	# 	response.pose.position.x = head_pos[0]
+	# 	response.pose.position.y = head_pos[1]
+	# 	response.pose.position.z = head_pos[2]
+
+	# 	response.pose.orientation.x = head_orn[0]
+	# 	response.pose.orientation.y = head_orn[1]
+	# 	response.pose.orientation.z = head_orn[2]
+	# 	response.pose.orientation.w = head_orn[3]
+	# 	self.get_logger().debug("Responding")
+
+	# 	self.roboy_is_ready = True
+
+	# 	return response
+
+	# def operator_movement_listener(self, ef_pose):
+	# 	"""Callback function of the endeffector subscription. Processes the msg received and moves the link accordingly.
+
+	# 	Args:
+	# 		ef_pose: end effector pose received from the operator.
+
+	# 	"""
+	# 	self.get_logger().debug('Endeffector pose received: ' + ef_pose.ef_name)
+
+	# 	if not self.roboy_is_ready:
+	# 		#self.get_logger().info('Roboy simulation is not ready.')
+
+	# 		return
+
+	# 	#process message
+	# 	self.get_logger().debug('got frame-id' + ef_pose.ef_name)
+		
+	# 	ef_pose.ef_name = self.get_roboy_link_name(ef_pose.ef_name)
+		
+	# 	orn = [ef_pose.ef_pose.orientation.x, 
+	# 			ef_pose.ef_pose.orientation.y, 
+	# 			ef_pose.ef_pose.orientation.z, 
+	# 			ef_pose.ef_pose.orientation.w]
+		
+	# 	link_orn = self.adapt_orientation_to_roboy(ef_pose.ef_name, orn)
+	# 	ef_pose.ef_pose.orientation.x = link_orn[0]
+	# 	ef_pose.ef_pose.orientation.y = link_orn[1]
+	# 	ef_pose.ef_pose.orientation.z = link_orn[2]
+	# 	ef_pose.ef_pose.orientation.w = link_orn[3]
+		
+	# 	self.get_logger().debug('Publishing EF-Pose')
+
+	# 	if ef_pose.ef_name.find("right") != -1:
+	# 		self.right_ef_publisher.publish(ef_pose)
+	# 	else:
+	# 		self.left_ef_publisher.publish(ef_pose)
+
+	# def get_initial_link_pose(self, link_name, client):
+	# 	"""Gets initial link pose for a link using its name.
+
+	# 	Args:
+	# 		link_name (string): The name of the link.
+	# 		client (RosClient): The client used to pass a request and get a response from service.
+
+	# 	Returns:
+	# 		[3darray(float), 4darray(float)]: A array containing two vectors, first is position and second is orientation.
+
+	# 	"""
+	# 	self.get_logger().info('Getting initial ' + link_name + ' link pose...')
+	# 	initial_link_pose_req = GetLinkPose.Request()
+	# 	initial_link_pose_req.link_name = link_name
+	# 	response = self.call_service(client, initial_link_pose_req)
+	# 	self.get_logger().debug('service called')
+
+	# 	return [[response.pose.position.x, 
+	# 		response.pose.position.y, 
+	# 		response.pose.position.z], 
+	# 		[response.pose.orientation.x, 
+	# 		response.pose.orientation.y, 
+	# 		response.pose.orientation.z, 
+	# 		response.pose.orientation.w]]
+
+	# def adapt_orientation_to_roboy(self, roboy_link_name, orientation):
+	# 	"""Adapts the orientation received to roboy's link according to roboy's and operators initial links.
+
+	# 	Args:
+	# 		roboy_link_name (string): link name according to roboy's urfd.
+	# 		orientation (4darray(float)): received target orientation from operator.
+		
+	# 	Returns:
+	# 		4darray(float): The adapted target orientation.
+
+	# 	"""
+		
+	# 	diff = self.roboy_to_operator_orientation_diff(roboy_link_name)
+	# 	quat = diff * orientation 
+
+	# 	return [quat[0], quat[1], quat[2], quat[3]]
+		  
+	# def call_service(self, client, msg):
+	# 	"""Calls a client synchnrnously passing a msg and returns the response
+
+	# 	Args:
+	# 		client (RosClient): The client used to communicate with the server
+	# 		msg (Object): A server msg to send to the server as a request
+
+	# 	Returns:
+	# 		response (Object): A response msg from the server
+
+	# 	"""
+	# 	while not client.wait_for_service(timeout_sec=1.0):
+	# 		self.get_logger().info(f"{client.srv_name} service not available, waiting again...")
+	# 	response = client.call(msg)
+	# 	return response

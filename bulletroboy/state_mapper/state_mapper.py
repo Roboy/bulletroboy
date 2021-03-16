@@ -192,7 +192,7 @@ class StateMapper(Node):
 
 		operator_collision = Collision()
 		operator_collision.contact_points = op_contact_pts
-		
+
 		self.exoforce_collision_publisher.publish(operator_collision)
 
 	def map_contact_point_to_operator(self, roboy_contact_pt):

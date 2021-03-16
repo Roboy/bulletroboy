@@ -192,6 +192,3 @@ class EnvironmentCtrl():
                                             orn[2] * math.pi / 180])
         self.objects.append(p.loadURDF("cube_small.urdf", pos, quat, useFixedBase=1, globalScaling = scale))
         # p.changeDynamics(self.objects[-1], -1, mass=mass)
-
-    def stop(self):
-        self.t.cancel()

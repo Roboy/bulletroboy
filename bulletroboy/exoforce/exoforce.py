@@ -142,7 +142,7 @@ class ViaPoint():
 		self.id = via_point['id']
 		self.link = via_point['link']
 		self.link_point = via_point['point']
-		self.world_point = via_point['point'] if self.link == "cage" else None
+		self.world_point = via_point['point'] if self.link == "cage" or self.link == "headset" else None
 
 	def to_msg(self, init_conf=False):
 		"""Returns via point data as a ROS message.
@@ -210,7 +210,7 @@ class Motor():
 			AssertionError: Via point link must be cage.
 		
 		"""
-		assert via_point.link == "cage"
+		assert via_point.link == "cage" or via_point.link == "headset"
 
 		self.id = id
 		self.via_point = via_point
@@ -546,6 +546,9 @@ class ExoForce(Node, ABC):
 
 		end_effector.position = link_pos
 		end_effector.orientation = link_orn
+
+		if ef_name == "right_hand":
+			self.get_logger().info(f"right hand pos {link_pos}")
 
 	def decompose(self, link_id, collision_force, collision_direction):
 		"""Decomposes force applied to link in operator.

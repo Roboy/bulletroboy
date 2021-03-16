@@ -1,10 +1,10 @@
 import time
 
 from roboy_middleware_msgs.msg import EFPose
-from roboy_middleware_msgs.srv import InitExoforce
-from roboy_simulation_msgs.msg import TendonUpdate
+from roboy_middleware_msgs.srv import InitExoforce, InitStateMapper
+from roboy_simulation_msgs.msg import TendonUpdate, LinkInformation
 
-from ..utils.utils import Services, Topics
+from ..utils.utils import Services, Topics, call_service_async
 from .operator import Link, Operator
 
 
@@ -27,6 +27,7 @@ class OperatorHW(Operator):
 
 		self.target_force_publisher = self.create_publisher(TendonUpdate, Topics.TARGET_FORCE, 1)		
 		self.create_subscription(EFPose, Topics.VR_HEADSET_POSES, self.vr_pose_listener, 1)
+		self.init_state_mapper_client = self.create_client(InitStateMapper, Services.INIT_STATE_MAPPER)
 		self.init_service = self.create_service(InitExoforce, Services.INIT_OPERATOR, self.init_callback)
 
 	def init_links(self):
@@ -73,7 +74,9 @@ class OperatorHW(Operator):
 			response.success = False
 			response.message = err_msg
 			return response
-		
+
+		self.init_state_mapper(request.roboy_link_information)
+
 		self.pull()
 		self.start_publishing()
 
@@ -81,6 +84,65 @@ class OperatorHW(Operator):
 		response.success = True
 
 		return response
+
+	def init_state_mapper(self, roboy_link_information):
+		"""Inits state mapper node.
+		
+		Args:
+			roboy_link_information (LinkInformation[]): List of roboy's link info.
+
+		Returns:
+			-
+
+		"""
+		request = InitStateMapper.Request()
+		request.roboy_link_information = roboy_link_information
+		
+		for link in self.links:
+			link_info = LinkInformation()
+			link_info.id = link.id
+			link_info.name = link.human_name
+			link_info.dimensions.x, link_info.dimensions.y, link_info.dimensions.z = link.dims
+			if link.init_pose is not None:
+				link_info.init_pose.position.x, link_info.init_pose.position.y, link_info.init_pose.position.z = link.init_pose[0]
+				link_info.init_pose.orientation.x, link_info.init_pose.orientation.y, link_info.init_pose.orientation.z, link_info.init_pose.orientation.w = link.init_pose[1]
+			else:
+				self.get_logger().info(f"No init pose found for operator link {link.human_name}, trying to use init pose of mapped roboy link {link.roboy_name}")
+				roboy_init_pose = None
+				for roboy_link_info in roboy_link_information:
+					if roboy_link_info.name == link.roboy_name:
+						roboy_init_pose = roboy_link_info.init_pose
+						break
+				if roboy_init_pose is not None:
+					link_info.init_pose = roboy_init_pose
+				else:
+					self.get_logger().warn(f"No link info found for roboy link {link.roboy_name}")
+					continue
+
+			request.operator_link_information.append(link_info)
+
+		self.get_logger().info("Request state mapper to initialize...")
+		call_service_async(self.init_state_mapper_client, request, self.init_state_mapper_callback, self.get_logger())
+
+	def init_state_mapper_callback(self, future):
+		"""Init state mapper callback.
+		
+		Args:
+			future: Service future var.
+
+		Returns:
+			-
+
+		"""
+		try:
+			result = future.result()
+		except Exception as e:
+			self.get_logger().error(f"{self.init_state_mapper_client.srv_name} service call failed {e}")
+		else:
+			if result.success:
+				self.get_logger().info("State mapper node succesfully initialized.")
+			else:
+				self.get_logger().error(f"State mapper node could not be initialized: {result.message}")
 
 	def pull(self):
 		"""Pulls operator to simulate connection to the roboy.

@@ -547,8 +547,8 @@ class ExoForce(Node, ABC):
 		end_effector.position = link_pos
 		end_effector.orientation = link_orn
 
-		if ef_name == "right_hand":
-			self.get_logger().info(f"right hand pos {link_pos}")
+		# if ef_name == "right_hand":
+		# 	self.get_logger().info(f"right hand pos {link_pos}")
 
 	def decompose(self, link_id, collision_force, collision_direction):
 		"""Decomposes force applied to link in operator.

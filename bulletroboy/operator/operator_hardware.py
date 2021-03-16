@@ -119,9 +119,9 @@ class OperatorHW(Operator):
 			4darray[float]: Orientation in cage frame.
 
 		"""
-		x_offset =  0.55
-		y_offset = -0.85
-		z_offset = -0.40
+		x_offset = 10.0
+		y_offset = 0.0
+		z_offset = 10.0
 
 		position[0] += x_offset
 		position[1] += y_offset

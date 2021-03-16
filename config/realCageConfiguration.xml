@@ -7,7 +7,7 @@
 	<muscleUnits>
 		<muscleUnit id="0">
 			<viaPoints>
-				<viaPoint id="0" link="cage">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="0" link="cage">-0.56 0.95 0.40</viaPoint>
 				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -17,7 +17,7 @@
 		</muscleUnit>
 		<muscleUnit id="1">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.10 0.0 0.0</viaPoint>
+				<viaPoint id="0" link="cage">0.56 0.95 0.40</viaPoint>
 				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -27,7 +27,7 @@
 		</muscleUnit>
 		<muscleUnit id="2">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.65 -0.82 0.0</viaPoint>
+				<viaPoint id="0" link="cage">1.12 0.04 0.40</viaPoint>
 				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -37,7 +37,7 @@
 		</muscleUnit>
 		<muscleUnit id="6">
 			<viaPoints>
-				<viaPoint id="0" link="cage">0.0 0.0 1.56</viaPoint>
+				<viaPoint id="0" link="cage">-0.46 0.80 2.00</viaPoint>
 				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -47,7 +47,7 @@
 		</muscleUnit>
 		<muscleUnit id="7">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.10 0.0 1.56</viaPoint>
+				<viaPoint id="0" link="cage">0.46 0.80 2.00</viaPoint>
 				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -57,7 +57,7 @@
 		</muscleUnit>
 		<muscleUnit id="8">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.65 -0.82 1.56</viaPoint>
+				<viaPoint id="0" link="cage">0.98 0.02 2.00</viaPoint>
 				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -87,7 +87,7 @@
 		</muscleUnit>
 		<muscleUnit id="3">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.65 -0.88 0.0</viaPoint>
+				<viaPoint id="0" link="cage">1.12 -0.04 0.40</viaPoint>
 				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -97,7 +97,7 @@
 		</muscleUnit>
 		<muscleUnit id="4">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.10 -1.90 0.0</viaPoint>
+				<viaPoint id="0" link="cage">0.56 -0.95 0.40</viaPoint>
 				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -107,7 +107,7 @@
 		</muscleUnit>
 		<muscleUnit id="5">
 			<viaPoints>
-				<viaPoint id="0" link="cage">0.0 -1.90 0.0</viaPoint>
+				<viaPoint id="0" link="cage">-0.56 -0.95 0.40</viaPoint>
 				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -117,7 +117,7 @@
 		</muscleUnit>
 		<muscleUnit id="9">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.65 -0.88 1.56</viaPoint>
+				<viaPoint id="0" link="cage">0.98 -0.02 2.00</viaPoint>
 				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -127,7 +127,7 @@
 		</muscleUnit>
 		<muscleUnit id="10">
 			<viaPoints>
-				<viaPoint id="0" link="cage">1.10 -1.90 1.56</viaPoint>
+				<viaPoint id="0" link="cage">0.46 -0.80 2.00</viaPoint>
 				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
@@ -137,7 +137,7 @@
 		</muscleUnit>
 		<muscleUnit id="11">
 			<viaPoints>
-				<viaPoint id="0" link="cage">0.0 -1.90 1.56</viaPoint>
+				<viaPoint id="0" link="cage">-0.46 -0.80 2.00</viaPoint>
 				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>

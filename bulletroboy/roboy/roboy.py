@@ -6,6 +6,7 @@ from rclpy.node import Node
 from rcl_interfaces.srv import GetParameters
 
 from sensor_msgs.msg import JointState
+from roboy_middleware_msgs.msg import EFPose
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
@@ -45,8 +46,8 @@ class BulletRoboy(Node):
         self.collision_publisher = self.create_publisher(Collision, Topics.ROBOY_COLLISIONS, 1)
         self.collision_for_hw_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision_hw', 1)
         # Operator EF pose subscriber
-        self.right_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_REF_POSE, self.ef_pose_callback, 1)
-        self.left_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_LEF_POSE, self.ef_pose_callback, 1)
+        self.right_ef_pose_subscription = self.create_subscription(EFPose, Topics.MAPPED_OP_REF_POSE, self.ef_pose_callback, 1)
+        self.left_ef_pose_subscription = self.create_subscription(EFPose, Topics.MAPPED_OP_LEF_POSE, self.ef_pose_callback, 1)
 
         # Initial head pose client
         self.operator_initial_head_pose_client = self.create_client(GetLinkPose, Services.INITIAL_HEAD_POSE)
@@ -275,17 +276,17 @@ class BulletRoboy(Node):
         Args:
             ef_pose: end effector pose received from the operator.
         """
-        self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
+        self.get_logger().debug('Endeffector pose received: ' + ef_pose.ef_name)
         
         #process message
-        ef_name = ef_pose.header.frame_id
+        ef_name = ef_pose.ef_name
         ef_id = self.end_effectors[ef_name]
         
-        link_pos = [ef_pose.pose.position.x, ef_pose.pose.position.y, ef_pose.pose.position.z]
-        link_orn = [ef_pose.pose.orientation.x, 
-                        ef_pose.pose.orientation.y, 
-                        ef_pose.pose.orientation.z, 
-                        ef_pose.pose.orientation.w]
+        link_pos = [ef_pose.ef_pose.position.x, ef_pose.ef_pose.position.y, ef_pose.ef_pose.position.z]
+        link_orn = [ef_pose.ef_pose.orientation.x, 
+                        ef_pose.ef_pose.orientation.y, 
+                        ef_pose.ef_pose.orientation.z, 
+                        ef_pose.ef_pose.orientation.w]
 
         # link_orn = self.get_adapted_link_orientation(ef_id,
         #                                             [ef_pose.pose.orientation.x, ef_pose.pose.orientation.y, 

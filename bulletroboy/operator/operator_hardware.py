@@ -107,7 +107,7 @@ class OperatorHW(Operator):
 				link_info.init_pose.position.x, link_info.init_pose.position.y, link_info.init_pose.position.z = link.init_pose[0]
 				link_info.init_pose.orientation.x, link_info.init_pose.orientation.y, link_info.init_pose.orientation.z, link_info.init_pose.orientation.w = link.init_pose[1]
 			else:
-				self.get_logger().info(f"No init pose found for operator link {link.human_name}, trying to use init pose of mapped roboy link {link.roboy_name}")
+				self.get_logger().info(f"No init pose found for operator link '{link.human_name}', using init pose of mapped roboy link '{link.roboy_name}'")
 				roboy_init_pose = None
 				for roboy_link_info in roboy_link_information:
 					if roboy_link_info.name == link.roboy_name:
@@ -116,7 +116,7 @@ class OperatorHW(Operator):
 				if roboy_init_pose is not None:
 					link_info.init_pose = roboy_init_pose
 				else:
-					self.get_logger().warn(f"No link info found for roboy link {link.roboy_name}")
+					self.get_logger().warn(f"No link info found for roboy link '{link.roboy_name}'")
 					continue
 
 			request.operator_link_information.append(link_info)

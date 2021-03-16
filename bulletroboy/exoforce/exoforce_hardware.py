@@ -163,7 +163,8 @@ class ExoforceHW(ExoForce):
 		request = InitExoforce.Request(ef_name=init_msg.ef_name,
 										ef_enabled=init_msg.ef_enabled,
 										ef_init_pose=init_msg.ef_init_pose,
-										operator_height=init_msg.operator_height)
+										operator_height=init_msg.operator_height,
+										roboy_link_information=init_msg.roboy_link_information)
 
 		call_service_async(self.init_operator_client, request, self.init_operator_callback, self.get_logger())
 
@@ -277,7 +278,6 @@ class ExoforceHW(ExoForce):
 		self.get_logger().info(f"Received collision")
 
 		contact_points = []
-
 		for cp in collision_msg.contact_points:
 			cage_direction = self.get_direction_in_cage_frame(cp.linkid, np.array([cp.contactnormal.x, cp.contactnormal.y, cp.contactnormal.z]))
 			if cage_direction is None:

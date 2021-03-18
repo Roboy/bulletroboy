@@ -6,7 +6,6 @@ from rclpy.node import Node
 from rcl_interfaces.srv import GetParameters
 
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float32
 from roboy_simulation_msgs.msg import Collision, ContactPoint
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId
@@ -44,7 +43,6 @@ class BulletRoboy(Node):
         # Collision publisher
         self.collision_publisher = self.create_publisher(Collision, Topics.ROBOY_COLLISIONS, 1)
         self.collision_for_hw_publisher = self.create_publisher(Collision, 'roboy/simulation/roboy/collision_hw', 1)
-        self.collision_for_plotting = self.create_publisher(Float32, '/collision', 1)
         # Operator EF pose subscriber
         self.right_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_REF_POSE, self.ef_pose_callback, 1)
         self.left_ef_pose_subscription = self.create_subscription(PoseStamped, Topics.MAPPED_OP_LEF_POSE, self.ef_pose_callback, 1)
@@ -406,7 +404,6 @@ class BulletRoboy(Node):
 
         """
         contact_pts = []
-        force_vectors = []
         for pt in collision:
             if pt[9] > 0:
                 link = self.get_link_info_from_id(pt[3])
@@ -446,11 +443,6 @@ class BulletRoboy(Node):
                 contact_pt.normalforce = pt[9]
 
                 contact_pts.append(contact_pt)
-                force_vectors.append(pt[9] * np.array([pt[7][0], pt[7][1], pt[7][2]]))
-
-        resultant_force_vector = np.sum(force_vectors, axis=0)
-        resultant_force_magnitude = np.linalg.norm(resultant_force_vector)
-        self.collision_for_plotting.publish(Float32(data=resultant_force_magnitude))
 
         if not contact_pts:
             return

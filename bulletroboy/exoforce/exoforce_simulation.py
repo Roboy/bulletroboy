@@ -173,10 +173,9 @@ class ExoForceSim(ExoForce):
 				self.update_tendon(tendon.tendon.id, force)
 
 	def get_direction_in_cage_frame(self, link_id, cp_direction):
-		_, rotation = p.getLinkState(self.operator.body_id, link_id)[:2]
-		rotation = np.array(p.getMatrixFromQuaternion(rotation)).reshape(3,3)
-
-		return rotation.dot(cp_direction) #force direction
+		linkPos, linkOrn = p.getLinkState(self.operator.body_id, link_id)[:2]
+		newVec, orn = p.multiplyTransforms(linkPos,linkOrn,cp_direction,[0,0,0,1])
+		return np.array(newVec)
 
 	def draw_force(self, contact_pt):
 		"""Draw force as a debugLine.

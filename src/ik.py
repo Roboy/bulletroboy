@@ -219,6 +219,7 @@ def ik(msg):
             rospy.logwarn_throttle(1, "head: " +  str(pos))
             p.resetBasePositionAndOrientation(0, pos, (0,0,0.7071,0.7071))
             head_initialized = True
+            # only call once at the initialization phase
             if not cage_interac.initialized :
                 cage_interac.initialize()
 

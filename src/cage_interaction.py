@@ -1,6 +1,6 @@
 import rospy
 from roboy_simulation_msgs.msg import Collision, ContactPoint, LinkInformation, BodyInformation
-from roboy_simulation_msgs.srv import GetBodyInformation, GetBodyInformationResponse
+from roboy_simulation_msgs.srv import UpdateBodyInformation
 from sensor_msgs.msg import JointState
 import pybullet as p
 import yaml
@@ -25,15 +25,38 @@ class CageInteraction:
         self.body_id = roboy_body_id
         self.links = []
         self.initialized = 0
-        self.collision_publisher = None
-        self.get_body_information_srv = None
-        
-    def initialize(self):
-        self.init_urdf_info()
         self.collision_publisher = rospy.Publisher(COLLISION_TOPIC, Collision, queue_size=1)
-        self.get_body_information_srv = rospy.Service(BODY_INFO_SRV, GetBodyInformation, self.get_body_information_srv_cb)
+        self.update_body_information = rospy.ServiceProxy(BODY_INFO_SRV, UpdateBodyInformation)
+
+    def initialize(self):
+        """Initializes urdf info and requests a body information update.
+        Args:
+            -
+        Returns:
+            -
+        """
+        self.init_urdf_info()
+        self.call_update_body_information_srv()
         self.initialized = 1
-     
+ 
+    def call_update_body_information_srv(self):
+        """Requests a body information update.
+        Args:
+            -
+        Returns:
+            -
+        """
+        try:
+            rospy.loginfo("Wait fo body info service...")
+            rospy.wait_for_service(BODY_INFO_SRV)  
+            rospy.loginfo("Request body information update...")
+
+            resp = self.update_body_information(self.get_body_information())
+            if resp.ret_code != 0:
+                rospy.logerr("UpdateBodyInformation service failed with messgae: {}.".format(resp.msg))
+        except Exception as e:
+            rospy.logerr(e)
+    
     def init_urdf_info(self):
         """Gets links, free joints, endeffectors and initial link poses in roboy's body.
         Args:
@@ -181,8 +204,7 @@ class CageInteraction:
 
         return pos_in_LF
 
-    def get_body_information_srv_cb(self, req):
-        rospy.loginfo("Body information requested.")
+    def get_body_information(self):
         body_information = BodyInformation(link_information=[])
         for link in self.links:
             link_info = LinkInformation()
@@ -199,4 +221,4 @@ class CageInteraction:
             link_info.init_pose.orientation.z = link['init_pose'][1][2]
             link_info.init_pose.orientation.w = link['init_pose'][1][3]
             body_information.link_information.append(link_info)
-        return GetBodyInformationResponse(body_information)
+        return body_information

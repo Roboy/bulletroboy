@@ -116,8 +116,8 @@ for i in range(numJoints):
         efs["hand_left"] = i
 
 
-height = 240*2
-width = 320*2
+height = 240 #720# 1080 #720 #240#*2
+width = 320 #1280 #1920 #1280 #320#*2
 aspect = width/height
 
 fov, nearplane, farplane = 100, 0.1, 100
@@ -316,29 +316,30 @@ vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
 rate = rospy.Rate(30)
 while not rospy.is_shutdown():
-    left = camera(11)
-    right = camera(12)
-    left_pic = to_cv2(left[0],left[1],left[2],0)
-    right_pic = to_cv2(right[0],right[1],right[2],1)
-    caml_pub.publish(bridge.cv2_to_compressed_imgmsg(left_pic))
-    camr_pub.publish(bridge.cv2_to_compressed_imgmsg(right_pic))
-    vis = np.concatenate((left_pic, right_pic), axis=1)
-    cv2.imshow('window', vis)
-    cv2.waitKey(1)
-    # msg.position = []
-    # msg.velocity = []
-    # msg.effort = []
-    # msg.name = []
-    # for i in freeJoints:
+    # left = camera(11)
+    # right = camera(12)
+    # left_pic = to_cv2(left[0],left[1],left[2],0)
+    # right_pic = to_cv2(right[0],right[1],right[2],1)
+    # caml_pub.publish(bridge.cv2_to_compressed_imgmsg(left_pic))
+    # camr_pub.publish(bridge.cv2_to_compressed_imgmsg(right_pic))
+    # vis = np.concatenate((left_pic, right_pic), axis=1)
+    # cv2.imshow('window', vis)
+    # cv2.waitKey(1)
+
+    msg.position = []
+    msg.velocity = []
+    msg.effort = []
+    msg.name = []
+    for i in freeJoints:
     #     if "head" not in joint_names[i]:
-    #         js = p.getJointState(0, i)
-    #         msg.position.append(js[0])
-    #         msg.velocity.append(0)
-    #         msg.effort.append(0)
-    #         msg.name.append(joint_names[i])
-    # if rospy.get_param('publish_cardsflow'):
+        js = p.getJointState(0, i)
+        msg.position.append(js[0])
+        msg.velocity.append(0)
+        msg.effort.append(0)
+        msg.name.append(joint_names[i])
+    if rospy.get_param('publish_cardsflow'):
     #     # print(msg)
-    #     # rospy.loginfo_throttle(1, msg)
-    #     joint_target_pub.publish(msg)
+        rospy.loginfo_throttle(1, msg.position)
+        joint_target_pub.publish(msg)
     rate.sleep()
 p.disconnect()

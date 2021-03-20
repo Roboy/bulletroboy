@@ -2,13 +2,13 @@
 
 if [ "$1" == "-h" ]
 then
-    echo "usage: dummyoperatorforce [ef] [force] [direction]"
+    echo "usage: dummyoperatorforce ef force direction"
     echo
     echo "arguments:"
     printf "  ef\t\tEnd effector ('left'/'right')\n"
     printf "  force\t\tForce to apply\n"
     printf "  direction\tDirection vector ('up'/'down')\n"
-    exit 1
+    exit 0
 fi
 
 TOPIC="/exoforce/simulation/collision"

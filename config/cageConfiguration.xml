@@ -8,7 +8,7 @@
 		<muscleUnit id="0">
 			<viaPoints>
 				<viaPoint id="0" link="cage">1.0874291915093577 0.0 1.9380437163129485</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -17,7 +17,7 @@
 		<muscleUnit id="1">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.5786176141761094 -0.9207083702844471 1.9380437163129485</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -26,7 +26,7 @@
 		<muscleUnit id="2">
 			<viaPoints>
 				<viaPoint id="0" link="cage">-0.40932642921767454 -1.0074493143035055 1.9380437163129485</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -35,7 +35,7 @@
 		<muscleUnit id="3">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.0 -0.1 1.4</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -44,7 +44,7 @@
 		<muscleUnit id="4">
 			<viaPoints>
 				<viaPoint id="0" link="cage">1.1533967083671417 0.0 0.0</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -53,7 +53,7 @@
 		<muscleUnit id="5">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.74426864200629 -0.8811289096371031 0.0</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -62,7 +62,7 @@
 		<muscleUnit id="6">
 			<viaPoints>
 				<viaPoint id="0" link="cage">-0.640866629642013 -0.9589650305842462 0.0</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -71,7 +71,7 @@
 		<muscleUnit id="7">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.0 -0.1 0.968</viaPoint>
-				<viaPoint id="1" link="right_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="right_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -80,7 +80,7 @@
 		<muscleUnit id="8">
 			<viaPoints>
 				<viaPoint id="0" link="cage">1.0874291915093577 0.0 1.9380437163129485</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -89,7 +89,7 @@
 		<muscleUnit id="9">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.5786176141761094 0.9207083702844471 1.9380437163129485</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -98,7 +98,7 @@
 		<muscleUnit id="10">
 			<viaPoints>
 				<viaPoint id="0" link="cage">-0.40932642921767454 1.0074493143035055 1.9380437163129485</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -107,7 +107,7 @@
 		<muscleUnit id="11">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.0 0.1 1.4</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -116,7 +116,7 @@
 		<muscleUnit id="12">
 			<viaPoints>
 				<viaPoint id="0" link="cage">1.1533967083671417 0.0 0.0</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -125,7 +125,7 @@
 		<muscleUnit id="13">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.74426864200629 0.8811289096371031 0.0</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -134,7 +134,7 @@
 		<muscleUnit id="14">
 			<viaPoints>
 				<viaPoint id="0" link="cage">-0.640866629642013 0.9589650305842462 0.0</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>
@@ -143,7 +143,7 @@
 		<muscleUnit id="15">
 			<viaPoints>
 				<viaPoint id="0" link="cage">0.0 0.1 0.968</viaPoint>
-				<viaPoint id="1" link="left_wrist">0.0 0.0 0.0</viaPoint>
+				<viaPoint id="1" link="left_hand">0.0 0.0 0.0</viaPoint>
 			</viaPoints>
 			<parameters>
 				<max_force>100</max_force>

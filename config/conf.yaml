@@ -14,10 +14,10 @@ state_mapper:
       [chest,
       right_shoulder,
       right_elbow,
-      right_wrist,
+      right_hand,
       left_shoulder,
       left_elbow,
-      left_wrist,
+      left_hand,
       neck]
 
 exoforce:
@@ -29,8 +29,8 @@ exoforce:
       min_tendon_force: 0.5
       max_collision_force: 50.0
     map_link_to_ef:
-      left_wrist: [7, 8, 43]
-      right_wrist: [4, 5, 3]
+      left_hand: [4, 5, 6]
+      right_hand: [1, 2, 3]
 
 operator:
   ros__parameters:
@@ -50,7 +50,7 @@ operator:
         [0.1042400000000326,
         0.10424010023452646,
         0.30872003341150434]
-      left_wrist:
+      left_hand:
         [0.09087999999999999,
         0.09087999999999996,
         0.09088000000000007]
@@ -62,7 +62,7 @@ operator:
         [0.10424000000003777,
         0.10424010023452582,
         0.30872003341150656]
-      right_wrist:
+      right_hand:
         [0.09087999999999999,
         0.09088000000000002,
         0.09088000000000007]
@@ -70,6 +70,12 @@ operator:
         [0.23287999999999998,
         0.23287999999999998,
         0.23287999999999975]
+
+operator_sim:
+  ros__parameters:
+    # mapping from udrf links to cage end effectors
+    cage_efs: [left_hand, right_hand]
+    urdf_links: [left_wrist, right_wrist]
 
 
 # Unmapped Robot links

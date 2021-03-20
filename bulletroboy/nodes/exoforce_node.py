@@ -1,20 +1,24 @@
-import os
+import os, sys
 import rclpy
 from ..exoforce.exoforce import CageConfiguration
 from ..exoforce.exoforce_hardware import ExoforceHW
+from ..utils.utils import parse_launch_arg
 
-CONFIG_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../../config/realCageConfiguration.xml"
+CAGE_CONF_DEFAULT_PATH = os.path.dirname(os.path.realpath(__file__)) + "/" + "../../config/realCageConfiguration.xml"
 
 def main(args=None):
-	rclpy.init(args=args)
+	try:
+		rclpy.init(args=args)
 
-	# EXOFORCE SETUP
-	initial_cage_conf = CageConfiguration(CONFIG_DEFAULT_PATH)
-	exoforce = ExoforceHW(initial_cage_conf)
-	rclpy.spin(exoforce)
+		cage_conf_path = parse_launch_arg(sys.argv[1], CAGE_CONF_DEFAULT_PATH, rclpy.logging._root_logger.info)
 
-	exoforce.destroy_node()
-	rclpy.shutdown()
+		# EXOFORCE SETUP
+		initial_cage_conf = CageConfiguration(cage_conf_path)
+		exoforce = ExoforceHW(initial_cage_conf)
+		rclpy.spin(exoforce)
+
+	except KeyboardInterrupt:
+		rclpy.shutdown()
 
 if __name__ == "__main__":
 	main()

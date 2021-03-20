@@ -7,8 +7,8 @@ import warnings
 class Topics:
 
 	# link poses topics
-	VR_HEADSET_POSES 		= "/bullet_ik"
-	OP_EF_POSES 			= "/roboy/simulation/operator/pose/endeffector"
+	VR_HEADSET_POSES 		= "/operator/pose"
+	OP_EF_POSES 			= "/exoforce/operator/pose"
 	MAPPED_OP_REF_POSE 		= "/roboy/exoforce/pose/endeffector/right"
 	MAPPED_OP_LEF_POSE 		= "/roboy/exoforce/pose/endeffector/left"
 	ROBOY_EF_POSES 			= "/roboy/simulation/roboy/ef_pose"
@@ -28,6 +28,11 @@ class Topics:
 	# force
 	TARGET_FORCE			= "/exoforce/force/target"
 
+	# construct interface
+	INIT_EXOFORCE_REQ		= "/exoforce/control/initialize_request"
+	INIT_EXOFORCE_RES		= "/exoforce/control/initialize_response"
+	STOP_EXOFORCE_REQ		= "/exoforce/control/stop_request"
+	STOP_EXOFORCE_RES		= "/exoforce/control/stop_response"
 
 class Services:
 
@@ -45,6 +50,9 @@ class Services:
 	# force
 	START_FORCE_CONTROL		= "/exoforce/force/start"
 	STOP_FORCE_CONTROL		= "/exoforce/force/stop"
+
+	# operator
+	INIT_OPERATOR			= "/operator/control/initialize"
 
 
 def parse_launch_arg(arg, default_value, logger):

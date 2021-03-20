@@ -53,5 +53,7 @@ def decompose_force_ef_to_tendons(force_value, force_direction, end_effector, pa
                 forces = {muscle.id: force for muscle, force in zip(end_effector.muscle_units, final_forces)}
             else:
                 message = solution.message
+        else:
+            message = "No tendon can pull in the direction of the target force"
     
     return forces, message

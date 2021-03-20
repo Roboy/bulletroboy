@@ -375,7 +375,10 @@ class StateMapper(Node):
 		if self.operator_initial_link_poses.get(operator_link_name) == None :
 			self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
 			self.get_logger().debug("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
-		op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
+		if np.sum(self.operator_initial_link_poses[operator_link_name][0]) + np.sum(self.operator_initial_link_poses[operator_link_name][1]) == 0:
+			op_init_orn = roboy_init_orn
+		else:
+			op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
 
 		diff = roboy_init_orn / op_init_orn
 

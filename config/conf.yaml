@@ -29,8 +29,8 @@ exoforce:
       min_tendon_force: 0.5
       max_collision_force: 50.0
     map_link_to_ef:
-      left_hand: [7, 8, 43]
-      right_hand: [4, 5, 3]
+      left_hand: [4, 5, 6]
+      right_hand: [1, 2, 3]
 
 operator:
   ros__parameters:

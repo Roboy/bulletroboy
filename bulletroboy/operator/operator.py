@@ -229,9 +229,19 @@ class Operator(Node, ABC):
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
 
 		link = self.get_link(request.link_name)
+		if link is None:
+			self.get_logger().warn(f"Link '{request.link_name}' does not exist in the operator.")
+			link_pos = [0.0,0.0,0.0]
+			link_orn = [0.0,0.0,0.0,0.0]
+		else:
+			if link.init_pose is None:
+				self.get_logger().warn(f"Init pose of link '{link.human_name}' is not initialized.")
+				link_pos = [0.0,0.0,0.0]
+				link_orn = [0.0,0.0,0.0,0.0]
+			else:
+				link_pos = link.init_pose[0]
+				link_orn = link.init_pose[1]
 		
-		link_pos = link.init_pose[0]
-		link_orn = link.init_pose[1]
 		response.pose.position.x = link_pos[0]
 		response.pose.position.y = link_pos[1]
 		response.pose.position.z = link_pos[2]

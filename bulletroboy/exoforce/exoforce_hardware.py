@@ -277,7 +277,10 @@ class ExoforceHW(ExoForce):
 		self.get_logger().info(f"Received collision: link: {collision_msg.linkid} force: {collision_msg.normalforce}")
 
 		ef = self.map_link_to_ef(collision_msg.linkid)
-		if ef.orientation is None:
+		if ef is None:
+			self.get_logger().warn(f"Link '{collision_msg.linkid}' has no mapping to ef!")
+			return
+		elif ef.orientation is None:
 			self.get_logger().warn(f"Orientation for ef '{ef.name}' is not initialized!")
 			return
 

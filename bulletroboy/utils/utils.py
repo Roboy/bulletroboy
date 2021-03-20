@@ -17,7 +17,7 @@ class Topics:
 	JOINT_STATES			= "/roboy/simulation/joint_state"
 
 	# collision
-	ROBOY_COLLISIONS 		= "/roboy/simulation/collision"
+	ROBOY_COLLISIONS 		= "/exoforce/collision"
 	MAPPED_COLLISIONS 		= "/exoforce/simulation/collision"
 
 	# cage

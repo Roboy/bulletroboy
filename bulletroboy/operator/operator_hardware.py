@@ -142,7 +142,7 @@ class OperatorHW(Operator):
 			if result.success:
 				self.get_logger().info("State mapper node succesfully initialized.")
 			else:
-				self.get_logger().error(f"State mapper node could not be initialized: {result.message}")
+				self.get_logger().error(f"State mapper node could not be initialized")
 
 	def pull(self):
 		"""Pulls operator to simulate connection to the roboy.

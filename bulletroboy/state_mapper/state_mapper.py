@@ -21,6 +21,8 @@ class StateMapper(Node):
 				('operator_link_names', None)
 			])
 
+		self.ready = False
+
 		self.roboy_link_names = self.get_parameter("roboy_link_names").get_parameter_value().string_array_value
 		self.operator_link_names = self.get_parameter("operator_link_names").get_parameter_value().string_array_value
 		
@@ -54,16 +56,18 @@ class StateMapper(Node):
 		err_msg = ""
 		response.success = True
 
+		self.get_logger().debug("Roboy link info:")
 		self.roboy_link_info = self.get_link_info_dict(request.roboy_link_information)
+		self.get_logger().debug("Operator link info:")
 		self.operator_link_info = self.get_link_info_dict(request.operator_link_information)
 
-		roboy_link_without_mapping = [link_name for link_name in self.roboy_link_names if self.get_roboy_link_info_name(link_name) is None]
-		operator_link_without_mapping = [link_name for link_name in self.operator_link_names if self.get_operator_link_info_name(link_name) is None]
+		roboy_link_without_info = [link_name for link_name in self.roboy_link_names if self.get_roboy_link_info_name(link_name) is None]
+		operator_link_without_info = [link_name for link_name in self.operator_link_names if self.get_operator_link_info_name(link_name) is None]
 
-		if roboy_link_without_mapping:
-			err_msg = f"The following roboy links have no mapping {roboy_link_without_mapping}"
-		elif operator_link_without_mapping:
-			err_msg = f"The following operator links have no mapping {operator_link_without_mapping}"
+		if roboy_link_without_info:
+			err_msg = f"The following roboy links have no info {roboy_link_without_info}"
+		elif operator_link_without_info:
+			err_msg = f"The following operator links have no info {operator_link_without_info}"
 
 		if err_msg:
 			self.get_logger().error(f"Cannot start the state mapper node [{err_msg}]")
@@ -71,6 +75,7 @@ class StateMapper(Node):
 			response.message = err_msg
 		else:
 			self.get_logger().info("Successfully initialized.")
+			self.ready = True
 
 		return response
 
@@ -93,6 +98,8 @@ class StateMapper(Node):
 			link_init_orn = np.array([link_info.init_pose.orientation.x, link_info.init_pose.orientation.y, link_info.init_pose.orientation.z, link_info.init_pose.orientation.w])
 
 			links_info.append({'id': link_id, 'name': link_name, 'dimensions': link_dimensions, 'init_pose': {'position': link_init_pos, 'orientation': link_init_orn}})
+
+			self.get_logger().debug(f"Received link info for {link_name}")
 
 		return links_info
 
@@ -176,6 +183,10 @@ class StateMapper(Node):
 		"""Collision subscriber handler.
 
 		"""
+
+		if not self.ready:
+			return
+			
 		self.get_logger().info(f"Mapping collision with {len(msg.contact_points)} contact points")
 
 		op_contact_pts = []

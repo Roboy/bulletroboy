@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
+
 import numpy as np
 import rclpy
-from rclpy.node import Node
+from roboy_middleware_msgs.msg import EFPose
 from rcl_interfaces.srv import GetParameters
-
+from rclpy.node import Node
 from roboy_control_msgs.srv import GetLinkPose
-from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromName
 
-from ..utils.utils import call_service_async, Topics, Services
+from ..utils.utils import Services, Topics, call_service_async
+
 
 class Link():
 	"""This class handles one operator link.
@@ -62,14 +63,15 @@ class Operator(Node, ABC):
 	"""This class handles the operator's ROS node.
 
 	"""
-	def __init__(self):
+	def __init__(self, node_name="operator"):
 		"""
 		Args:
 			-
 
 		"""
-		super().__init__("operator")
+		super().__init__(node_name)
 		self.ready = False
+		self.links = None
 
 		# State Mapper node parameters client
 		self.state_mapper_parameters_client = self.create_client(GetParameters, Services.STATE_MAPPER_GET)
@@ -87,20 +89,14 @@ class Operator(Node, ABC):
 			operator_link_names = result.values[1].string_array_value
 			self.link_map = {k: v for k, v in zip(roboy_link_names, operator_link_names)}
 
-			self.declare_parameters(
-				namespace='',
-				parameters=[('operator_link_dimentions.' + link_name, None) for link_name in operator_link_names]
-				)
-
 			self.init_node()
 			self.start_node()
 			self.ready = True
 
 	def init_node(self):
 		self.init_links()
-		self.init_end_effectors(["left_wrist", "right_wrist"])
 		
-		self.ef_publisher = self.create_publisher(PoseStamped, Topics.OP_EF_POSES, 1)
+		self.ef_publisher = self.create_publisher(EFPose, Topics.OP_EF_POSES, 1)
 		self.link_info_service = self.create_service(LinkInfoFromName, Services.LINK_INFO_FROM_NAME, self.link_info_from_name_callback)
 		self.initial_pose_service = self.create_service(GetLinkPose, Services.OP_INITIAL_LINK_POSE, self.initial_link_pose_callback)
 
@@ -108,25 +104,39 @@ class Operator(Node, ABC):
 	def start_node(self):
 		pass
 
-	def start_publishing(self, period=0.1):
+	def start_publishing(self, period=0.02):
 		self.timer = self.create_timer(period, self.publish_ef_state)
 
-	def init_end_effectors(self, efs):
+	def init_end_effectors(self, efs, init_pos=[None], init_orn=[None]):
 		"""Initilizes operator's end effector.
 		
 		Args:
 			efs (list[string]): Names of the end effectors link.
+			init_pos (list[float[3]]): Initial positions of the end effectors.
+			init_orn (list[float[4]]): Initial orientations of the end effectors.
 
 		Returns:
 		   	-
 
 		"""
 		self.end_effectors = []
-		for link in self.links:
-			if link.human_name in efs:
-				self.end_effectors.append(link)
-				self.get_logger().info("EF " + link.human_name + ": " + str(link.id))
+
+		if len(efs) != len(init_pos): init_pos *= len(efs)
+		if len(efs) != len(init_orn): init_orn *= len(efs)
 		
+		for ef, pos, orn in zip(efs, init_pos, init_orn):
+			ef_link = self.get_link(ef)
+			if ef_link is None:
+				self.get_logger().error(f"EF {ef} is not a link of the operator!")
+				return False
+			
+			if pos is not None and orn is not None:
+				ef_link.init_pose = [pos, orn]
+
+			self.end_effectors.append(ef_link)
+			self.get_logger().info("EF " + ef_link.human_name + ": " + str(ef_link.id))
+		
+		return True
 
 	def get_human_link(self, roboy_link_name):
 		"""Gets link object given the roboy's link name that maps to it.
@@ -182,23 +192,24 @@ class Operator(Node, ABC):
 
 		"""
 		for ef_link in self.end_effectors:
-		   if ef_link.pose is None:
-			   continue
+			if ef_link.pose is None:
+				continue
 		#    self.get_logger().info('Sending Endeffector pose: ' + ef_link.human_name)
-		   ef_pos, ef_orn = ef_link.pose
-		   msg = PoseStamped()
-		   msg.header.frame_id = ef_link.human_name
+			ef_pos, ef_orn = ef_link.pose
 
-		   msg.pose.position.x = ef_pos[0]
-		   msg.pose.position.y = ef_pos[1]
-		   msg.pose.position.z = ef_pos[2]
+			msg = EFPose()
+			msg.ef_name = ef_link.human_name
 
-		   msg.pose.orientation.x = ef_orn[0]
-		   msg.pose.orientation.y = ef_orn[1]
-		   msg.pose.orientation.z = ef_orn[2]
-		   msg.pose.orientation.w = ef_orn[3]
+			msg.ef_pose.position.x = ef_pos[0]
+			msg.ef_pose.position.y = ef_pos[1]
+			msg.ef_pose.position.z = ef_pos[2]
 
-		   self.ef_publisher.publish(msg)
+			msg.ef_pose.orientation.x = ef_orn[0]
+			msg.ef_pose.orientation.y = ef_orn[1]
+			msg.ef_pose.orientation.z = ef_orn[2]
+			msg.ef_pose.orientation.w = ef_orn[3]
+
+			self.ef_publisher.publish(msg)
 
 	def link_info_from_name_callback(self, request, response):
 		"""ROS service callback to get link info from link name.
@@ -218,9 +229,19 @@ class Operator(Node, ABC):
 		self.get_logger().info(f"Service Initial Link Pose: request received for {request.link_name}")
 
 		link = self.get_link(request.link_name)
+		if link is None:
+			self.get_logger().warn(f"Link '{request.link_name}' does not exist in the operator.")
+			link_pos = [0.0,0.0,0.0]
+			link_orn = [0.0,0.0,0.0,0.0]
+		else:
+			if link.init_pose is None:
+				self.get_logger().warn(f"Init pose of link '{link.human_name}' is not initialized.")
+				link_pos = [0.0,0.0,0.0]
+				link_orn = [0.0,0.0,0.0,0.0]
+			else:
+				link_pos = link.init_pose[0]
+				link_orn = link.init_pose[1]
 		
-		link_pos = link.init_pose[0]
-		link_orn = link.init_pose[1]
 		response.pose.position.x = link_pos[0]
 		response.pose.position.y = link_pos[1]
 		response.pose.position.z = link_pos[2]

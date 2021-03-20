@@ -8,10 +8,10 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 from ..utils.utils import Topics, Services
 from roboy_simulation_msgs.msg import Collision, ContactPoint
+from roboy_middleware_msgs.msg import EFPose
 from roboy_simulation_msgs.srv import LinkInfoFromName
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose
-from geometry_msgs.msg import PoseStamped
 
 class StateMapper(Node):
 	def __init__(self):
@@ -50,14 +50,14 @@ class StateMapper(Node):
 			1)
 		# Operator EF pose subscriber
 		self.operator_movement_subscription = self.create_subscription(
-			PoseStamped, 
+			EFPose, 
 			Topics.OP_EF_POSES, 
 			self.operator_movement_listener, 
 			1)
 		# Define publishers
 		self.exoforce_collision_publisher = self.create_publisher(Collision, Topics.MAPPED_COLLISIONS, 1)
-		self.right_ef_publisher = self.create_publisher(PoseStamped, Topics.MAPPED_OP_REF_POSE, 1)
-		self.left_ef_publisher = self.create_publisher(PoseStamped, Topics.MAPPED_OP_LEF_POSE, 1)
+		self.right_ef_publisher = self.create_publisher(EFPose, Topics.MAPPED_OP_REF_POSE, 1)
+		self.left_ef_publisher = self.create_publisher(EFPose, Topics.MAPPED_OP_LEF_POSE, 1)
 
 		# Define service
 		self.operator_initial_head_pose = self.create_service(GetLinkPose, Services.INITIAL_HEAD_POSE, self.operator_initial_head_pose_callback)
@@ -135,7 +135,7 @@ class StateMapper(Node):
 			ef_pose: end effector pose received from the operator.
 
 		"""
-		self.get_logger().debug('Endeffector pose received: ' + ef_pose.header.frame_id)
+		self.get_logger().debug('Endeffector pose received: ' + ef_pose.ef_name)
 
 		if not self.roboy_is_ready:
 			#self.get_logger().info('Roboy simulation is not ready.')
@@ -143,24 +143,28 @@ class StateMapper(Node):
 			return
 
 		#process message
-		self.get_logger().debug('got frame-id' + ef_pose.header.frame_id)
+		self.get_logger().debug('got frame-id' + ef_pose.ef_name)
 		
-		ef_pose.header.frame_id = self.get_roboy_link_name(ef_pose.header.frame_id)
+		ef_pose.ef_name = self.get_roboy_link_name(ef_pose.ef_name)
 		
-		orn = [ef_pose.pose.orientation.x, 
-				ef_pose.pose.orientation.y, 
-				ef_pose.pose.orientation.z, 
-				ef_pose.pose.orientation.w]
+		ef_pose.ef_pose.position.x += 0.2
+		ef_pose.ef_pose.position.y += 0
+		ef_pose.ef_pose.position.z += 1.5
+
+		orn = [ef_pose.ef_pose.orientation.x, 
+				ef_pose.ef_pose.orientation.y, 
+				ef_pose.ef_pose.orientation.z, 
+				ef_pose.ef_pose.orientation.w]
 		
-		link_orn = self.adapt_orientation_to_roboy(ef_pose.header.frame_id, orn)
-		ef_pose.pose.orientation.x = link_orn[0]
-		ef_pose.pose.orientation.y = link_orn[1]
-		ef_pose.pose.orientation.z = link_orn[2]
-		ef_pose.pose.orientation.w = link_orn[3]
+		link_orn = self.adapt_orientation_to_roboy(ef_pose.ef_name, orn)
+		ef_pose.ef_pose.orientation.x = link_orn[0]
+		ef_pose.ef_pose.orientation.y = link_orn[1]
+		ef_pose.ef_pose.orientation.z = link_orn[2]
+		ef_pose.ef_pose.orientation.w = link_orn[3]
 		
 		self.get_logger().debug('Publishing EF-Pose')
 
-		if ef_pose.header.frame_id.find("right") != -1:
+		if ef_pose.ef_name.find("right") != -1:
 			self.right_ef_publisher.publish(ef_pose)
 		else:
 			self.left_ef_publisher.publish(ef_pose)
@@ -177,7 +181,7 @@ class StateMapper(Node):
 
 		"""
 		while not client.wait_for_service(timeout_sec=1.0):
-			self.get_logger().info("service not available, waiting again...")
+			self.get_logger().info(f"{client.srv_name} service not available, waiting again...")
 		response = client.call(msg)
 		return response
 
@@ -185,7 +189,7 @@ class StateMapper(Node):
 		"""Collision subscriber handler.
 
 		"""
-		self.get_logger().info("Mapping collision.")
+		self.get_logger().info(f"Mapping collision with {len(msg.contact_points)} contact points")
 		op_contact_pts = []
 		for pt in msg.contact_points:
 			op_contact_point = self.map_contact_point_to_operator(pt)
@@ -197,7 +201,6 @@ class StateMapper(Node):
 			return
 
 		operator_collision = Collision()
-		operator_collision.header.stamp = self.get_clock().now().to_msg()
 		operator_collision.contact_points = op_contact_pts
 
 		self.get_logger().debug("publishing")
@@ -386,7 +389,10 @@ class StateMapper(Node):
 		if self.operator_initial_link_poses.get(operator_link_name) == None :
 			self.operator_initial_link_poses[operator_link_name] = self.get_initial_link_pose(operator_link_name, self.operator_initial_link_pose_client)        
 			self.get_logger().debug("Got operator initial pose for link " + operator_link_name + " : " + str(self.operator_initial_link_poses[operator_link_name]))
-		op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
+		if np.sum(self.operator_initial_link_poses[operator_link_name][1]) == 0:
+			op_init_orn = roboy_init_orn
+		else:
+			op_init_orn = Quaternion(np.array(self.operator_initial_link_poses[operator_link_name][1]))
 
 		diff = roboy_init_orn / op_init_orn
 

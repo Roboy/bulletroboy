@@ -11,7 +11,7 @@ from rclpy.node import Node
 from roboy_control_msgs.msg import CageState, EndEffector as EndEffectorMsg, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
 from roboy_control_msgs.srv import GetCageEndEffectors
 from roboy_simulation_msgs.msg import Collision
-from geometry_msgs.msg import PoseStamped
+from roboy_middleware_msgs.msg import EFPose
 from geometry_msgs.msg import Point
 
 from ..utils.force_decomposition import decompose_force_ef_to_tendons
@@ -370,6 +370,8 @@ class ExoForce(Node, ABC):
 		self.cage_state_publisher = self.create_publisher(CageState, Topics.CAGE_STATE, 1)
 		self.initial_conf_service = self.create_service(GetCageEndEffectors, Topics.CAGE_END_EFFECTORS, self.get_end_effectors_callback)
 
+		self.create_subscription(EFPose, Topics.OP_EF_POSES, self.operator_ef_pos_listener, 1)
+
 	def init_force_decomp_params(self):
 		"""Reads force decomposition params.
 		
@@ -523,6 +525,33 @@ class ExoForce(Node, ABC):
 
 		return response
 
+	def operator_ef_pos_listener(self, ef_pose):
+		"""Callback of the pose subscriber. Sets the pose of the end effector given in the msg.
+
+		Args:
+			ef_pose: received EFPose msg.
+		
+		Returns:
+			-
+
+		"""
+		ef_name = ef_pose.ef_name
+		#self.get_logger().info("Received pose for " + ef_name)
+		end_effector = self.get_ef_name(ef_name)
+		if end_effector is None:
+			self.get_logger().warn(ef_name + " is not an end effector!")
+			return
+
+		link_pos = np.array([ef_pose.ef_pose.position.x, ef_pose.ef_pose.position.y, ef_pose.ef_pose.position.z])
+		link_orn = np.array([ef_pose.ef_pose.orientation.x, ef_pose.ef_pose.orientation.y, ef_pose.ef_pose.orientation.z, ef_pose.ef_pose.orientation.w])
+
+		end_effector.position = link_pos
+		end_effector.orientation = link_orn
+
+		# if ef_name == "right_hand":
+		# 	self.get_logger().warn(f"{link_pos}")
+
+
 	def decompose(self, contact_points):
 		"""Decomposes force applied to link in operator.
 		
@@ -548,15 +577,16 @@ class ExoForce(Node, ABC):
 				resultant_force_magnitude = np.linalg.norm(resultant_force_vector)
 				resultant_force_direction = resultant_force_vector / resultant_force_magnitude
 
-				force_msg = f"ef:{ef.name} force:{resultant_force_magnitude:.2f} direction:{np.around(resultant_force_direction, decimals=3)}"
+				force_msg = f"ef: {ef.name} force: {resultant_force_magnitude:.2f} direction: {np.around(resultant_force_direction, decimals=3)}"
 
-				self.get_logger().info(f"Decomposing force-> {force_msg}")
+				self.get_logger().debug(f"Decomposing force: {force_msg}")
 
 				ef_forces, msg = decompose_force_ef_to_tendons(resultant_force_magnitude, resultant_force_direction, ef, self.force_decomp_params)
 
 				if not ef_forces:
-					self.get_logger().warn(f"Force was not decomposed-> {force_msg} error: [{msg}]")
+					self.get_logger().warn(f"Force was not decomposed: {force_msg} error: [{msg}]")
 				else:
+					self.get_logger().info(f"Decomposed force: {force_msg}")
 					forces.update(ef_forces)
 
 		return forces

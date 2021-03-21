@@ -55,7 +55,7 @@ bridge = CvBridge()
 msg = JointState()
 
 p.connect(p.GUI)
-roboy = ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
+roboy = ob = p.loadURDF(robots_path+"/upper_body/brain_model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 castle = p.loadURDF("samurai.urdf", 0,2,0)
@@ -122,8 +122,8 @@ for i in range(numJoints):
     if info[12] == b'hand_left':
         efs["hand_left"] = i
 
-height = 240*2
-width = 320*2
+height = 120
+width = 160
 aspect = width/height
 
 fov, nearplane, farplane = 100, 0.1, 100
@@ -306,6 +306,8 @@ def joint_targets_cb(msg):
                                         jointIndex=id,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
                                         targetPosition=msg.position[i])
+            if not cage_interac.initialized :
+                cage_interac.initialize()
                                         # maxVelocity=0.5)
             # p.setJointMotorControl2(bodyIndex=0,
             #                         jointIndex=id,
@@ -322,7 +324,7 @@ def cmdVelCB(msg):
                               [msg.angular.x,msg.angular.y,msg.angular.z])
 
 ik_sub = rospy.Subscriber(topic_root + "/control/bullet_ik", PoseStamped, ik, queue_size=1)
-joint_target_sub = rospy.Subscriber(topic_root+"/control/joint_targets", JointState, joint_targets_cb, queue_size=1)
+joint_target_sub = rospy.Subscriber(topic_root+"/control/joint_targets", JointState, joint_targets_cb, queue_size=20)
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 

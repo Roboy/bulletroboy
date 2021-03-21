@@ -76,7 +76,7 @@ class EnvironmentCtrl():
         self.objects = []
 
         # auto_sim_collision_timer 
-        rospy.Timer(rospy.Duration(5), self.collision_callback)
+        #rospy.Timer(rospy.Duration(5), self.collision_callback)
     
     def collision_callback(self, event):
         p.loadURDF("cube_small.urdf", [0,0,1], globalScaling = 8.2, useFixedBase = 0)

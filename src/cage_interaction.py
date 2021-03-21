@@ -51,9 +51,11 @@ class CageInteraction:
             rospy.wait_for_service(BODY_INFO_SRV)  
             rospy.loginfo("Request body information update...")
 
-            resp = self.update_body_information(self.get_body_information())
+            resp = self.update_body_information(self.get_body_information())            
+            rospy.loginfo("Got Response...")
             if resp.ret_code != 0:
                 rospy.logerr("UpdateBodyInformation service failed with messgae: {}.".format(resp.msg))
+
         except Exception as e:
             rospy.logerr(e)
     

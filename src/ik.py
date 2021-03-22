@@ -310,7 +310,7 @@ def cmdVelCB(msg):
                               [msg.angular.x,msg.angular.y,msg.angular.z])
 
 ik_sub = rospy.Subscriber(topic_root + "/control/bullet_ik", PoseStamped, ik, queue_size=1)
-joint_target_sub = rospy.Subscriber(topic_root+"/control/joint_targets", JointState, joint_targets_cb, queue_size=1)
+joint_target_sub = rospy.Subscriber(topic_root+"/simulation/joint_targets", JointState, joint_targets_cb, queue_size=1)
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)

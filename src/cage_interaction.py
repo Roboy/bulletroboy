@@ -154,13 +154,15 @@ class CageInteraction:
                 contact_pt.linkid = link_id
 
                 #pt[5] == positionOnA in PyBullet docu
-                pos_in_lf = self.get_vector_in_link_frame(link_id, pt[5])
+                # pos_in_lf = self.get_vector_in_link_frame(link_id, pt[5])
+                pos_in_lf = pt[5]
                 contact_pt.position.x = pos_in_lf[0]
                 contact_pt.position.y = pos_in_lf[1]
                 contact_pt.position.z = pos_in_lf[2]
 
                 #pt[7] == contactNormalOnB in PyBullet docu
                 normal_in_lf = self.get_vector_in_link_frame(link_id, pt[7])
+                normal_in_lf = pt[7]
                 contact_pt.contactnormal.x = normal_in_lf[0]
                 contact_pt.contactnormal.y = normal_in_lf[1]
                 contact_pt.contactnormal.z = normal_in_lf[2]

@@ -2,10 +2,21 @@ import pybullet as p
 import pybullet_data
 import rospy
 import math
-
+from rospkg import RosPack
 import time
 
 from threading import Timer
+
+URDF_PATH = "/src/"
+
+RANDOM_URDF = [
+    ["duck_vhacd.urdf", [0.6, 0.0, 1.8], 6],
+    ["racecar/racecar.urdf", [0.6, 0.0, 1.8], 1],
+    ["quadruped/minitaur.urdf", [0.6, 0.0, 1.8], 1],
+    ["jenga/jenga.urdf", [0.6, 0.0, 1.8], 5],
+    ["sphere_small.urdf", [0.6, 0.0, 1.8], 10],
+]
+
 
 class EnvironmentCtrl():
     def __init__(self):
@@ -40,7 +51,11 @@ class EnvironmentCtrl():
         #Number of times add cube button was clicked
         self.add_cube = 0
         self.add_cube_id = p.addUserDebugParameter("Add cube " , 1, 0, 0)
-        
+
+        #Number of times add sphere button was clicked
+        self.add_sphere = 0
+        self.add_sphere_id = p.addUserDebugParameter("Add sphere " , 1, 0, 0)     
+
         #Adding fixed cube is needed to have same collision for debugging
         #Number of times add fixed cube button was clicked
         self.add_fixed_cube = 0
@@ -65,16 +80,24 @@ class EnvironmentCtrl():
         self.test3_id = p.addUserDebugParameter("Drop cube 5kg: " , 1, 0, 0)
 
         #Number of times test2 button was clicked
-        self.test4 = 0
-        self.test4_id = p.addUserDebugParameter("Simulate table " , 1, 0, 0)
+        self.table = 0
+        self.table_id = p.addUserDebugParameter("Simulate table " , 1, 0, 0)
+
+        #Number of times add random button was clicked
+        self.add_random = 0
+        self.add_random_id = p.addUserDebugParameter("Add random object " , 1, 0, 0)   
 
         #Number of times test2 button was clicked
-        self.test5 = 0
-        self.test5_id = p.addUserDebugParameter("Simulate Wall " , 1, 0, 0)
+        # self.wall = 0
+        # self.wall_id = p.addUserDebugParameter("Simulate Wall " , 1, 0, 0)
 
         #The objects added
         self.objects = []
 
+        rp = RosPack()
+        self.urdf_path = rp.get_path('bulletroboy') + URDF_PATH
+        
+        self.random = 0
         # auto_sim_collision_timer 
         #rospy.Timer(rospy.Duration(5), self.collision_callback)
     
@@ -98,13 +121,14 @@ class EnvironmentCtrl():
             self.test3 = p.readUserDebugParameter(self.test3_id)
             self.weight_test(5.0)
 
-        elif p.readUserDebugParameter(self.test4_id) - self.test4 != 0:
-            self.test4 = p.readUserDebugParameter(self.test4_id)
-            self.pos_ctrl_test([0.9, 0.0, 0.7])
+        elif p.readUserDebugParameter(self.table_id) - self.table != 0:
+            self.table = p.readUserDebugParameter(self.table_id)
+            self.test_table()
+            # self.pos_ctrl_test([0.9, 0.0, 0.8], name="table")
 
-        elif p.readUserDebugParameter(self.test5_id) - self.test5 != 0:
-            self.test5 = p.readUserDebugParameter(self.test5_id)
-            self.pos_ctrl_test([0.1, -1.0, 1.26])
+        # elif p.readUserDebugParameter(self.wall_id) - self.wall != 0:
+        #     self.wall = p.readUserDebugParameter(self.wall_id)
+        #     self.pos_ctrl_test([0.1, -1.0, 1.26])
 
         else:
             count = p.readUserDebugParameter(self.add_cube_id)
@@ -120,13 +144,31 @@ class EnvironmentCtrl():
                 mass = p.readUserDebugParameter(self.mass_id)
                 p.changeDynamics(self.objects[-1], -1, mass=mass)
 
+            count = p.readUserDebugParameter(self.add_sphere_id)
+            #for each click done in last step simulation
+            for i in range(int(count - self.add_sphere)):
+                self.add_sphere = count
+                scale = p.readUserDebugParameter(self.size_id) 
+                pos = [p.readUserDebugParameter(self.x_id) , p.readUserDebugParameter(self.y_id) , p.readUserDebugParameter(self.z_id)]
+                orn = p.getQuaternionFromEuler([p.readUserDebugParameter(self.or_x_id) * math.pi / 180, 
+                                                p.readUserDebugParameter(self.or_y_id) * math.pi / 180, 
+                                                p.readUserDebugParameter(self.or_z_id) * math.pi / 180])
+                self.objects.append(p.loadURDF("sphere_small.urdf", pos, orn, globalScaling = scale))
+                mass = p.readUserDebugParameter(self.mass_id)
+                p.changeDynamics(self.objects[-1], -1, mass=mass)
+
             count = p.readUserDebugParameter(self.add_fixed_cube_id)
             for i in range(int(count - self.add_fixed_cube)):
                 self.add_fixed_cube = count
                 scale = p.readUserDebugParameter(self.size_id) 
                 pos = [p.readUserDebugParameter(self.x_id) , p.readUserDebugParameter(self.y_id) , p.readUserDebugParameter(self.z_id)]
                 self.objects.append(p.loadURDF("cube_small.urdf", pos, globalScaling = scale, useFixedBase = 1))
-            
+
+            count = p.readUserDebugParameter(self.add_random_id)
+            for i in range(int(count - self.add_random)):
+                self.add_random = count
+                self.add_random_obj()
+
             count = p.readUserDebugParameter(self.add_model_id)
             for i in range(int(count - self.add_model)):
                 self.add_model = count
@@ -174,21 +216,32 @@ class EnvironmentCtrl():
                                                             or_z * math.pi / 180]))
         
     def weight_test(self, mass, scale=8.2, pos=[0.6, 0.0, 1.8], orn=[14, 0.0, 0.0]): 
-        for o in self.objects:
-                p.removeBody(o)
-                self.objects = []
         quat = p.getQuaternionFromEuler([orn[0] * math.pi / 180, 
                                             orn[1] * math.pi / 180, 
                                             orn[2] * math.pi / 180])
         self.objects.append(p.loadURDF("cube_small.urdf", pos, quat, globalScaling = scale))
         p.changeDynamics(self.objects[-1], -1, mass=mass)
 
-    def pos_ctrl_test(self,pos, scale=23.0, orn=[0,0,0], mass=5.0): 
+    def pos_ctrl_test(self, pos, scale=23.0, orn=[0,0,0], mass=5.0, name=""): 
         for o in self.objects:
                 p.removeBody(o)
                 self.objects = []
         quat = p.getQuaternionFromEuler([orn[0] * math.pi / 180, 
                                             orn[1] * math.pi / 180, 
                                             orn[2] * math.pi / 180])
+        urdf = "cube_small" if not name else  self.urdf_path + name +".urdf"
         self.objects.append(p.loadURDF("cube_small.urdf", pos, quat, useFixedBase=1, globalScaling = scale))
         # p.changeDynamics(self.objects[-1], -1, mass=mass)
+    
+    def test_table(self):
+        quat = p.getQuaternionFromEuler([0, 0, 90 * math.pi / 180])
+
+        self.objects.append(p.loadURDF("table/table.urdf", [1.1, 0, 0.5], quat, useFixedBase=1, globalScaling = 1.5))
+
+
+    def add_random_obj(self):
+        quat = p.getQuaternionFromEuler([0, 0, 90 * math.pi / 180])
+        obj = RANDOM_URDF[self.random % len(RANDOM_URDF)]
+        self.objects.append(p.loadURDF(obj[0], obj[1], [0,0,0,1], useFixedBase=0, globalScaling = obj[2]))
+        self.random += 1
+        p.changeDynamics(self.objects[-1], -1, mass=5.0)

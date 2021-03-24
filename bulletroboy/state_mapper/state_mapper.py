@@ -286,7 +286,10 @@ class StateMapper(Node):
 
 		"""
 		roboy_link_init_orn = Quaternion(roboy_link_info['init_pose']['orientation'])
-		op_link_init_orn = Quaternion(operator_link_info['init_pose']['orientation'])
+		if np.sum(operator_link_info['init_pose']['orientation']) == 0:
+			op_link_init_orn = roboy_link_init_orn
+		else:
+			op_link_init_orn = Quaternion(operator_link_info['init_pose']['orientation'])
 
 		return roboy_link_init_orn / op_link_init_orn
 

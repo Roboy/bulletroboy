@@ -33,4 +33,4 @@ then
 fi
 
 # Publish collision msg to ROS2
-ros2 topic pub $TOPIC $MSGTYPE "{linkid: $LINKID, normalforce: $2, contactnormal: $NORMAL}"
+ros2 topic pub $TOPIC $MSGTYPE "contact_points: [{linkid: $LINKID, normalforce: $2, contactnormal: $NORMAL}]"

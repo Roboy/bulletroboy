@@ -294,15 +294,16 @@ class ExoforceHW(ExoForce):
 		self.apply_min_force_timer.reset()
 
 	def get_direction_in_cage_frame(self, link_id, cp_direction):
-		ef = self.map_link_to_ef(link_id)
-		if ef is None:
-			self.get_logger().warn(f"Link '{link_id}' has no mapping to ef!")
-			return
-		elif ef.orientation is None:
-			self.get_logger().warn(f"Orientation for ef '{ef.name}' is not initialized!")
-			return
-		quaternion = Quaternion(ef.orientation)
-		return quaternion.rotation_matrix.dot(cp_direction)
+		# ef = self.map_link_to_ef(link_id)
+		# if ef is None:
+		# 	self.get_logger().warn(f"Link '{link_id}' has no mapping to ef!")
+		# 	return
+		# elif ef.orientation is None:
+		# 	self.get_logger().warn(f"Orientation for ef '{ef.name}' is not initialized!")
+		# 	return
+		# quaternion = Quaternion(ef.orientation)
+		# return quaternion.rotation_matrix.dot(cp_direction)
+		return cp_direction
 
 	def update(self):
 		"""Updates ExoForce's state.

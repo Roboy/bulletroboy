@@ -107,7 +107,7 @@ exoforce:
     max_force_apply_time: 1.0 # (seconds) Max time the last decomposed force will be applied
     force_decomposition:
       min_tendon_force: 0.5
-      max_collision_force: 50.0
+      max_collision_force: 40.0
     map_link_to_ef:
       left_hand: [4, 5, 6]
       right_hand: [1, 2, 3]

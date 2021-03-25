@@ -241,7 +241,8 @@ class StateMapper(Node):
 
 		# Transforming collision between link frames
 		new_position = self.rotate_vector(roboy_link_info, operator_link_info, scaled_collision_position)
-		new_contact_normal = self.rotate_vector(roboy_link_info, operator_link_info, np.array([roboy_contact_pt.contactnormal.x, roboy_contact_pt.contactnormal.y, roboy_contact_pt.contactnormal.z]))
+		# new_contact_normal = self.rotate_vector(roboy_link_info, operator_link_info, np.array([roboy_contact_pt.contactnormal.x, roboy_contact_pt.contactnormal.y, roboy_contact_pt.contactnormal.z]))
+		new_contact_normal = np.array([roboy_contact_pt.contactnormal.x, roboy_contact_pt.contactnormal.y, roboy_contact_pt.contactnormal.z])
 
 		# Building operator collision msg
 		operator_contact_pt = roboy_contact_pt

@@ -293,8 +293,8 @@ def joint_targets_cb(msg):
             p.setJointMotorControl2(bodyIndex=ob,
                                         jointIndex=id,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
-                                        targetPosition=msg.position[i])
-                                        # maxVelocity=0.5)
+                                        targetPosition=msg.position[i],
+                                        maxVelocity=0.5)
             # p.setJointMotorControl2(bodyIndex=0,
             #                         jointIndex=id,
             #                         controlMode=p.POSITION_CONTROL,

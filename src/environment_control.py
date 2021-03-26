@@ -241,7 +241,7 @@ class EnvironmentCtrl():
     def test_wall(self):
         quat = p.getQuaternionFromEuler([0, 90 * math.pi / 180, 90 * math.pi / 180])
 
-        self.objects.append(p.loadURDF("block.urdf", [1.1, 0, 1.5], quat, useFixedBase=1, globalScaling = 40))
+        self.objects.append(p.loadURDF("block.urdf", [0.9, 0, 1.5], quat, useFixedBase=1, globalScaling = 60))
 
 
     def add_random_obj(self):

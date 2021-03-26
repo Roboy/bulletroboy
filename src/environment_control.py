@@ -88,8 +88,8 @@ class EnvironmentCtrl():
         self.add_random_id = p.addUserDebugParameter("Add random object " , 1, 0, 0)   
 
         #Number of times test2 button was clicked
-        # self.wall = 0
-        # self.wall_id = p.addUserDebugParameter("Simulate Wall " , 1, 0, 0)
+        self.wall = 0
+        self.wall_id = p.addUserDebugParameter("Simulate Wall " , 1, 0, 0)
 
         #The objects added
         self.objects = []
@@ -126,9 +126,9 @@ class EnvironmentCtrl():
             self.test_table()
             # self.pos_ctrl_test([0.9, 0.0, 0.8], name="table")
 
-        # elif p.readUserDebugParameter(self.wall_id) - self.wall != 0:
-        #     self.wall = p.readUserDebugParameter(self.wall_id)
-        #     self.pos_ctrl_test([0.1, -1.0, 1.26])
+        elif p.readUserDebugParameter(self.wall_id) - self.wall != 0:
+            self.wall = p.readUserDebugParameter(self.wall_id)
+            self.test_wall()
 
         else:
             count = p.readUserDebugParameter(self.add_cube_id)
@@ -238,10 +238,18 @@ class EnvironmentCtrl():
 
         self.objects.append(p.loadURDF("table/table.urdf", [1.1, 0, 0.5], quat, useFixedBase=1, globalScaling = 1.5))
 
+    def test_wall(self):
+        quat = p.getQuaternionFromEuler([0, 0, 90 * math.pi / 180])
+
+        self.objects.append(p.loadURDF("block.urdf", [0.9, 0, 1.5], quat, useFixedBase=1, globalScaling = 15))
+
 
     def add_random_obj(self):
         quat = p.getQuaternionFromEuler([0, 0, 90 * math.pi / 180])
         obj = RANDOM_URDF[self.random % len(RANDOM_URDF)]
+        quat = [0,0,0,1]
+        if obj[0] == "jenga/jenga.urdf":
+            quat = p.getQuaternionFromEuler([0, 0, 90 * math.pi / 180])
         self.objects.append(p.loadURDF(obj[0], obj[1], [0,0,0,1], useFixedBase=0, globalScaling = obj[2]))
         self.random += 1
         p.changeDynamics(self.objects[-1], -1, mass=5.0)

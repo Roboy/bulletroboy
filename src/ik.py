@@ -7,9 +7,14 @@ from sensor_msgs.msg import JointState, CompressedImage
 from geometry_msgs.msg import PoseStamped, Twist
 from visualization_msgs.msg import InteractiveMarkerUpdate
 import numpy as np
+from environment_control import EnvironmentCtrl
+from cage_interaction import CageInteraction
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
+from rospkg import RosPack
+from environment_control import EnvironmentCtrl
+from cage_interaction import CageInteraction
 
 from pyquaternion import Quaternion
 import pybullet_data
@@ -31,7 +36,6 @@ if args.wait:
     rospy.sleep(3)
 
 
-
 def quaternion_multiply(quaternion1, quaternion0):
     x0, y0, z0, w0 = quaternion0
     x1, y1, z1, w1 = quaternion1
@@ -39,7 +43,6 @@ def quaternion_multiply(quaternion1, quaternion0):
                      -x1 * z0 + y1 * w0 + z1 * x0 + w1 * y0,
                      x1 * y0 - y1 * x0 + z1 * w0 + w1 * z0,
                      -x1 * x0 - y1 * y0 - z1 * z0 + w1 * w0], dtype=np.float64)
-
 
 
 rospy.init_node("bullet_joints")
@@ -52,10 +55,11 @@ bridge = CvBridge()
 msg = JointState()
 
 p.connect(p.GUI)
-roboy = ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
+roboy = ob = p.loadURDF(robots_path+"/upper_body/brain_model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 castle = p.loadURDF("samurai.urdf", 0,2,0)
+env = EnvironmentCtrl()
 
 p.setGravity(0,0,-10)
 t = 0.
@@ -66,11 +70,11 @@ useNullSpace = 0
 
 useOrientation = 0
 
+cage_interac = CageInteraction(roboy)
+
 #This can be used to test the IK result accuracy.
-useSimulation = 1
-useRealTimeSimulation = 1
 ikSolver = 0
-p.setRealTimeSimulation(useRealTimeSimulation)
+p.setRealTimeSimulation(1)
 #trailDuration is duration (in seconds) after debug lines will be removed automatically
 #use 0 for no-removal
 trailDuration = 15
@@ -83,7 +87,7 @@ markerVisualId["head"] = p.addUserDebugText("head", [0,0,0])
 
 
 global freeJoints, numJoints, init_orn,  head_initialized, right_initialized, right_orn_offset
-numJoints = p.getNumJoints(ob)
+numJoints = p.getNumJoints(roboy)
 rospy.logwarn("Using hardcoded orientation correction quterions for controllers!")
 right_initialized = True
 left_initialized = True
@@ -101,12 +105,15 @@ freeJoints = []
 joint_names = {}
 efs = {}
 for i in range(numJoints):
-    info = p.getJointInfo(ob,i)
+    info = p.getJointInfo(roboy,i)
+    print(i)
+    print(info[12])
     if info[2] == p.JOINT_REVOLUTE:
+        # if "elbow" in info[1]:
         # if info[1] == b'head_axis0' or info[1] == b'head_axis1' or info[1] == b'head_axis2':
         #     continue
         freeJoints.append(i)
-        joint_names[i] = (p.getJointInfo(0, i)[1].decode("utf-8"))
+        joint_names[i] = (p.getJointInfo(roboy, i)[1].decode("utf-8"))
         rospy.loginfo("Added joint %s to freeJoints"%joint_names[i])
     if info[12] == b'hand_right':
         endEffectorId = i
@@ -115,9 +122,8 @@ for i in range(numJoints):
     if info[12] == b'hand_left':
         efs["hand_left"] = i
 
-
-height = 240*2
-width = 320*2
+height = 120
+width = 160
 aspect = width/height
 
 fov, nearplane, farplane = 100, 0.1, 100
@@ -166,15 +172,15 @@ def idFromName(joint_name):
             return i
     return None
 
-def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
+def accurateCalculateInverseKinematics(roboy, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
     closeEnough = False
     iter = 0
     dist2 = 1e30
     while (not closeEnough and iter < maxIter):
         if targetOrn is None:
-            jointPoses = p.calculateInverseKinematics(ob, endEffectorId, targetPos)
+            jointPoses = p.calculateInverseKinematics(roboy, endEffectorId, targetPos)
         else:
-            jointPoses = p.calculateInverseKinematics(ob, endEffectorId, targetPos, targetOrientation=targetOrn)
+            jointPoses = p.calculateInverseKinematics(roboy, endEffectorId, targetPos, targetOrientation=targetOrn)
         #import pdb; pdb.set_trace()
         for idx,pos in zip(freeJoints,jointPoses): #range(len(freeJoints)):#p.getNumJoints(ob)):#
             # p.resetJointState(ob, freeJoints[i], jointPoses[i])
@@ -197,6 +203,8 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
     #print ("Num iter: "+str(iter) + "threshold: "+str(dist2))
     return jointPoses
 
+
+
 def ik(msg):
 
     global freeJoints, markerVisualId, head_initialized, right_initialized, orn_offset, left_initialized
@@ -211,6 +219,9 @@ def ik(msg):
             rospy.logwarn_throttle(1, "head: " +  str(pos))
             p.resetBasePositionAndOrientation(0, pos, (0,0,0.7071,0.7071))
             head_initialized = True
+            # only call once at the initialization phase
+            if not cage_interac.initialized :
+                cage_interac.initialize()
 
     else:#if msg.header.frame_id == "hand_left":
         if not right_initialized and msg.header.frame_id == "hand_right":
@@ -232,8 +243,9 @@ def ik(msg):
             left_initialized = True
 
         else:
+            rospy.logwarn_throttle(1, "calculating ik")
             endEffectorId = efs[msg.header.frame_id]
-            threshold = 0.03
+            threshold = 0.05
             maxIter = 80
 
             # if first:
@@ -294,6 +306,8 @@ def joint_targets_cb(msg):
                                         jointIndex=id,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
                                         targetPosition=msg.position[i])
+            if not cage_interac.initialized :
+                cage_interac.initialize()
                                         # maxVelocity=0.5)
             # p.setJointMotorControl2(bodyIndex=0,
             #                         jointIndex=id,
@@ -310,9 +324,10 @@ def cmdVelCB(msg):
                               [msg.angular.x,msg.angular.y,msg.angular.z])
 
 ik_sub = rospy.Subscriber(topic_root + "/control/bullet_ik", PoseStamped, ik, queue_size=1)
-joint_target_sub = rospy.Subscriber(topic_root+"/control/joint_targets", JointState, joint_targets_cb, queue_size=1)
+joint_target_sub = rospy.Subscriber(topic_root+"/control/joint_targets", JointState, joint_targets_cb, queue_size=20)
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
+
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
 rate = rospy.Rate(30)
 while not rospy.is_shutdown():
@@ -325,6 +340,14 @@ while not rospy.is_shutdown():
     vis = np.concatenate((left_pic, right_pic), axis=1)
     cv2.imshow('window', vis)
     cv2.waitKey(1)
+
+    #update the environement parameters with each step
+    env.update()
+    #publish collisions
+    contact_pts = p.getContactPoints(roboy)
+    if contact_pts and cage_interac.initialized:
+        cage_interac.publish_collision(contact_pts)
+
     # msg.position = []
     # msg.velocity = []
     # msg.effort = []

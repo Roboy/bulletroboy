@@ -1,4 +1,3 @@
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -20,3 +19,9 @@ __pycache__/
 *.swp
 
 cmake-build-debug/
+
+*__pycache__/
+*build/
+*install/
+*log/
+*vscode/

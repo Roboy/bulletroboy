@@ -29,12 +29,12 @@ cd roboy_ws
 ## Usage
 To be able to run any node after the package is built, you need to source the workspace overlay.
 
-Run the system with the operator simulation.
-```bash
-ros2 launch bulletroboy cage_sim.launch.py  # use -s to list arguments
-```
+1. [ros2-web-bridge](https://github.com/RobotWebTools/ros2-web-bridge) needs to be compiled and running to comunicate with the construct app.
+2. [ros1_bridge](https://github.com/ros2/ros1_bridge) needs to be compiled and running to comunication with the force control node.
+3. [roboy_plexus](https://github.com/Roboy/roboy_plexus) needs to be configured and running to comunicate with the motors.
+4. [force_control](https://github.com/Roboy/exoforce_force_control) needs to be running.
 
-Run the system with the real exoforce cage.
+Run the system using the launch file.
 ```bash
 ros2 launch bulletroboy exoforce.launch.py # use -s to list arguments
 ```

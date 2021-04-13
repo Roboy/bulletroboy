@@ -108,7 +108,7 @@ class Operator(Node, ABC):
 	def start_node(self):
 		pass
 
-	def start_publishing(self, period=0.1):
+	def start_publishing(self, period=0.02):
 		self.timer = self.create_timer(period, self.publish_ef_state)
 
 	def init_end_effectors(self, efs):
@@ -182,23 +182,23 @@ class Operator(Node, ABC):
 
 		"""
 		for ef_link in self.end_effectors:
-		   if ef_link.pose is None:
-			   continue
+			if ef_link.pose is None:
+				continue
 		#    self.get_logger().info('Sending Endeffector pose: ' + ef_link.human_name)
-		   ef_pos, ef_orn = ef_link.pose
-		   msg = PoseStamped()
-		   msg.header.frame_id = ef_link.human_name
+			ef_pos, ef_orn = ef_link.pose
+			msg = PoseStamped()
+			msg.header.frame_id = ef_link.human_name
 
-		   msg.pose.position.x = ef_pos[0]
-		   msg.pose.position.y = ef_pos[1]
-		   msg.pose.position.z = ef_pos[2]
+			msg.pose.position.x = ef_pos[0]
+			msg.pose.position.y = ef_pos[1]
+			msg.pose.position.z = ef_pos[2]
 
-		   msg.pose.orientation.x = ef_orn[0]
-		   msg.pose.orientation.y = ef_orn[1]
-		   msg.pose.orientation.z = ef_orn[2]
-		   msg.pose.orientation.w = ef_orn[3]
+			msg.pose.orientation.x = ef_orn[0]
+			msg.pose.orientation.y = ef_orn[1]
+			msg.pose.orientation.z = ef_orn[2]
+			msg.pose.orientation.w = ef_orn[3]
 
-		   self.ef_publisher.publish(msg)
+			self.ef_publisher.publish(msg)
 
 	def link_info_from_name_callback(self, request, response):
 		"""ROS service callback to get link info from link name.

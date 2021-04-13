@@ -102,6 +102,9 @@ bullet_roboy:
 
 exoforce:
   ros__parameters:
+    no_slack_force: 4.0       # (Newtons) Minimal force applied to the tendons to avoid slack
+    tendon_init_time: 3.0     # (seconds) Time to wait after starting force controllers to pull the initial slack
+    max_force_apply_time: 1.0 # (seconds) Max time the last decomposed force will be applied
     force_decomposition:
       min_tendon_force: 0.5
       max_collision_force: 50.0
@@ -111,6 +114,9 @@ exoforce:
 
 operator:
   ros__parameters:
+    pull_motor: 16
+    pull_force: 30.0
+    pull_time: 1.0
     operator_link_dimentions:
       chest:
         [0.24991999999999998,

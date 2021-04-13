@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import rclpy
-from roboy_middleware_msgs.msg import EFPose
+from roboy_control_msgs.msg import EFPose
 from rcl_interfaces.srv import GetParameters
 from rclpy.node import Node
 from roboy_control_msgs.srv import GetLinkPose

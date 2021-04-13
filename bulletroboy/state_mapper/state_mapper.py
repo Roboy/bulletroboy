@@ -8,7 +8,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 from ..utils.utils import Topics, Services
 from roboy_simulation_msgs.msg import Collision
-from roboy_middleware_msgs.msg import EFPose
+from roboy_control_msgs.msg import EFPose
 from roboy_simulation_msgs.srv import LinkInfoFromName
 from roboy_simulation_msgs.srv import LinkInfoFromId
 from roboy_control_msgs.srv import GetLinkPose

@@ -7,10 +7,9 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 from rclpy.node import Node
-from roboy_control_msgs.msg import CageState, EndEffector as EndEffectorMsg, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
+from roboy_control_msgs.msg import EFPose, CageState, EndEffector as EndEffectorMsg, ViaPoint as ViaPointMsg, MuscleUnit as MuscleUnitMsg
 from roboy_control_msgs.srv import GetCageEndEffectors
 from roboy_simulation_msgs.msg import Collision
-from roboy_middleware_msgs.msg import EFPose
 from geometry_msgs.msg import Point
 
 from ..utils.force_decomposition import decompose_force_ef_to_tendons

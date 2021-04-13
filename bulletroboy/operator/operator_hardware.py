@@ -1,6 +1,6 @@
 import time
 
-from roboy_middleware_msgs.msg import EFPose
+from roboy_control_msgs.msg import EFPose
 from roboy_middleware_msgs.srv import InitExoforce
 from roboy_simulation_msgs.msg import TendonUpdate
 

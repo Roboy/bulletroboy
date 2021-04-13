@@ -6,7 +6,7 @@ from rclpy.node import Node
 from rcl_interfaces.srv import GetParameters
 
 from sensor_msgs.msg import JointState
-from roboy_middleware_msgs.msg import EFPose
+from roboy_control_msgs.msg import EFPose
 from roboy_simulation_msgs.msg import Collision
 from geometry_msgs.msg import PoseStamped
 from roboy_simulation_msgs.srv import LinkInfoFromId

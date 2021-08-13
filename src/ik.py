@@ -51,7 +51,7 @@ bridge = CvBridge()
 
 msg = JointState()
 
-p.connect(p.GUI)
+p.connect(p.DIRECT) # (p.GUI)
 roboy = ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -303,6 +303,7 @@ def joint_targets_cb(msg):
             #                         force=10,
             #                         positionGain=0.4,
             #                         velocityGain=0.1)
+    # rospy.logwarn_throttle(1,debug + "\n\n")
 
 def cmdVelCB(msg):
     """callback to receive vel commands from user"""
@@ -314,8 +315,9 @@ joint_target_sub = rospy.Subscriber(topic_root+"/simulation/joint_targets", Join
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
-rate = rospy.Rate(30)
+rate = rospy.Rate(200)
 while not rospy.is_shutdown():
+    p.stepSimulation()
     # left = camera(11)
     # right = camera(12)
     # left_pic = to_cv2(left[0],left[1],left[2],0)
@@ -325,7 +327,7 @@ while not rospy.is_shutdown():
     # vis = np.concatenate((left_pic, right_pic), axis=1)
     # cv2.imshow('window', vis)
     # cv2.waitKey(1)
-
+    msg.header.stamp = rospy.Time.now()
     msg.position = []
     msg.velocity = []
     msg.effort = []

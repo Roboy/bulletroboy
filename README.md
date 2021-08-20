@@ -4,7 +4,7 @@
 *Tested on Ubuntu 18.04 and 20.04*
 - install python>=3.6
 - install [pybullet](https://github.com/bulletphysics/bullet3/blob/master/README.md#pybullet)
-- install [ROS Melodic Morenia](http://wiki.ros.org/melodic/Installation/Ubuntu) or[ROS Melodic Morenia](http://wiki.ros.org/noetic/Installation)
+- install [ROS Melodic Morenia](http://wiki.ros.org/melodic/Installation/Ubuntu) or [ROS Noetic Ninjemys](http://wiki.ros.org/noetic/Installation)
 
 ```bash
 # setup ROS for python3

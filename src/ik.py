@@ -51,11 +51,11 @@ bridge = CvBridge()
 
 msg = JointState()
 
-p.connect(p.DIRECT) # (p.GUI)
+p.connect(p.DIRECT) #GUI) # (p.GUI)
 roboy = ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
-castle = p.loadURDF("samurai.urdf", 0,2,0)
+# castle = p.loadURDF("samurai.urdf", 0,2,0)
 
 p.setGravity(0,0,-10)
 t = 0.

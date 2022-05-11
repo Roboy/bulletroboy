@@ -1,7 +1,8 @@
-#Simulated Roboy 3.0 using pyBullet
+# Simulated Roboy 3.0 using pyBullet
 - Python >= 3.6
 - ROS melodic and later
-- Depends on
+
+## Dependencies
   - `pybullet`
   - `pyquaternion`
   - `cv2`
@@ -12,7 +13,10 @@
   - `geometry_msgs` ROS package
   - [`roboy3_models`](https://github.com/Roboy/roboy3_models/tree/bullet) ROS package (branch *bullet*)
 
-To start the ROS node, start `roscore` and use:
+## Run
+1. Build ROS workspace with `roboy3_models` and `bulletroboy` packages
+2. Start ROS master with `roscore`
+3. Start the simulation ROS node 
 ```rosrun bulletroboy ik.py```
 
 

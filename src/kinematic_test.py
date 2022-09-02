@@ -315,7 +315,7 @@ joint_target_sub = rospy.Subscriber(topic_root+"/simulation/joint_targets", Join
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
-rate = rospy.Rate(200)
+rate = rospy.Rate(600)
 while not rospy.is_shutdown():
     p.stepSimulation()
     # left = camera(11)

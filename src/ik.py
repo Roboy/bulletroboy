@@ -183,7 +183,7 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
                                             jointIndex=idx,#freeJoints[i],
                                             controlMode=p.POSITION_CONTROL,
                                             targetPosition=pos,
-                                            maxVelocity=0.5)#jointPoses[i])
+                                            maxVelocity=1.0)#jointPoses[i])
                                             # targetVelocity=0,
                                             # force=1,
                                             # positionGain=5,

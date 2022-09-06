@@ -45,9 +45,9 @@ def quaternion_multiply(quaternion1, quaternion0):
 rospy.init_node("bullet_joints")
 topic_root = "/roboy/pinky"
 joint_target_pub = rospy.Publisher(topic_root+"/control/joint_targets", JointState, queue_size=1)
-caml_pub = rospy.Publisher(topic_root+'/sensors/caml/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
-camr_pub = rospy.Publisher(topic_root+'/sensors/camr/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
-bridge = CvBridge()
+#caml_pub = rospy.Publisher(topic_root+'/sensors/caml/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
+#camr_pub = rospy.Publisher(topic_root+'/sensors/camr/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
+#bridge = CvBridge()
 
 msg = JointState()
 
@@ -55,7 +55,7 @@ p.connect(p.DIRECT) #GUI) # (p.GUI)
 roboy = ob = p.loadURDF(robots_path+"/upper_body/model.urdf", useFixedBase=1, basePosition=(0,0,1), baseOrientation=(0,0,0.7071,0.7071))
 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
-castle = p.loadURDF("samurai.urdf", 0,2,0)
+#castle = p.loadURDF("samurai.urdf", 0,2,0)
 
 p.setGravity(0,0,-10)
 t = 0.
@@ -68,7 +68,7 @@ useOrientation = 0
 
 #This can be used to test the IK result accuracy.
 useSimulation = 1
-useRealTimeSimulation = 1
+useRealTimeSimulation = 0 #1
 ikSolver = 0
 p.setRealTimeSimulation(useRealTimeSimulation)
 #trailDuration is duration (in seconds) after debug lines will be removed automatically
@@ -120,8 +120,8 @@ height = 240 #720# 1080 #720 #240#*2
 width = 320 #1280 #1920 #1280 #320#*2
 aspect = width/height
 
-fov, nearplane, farplane = 100, 0.1, 100
-projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, nearplane, farplane)
+#fov, nearplane, farplane = 100, 0.1, 100
+#projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, nearplane, farplane)
 
 init_up_vector = (0, 0, 1)
 
@@ -183,7 +183,7 @@ def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, 
                                             jointIndex=idx,#freeJoints[i],
                                             controlMode=p.POSITION_CONTROL,
                                             targetPosition=pos,
-                                            maxVelocity=1.0)#jointPoses[i])
+                                            maxVelocity=8.0)#jointPoses[i])
                                             # targetVelocity=0,
                                             # force=1,
                                             # positionGain=5,
@@ -288,13 +288,14 @@ def marker(msg):
 
 def joint_targets_cb(msg):
     for i in range(len(msg.name)):
+        maxVelocity = 20.0 if "head" in msg.name else 2.0
         id = idFromName(msg.name[i])
         if id is not None:
             p.setJointMotorControl2(bodyIndex=ob,
                                         jointIndex=id,#freeJoints[i],
                                         controlMode=p.POSITION_CONTROL,
                                         targetPosition=msg.position[i],
-                                        maxVelocity=0.55)
+                                        maxVelocity=maxVelocity)
             # p.setJointMotorControl2(bodyIndex=0,
             #                         jointIndex=id,
             #                         controlMode=p.POSITION_CONTROL,

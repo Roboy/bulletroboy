@@ -1,0 +1,6 @@
+pybullet
+pyyaml
+numpy
+scipy
+matplotlib
+pyquaternion

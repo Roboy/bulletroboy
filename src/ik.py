@@ -6,6 +6,7 @@ import rospy
 from sensor_msgs.msg import JointState, CompressedImage
 from geometry_msgs.msg import PoseStamped, Twist
 from visualization_msgs.msg import InteractiveMarkerUpdate
+from roboy_middleware_msgs.msg import MotorCommand
 import numpy as np
 
 from cv_bridge import CvBridge, CvBridgeError
@@ -45,6 +46,18 @@ def quaternion_multiply(quaternion1, quaternion0):
 rospy.init_node("bullet_joints")
 topic_root = "/roboy/pinky"
 joint_target_pub = rospy.Publisher(topic_root+"/control/joint_targets", JointState, queue_size=1)
+
+hand_left_ids = [40, 41, 38, 39]
+hand_left_max_setpoints = [1000, 900, 1000, 1000]
+hand_right_ids = [42, 43, 44, 45]
+hand_right_max_setpoints = [1000,1000, 1000, 1000]
+if rospy.has_param('/hand_right/max_setpoints'):
+    hand_right_max_setpoints = rospy.get_param("hand_right/max_setpoints")
+else:
+    rospy.logerr("Unable to get hand_right/max_setpoints ROS param")
+motor_cmd_pub = rospy.Publisher(
+                    topic_root + '/middleware/MotorCommand', MotorCommand, queue_size=0)
+
 #caml_pub = rospy.Publisher(topic_root+'/sensors/caml/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
 #camr_pub = rospy.Publisher(topic_root+'/sensors/camr/compressed', CompressedImage,tcp_nodelay=True,queue_size=1)
 #bridge = CvBridge()
@@ -286,7 +299,33 @@ def marker(msg):
                                         positionGain=1,
                                         velocityGain=0.1)
 
+def send_hand_cmd(trigger_values, is_left):
+    msg = MotorCommand()
+    msg.global_id = hand_left_ids if is_left else hand_right_ids
+
+    trigger_values = np.clip(trigger_values, 0, 1)
+    max_setpoints = hand_left_max_setpoints if is_left else hand_right_max_setpoints
+
+    # The amout each finger flexes is not linear with the PWM values it's recieving.
+    # Therefore we introducte the following cubic polynomials to approximately account for that
+    # poly = np.poly1d([-0.8, 1.8, 0]) if is_left else np.poly1d([-1.6, 2.6, 0])
+    poly = np.poly1d([-0.6, 1.6, 0])
+    setpoints = poly(trigger_values)
+    setpoints = np.clip(setpoints, [0] * len(max_setpoints), max_setpoints)
+    setpoints *= max_setpoints
+
+    msg.setpoint = [int(p) for p in setpoints]
+    motor_cmd_pub.publish(msg)
+
+
 def joint_targets_cb(msg):
+    #for f in ["thumb", "index", "middle", "ring"]:
+    #    left_trigger
+    left_trigger = msg.position[msg.name.index("index_left")]
+    right_trigger = msg.position[msg.name.index("index_right")]
+    send_hand_cmd([left_trigger]*4, True)
+    send_hand_cmd([right_trigger]*4, False)
+
     for i in range(len(msg.name)):
         maxVelocity = 20.0 if "head" in msg.name else 2.0
         id = idFromName(msg.name[i])

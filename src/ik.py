@@ -321,10 +321,12 @@ def send_hand_cmd(trigger_values, is_left):
 def joint_targets_cb(msg):
     #for f in ["thumb", "index", "middle", "ring"]:
     #    left_trigger
-    left_trigger = msg.position[msg.name.index("index_left")]
-    right_trigger = msg.position[msg.name.index("index_right")]
-    send_hand_cmd([left_trigger]*4, True)
-    send_hand_cmd([right_trigger]*4, False)
+    if "index_left" in msg.name:
+        left_trigger = msg.position[msg.name.index("index_left")]
+        send_hand_cmd([left_trigger]*4, True)
+    if "index_right" in msg.name:
+        right_trigger = msg.position[msg.name.index("index_right")]
+        send_hand_cmd([right_trigger]*4, False)
 
     for i in range(len(msg.name)):
         maxVelocity = 20.0 if "head" in msg.name else 2.0

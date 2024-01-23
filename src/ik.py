@@ -3,6 +3,7 @@ import pybullet as p
 import math
 import time
 import rospy
+from std_srvs.srv import Trigger, TriggerResponse
 from sensor_msgs.msg import JointState, CompressedImage
 from geometry_msgs.msg import PoseStamped, Twist
 from visualization_msgs.msg import InteractiveMarkerUpdate
@@ -14,6 +15,9 @@ import cv2
 
 from pyquaternion import Quaternion
 import pybullet_data
+
+import signal
+import sys
 
 import rospkg
 rospack = rospkg.RosPack()
@@ -31,7 +35,10 @@ if args.wait:
     rospy.logwarn("Waiting 3 seconds before launching IK node...")
     rospy.sleep(3)
 
-
+def signal_handler(sig, frame):
+    # Perform cleanup and shutdown routines here
+    print('Ctrl+C detected, shutting down...')
+    sys.exit(0)
 
 def quaternion_multiply(quaternion1, quaternion0):
     x0, y0, z0, w0 = quaternion0
@@ -109,6 +116,10 @@ if not rospy.has_param('publish_cardsflow'):
     rospy.logwarn("Set param /publish_cardsflow true to forward joint poses")
     rospy.set_param('publish_cardsflow', False)
 
+if not rospy.has_param('orchestrated_arms_active'):
+    rospy.logwarn("Set param /orchestrated_movements_active true to forward joint poses")
+    rospy.set_param('orchestrated_arms_active', False)    
+
 init_orn = (0,0,0,1)
 freeJoints = []
 joint_names = {}
@@ -128,6 +139,14 @@ for i in range(numJoints):
     if info[12] == b'hand_left':
         efs["hand_left"] = i
 
+def idFromName(joint_name):
+    for i in range(numJoints):
+        if p.getJointInfo(0,i)[1].decode("utf-8") == joint_name:
+            return i
+    return None
+
+arm_joint_names = [f"{joint_type}_{side}_axis{axis}" for side in ["left", "right"] for joint_type in ["shoulder", "elbow"] for axis in (range(3) if joint_type == "shoulder" else range(2))]
+arm_joint_ids = [idFromName(f"{joint_type}_{side}_axis{axis}") for side in ["left", "right"] for joint_type in ["shoulder", "elbow"] for axis in (range(3) if joint_type == "shoulder" else range(2))]
 
 height = 240 #720# 1080 #720 #240#*2
 width = 320 #1280 #1920 #1280 #320#*2
@@ -137,6 +156,7 @@ aspect = width/height
 #projection_matrix = p.computeProjectionMatrixFOV(fov, aspect, nearplane, farplane)
 
 init_up_vector = (0, 0, 1)
+
 
 def camera(link_id):
     com_p, com_o, _, _, _, _ = p.getLinkState(roboy, link_id)
@@ -173,11 +193,7 @@ def isRight(id):
     info = p.getJointInfo(ob,id)
     return "right" in str(info[12])
 
-def idFromName(joint_name):
-    for i in range(numJoints):
-        if p.getJointInfo(0,i)[1].decode("utf-8") == joint_name:
-            return i
-    return None
+
 
 def accurateCalculateInverseKinematics(ob, endEffectorId, targetPos, threshold, maxIter, targetOrn=None):
     closeEnough = False
@@ -249,28 +265,13 @@ def ik(msg):
             threshold = 0.03
             maxIter = 80
 
-            # if first:
-            #     init_orn = orn
-            # else:
             rospy.loginfo_throttle(1, orn)
             corrected_orn = quaternion_multiply(orn, orn_offset[msg.header.frame_id]) #(0,0,0.7071,0.7071))
-            # corrected_orn = quaternion_multiply(corrected_orn, (0,0,-0.7071,0.7071))
 
-            # jointPoses = p.calculateInverseKinematics(0, endEffectorId, pos, corrected_orn)#(0,0,0,1)) #orn)  #accurateCalculateInverseKinematics(0, endEffectorId, pos,
-            #                                                 # threshold, maxIter, corrected_orn)
 
             jointPoses = accurateCalculateInverseKinematics(0, endEffectorId, pos,
                                                             threshold, maxIter)#, corrected_orn)
-            # if (useSimulation):
-            # for i in range(len(freeJoints)):
-            #     p.setJointMotorControl2(bodyIndex=0,
-            #                             jointIndex=freeJoints[i],
-            #                             controlMode=p.POSITION_CONTROL,
-            #                             targetPosition=jointPoses[i],
-            #                             targetVelocity=0,
-            #                             force=1,
-            #                             positionGain=5,
-            #                             velocityGain=0.1)
+
 
     markerVisualId[msg.header.frame_id] = p.addUserDebugText(msg.header.frame_id, pos, replaceItemUniqueId=markerVisualId[msg.header.frame_id])
 
@@ -319,8 +320,7 @@ def send_hand_cmd(trigger_values, is_left):
 
 
 def joint_targets_cb(msg):
-    #for f in ["thumb", "index", "middle", "ring"]:
-    #    left_trigger
+    global orchestrated_arms_active
     if "index_left" in msg.name:
         left_trigger = msg.position[msg.name.index("index_left")]
         send_hand_cmd([left_trigger]*4, True)
@@ -329,36 +329,103 @@ def joint_targets_cb(msg):
         send_hand_cmd([right_trigger]*4, False)
 
     for i in range(len(msg.name)):
-        maxVelocity = 20.0 if "head" in msg.name else 2.0
-        id = idFromName(msg.name[i])
-        if id is not None:
-            p.setJointMotorControl2(bodyIndex=ob,
-                                        jointIndex=id,#freeJoints[i],
-                                        controlMode=p.POSITION_CONTROL,
-                                        targetPosition=msg.position[i],
-                                        maxVelocity=maxVelocity)
-            # p.setJointMotorControl2(bodyIndex=0,
-            #                         jointIndex=id,
-            #                         controlMode=p.POSITION_CONTROL,
-            #                         targetPosition=msg.position[i],
-            #                         targetVelocity=0,
-            #                         force=10,
-            #                         positionGain=0.4,
-            #                         velocityGain=0.1)
-    # rospy.logwarn_throttle(1,debug + "\n\n")
+        if (orchestrated_arms_active and msg.name[i] not in arm_joint_names) or \
+        not orchestrated_arms_active:
+            maxVelocity = 30.0 if "head" in msg.name else 10.0
+            id = idFromName(msg.name[i])
+            if id is not None:
+                p.setJointMotorControl2(bodyIndex=ob,
+                                            jointIndex=id,
+                                            controlMode=p.POSITION_CONTROL,
+                                            targetPosition=msg.position[i],
+                                            maxVelocity=maxVelocity)
+        else:
+            print("orchestrated movements")
+
+
+def orchestrated_cb(msg):
+    global orchestrated_arms_active
+    if orchestrated_arms_active:
+        # print("in the callback: " + str(rospy.get_param("orchestrated_arms_active")))
+        if "index_left" in msg.name:
+            left_trigger = msg.position[msg.name.index("index_left")]
+            send_hand_cmd([left_trigger]*4, True)
+        if "index_right" in msg.name:
+            right_trigger = msg.position[msg.name.index("index_right")]
+            send_hand_cmd([right_trigger]*4, False)
+        
+        maxVelocity = 30.0 if "head" in msg.name else 10.0
+        for i in range(len(msg.name)):
+            # print(arm_joint_names)
+            # print("setting joint command: " + msg.name)
+                   
+            #print("setting joint command: " + msg.name[i])
+            id = idFromName(msg.name[i])
+            if id is not None  and id in arm_joint_ids:    
+                p.setJointMotorControl2(bodyIndex=ob,
+                                            jointIndex=id,
+                                            controlMode=p.POSITION_CONTROL,
+                                            targetPosition=msg.position[i],
+                                            maxVelocity=maxVelocity)
+
 
 def cmdVelCB(msg):
     """callback to receive vel commands from user"""
     p.resetBaseVelocity(roboy, [msg.linear.x,msg.linear.y,msg.linear.z],
                               [msg.angular.x,msg.angular.y,msg.angular.z])
 
+def zero_joints(req):
+    response = TriggerResponse()
+    # for idx in freeJoints:
+    #     p.setJointMotorControl2(bodyIndex=ob,
+    #                             jointIndex=idx,#freeJoints[i],
+    #                             controlMode=p.POSITION_CONTROL,
+    #                             targetPosition=0.0,
+    #                             maxVelocity=2.0)
+
+    num_steps = 100
+    time_step = 1 / 240.0  # Assuming 240 Hz physics update rate
+
+    
+    joint_states = []
+    for idx in freeJoints:
+        current_position = p.getJointState(ob, idx)[0]
+        joint_states.append((idx, current_position, 0.0))
+
+    for step in range(num_steps):
+        t = step / (num_steps - 1)
+        
+        for idx, current_position, target_position in joint_states:
+            interpolated_position = current_position + t * (target_position - current_position)
+            
+            p.setJointMotorControl2(bodyIndex=ob,
+                                    jointIndex=idx,
+                                    controlMode=p.POSITION_CONTROL,
+                                    targetPosition=interpolated_position,
+                                    maxVelocity=2.0)
+            
+            time.sleep(time_step)
+
+    response.success = True
+    response.message = "All joints are set to position 0"
+    return response
+
+
 ik_sub = rospy.Subscriber(topic_root + "/control/bullet_ik", PoseStamped, ik, queue_size=1)
 joint_target_sub = rospy.Subscriber(topic_root+"/simulation/joint_targets", JointState, joint_targets_cb, queue_size=1)
+orchestrated_movements_sub = rospy.Subscriber(topic_root+"/orchestrated/joint_targets", JointState, orchestrated_cb, queue_size=1)
+
+zero_srv = rospy.Service(topic_root + "/simulation/ZeroJoints", Trigger, zero_joints)
 
 vel_sub = rospy.Subscriber("/cmd_vel", Twist, cmdVelCB)
 marker_sub = rospy.Subscriber("/interactive_markers/update", InteractiveMarkerUpdate, marker)
+global orchestrated_arms_active
 rate = rospy.Rate(200)
+
+signal.signal(signal.SIGINT, signal_handler)
+
 while not rospy.is_shutdown():
+    orchestrated_arms_active = rospy.get_param("orchestrated_arms_active")
     p.stepSimulation()
     # left = camera(11)
     # right = camera(12)

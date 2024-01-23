@@ -1,4 +1,4 @@
-#Simulated Roboy 3.0 using pyBullet
+# Simulated Roboy 3.0 using pyBullet
 - Python >= 3.6
 - ROS melodic and later
 - Depends on

@@ -10,7 +10,6 @@ from visualization_msgs.msg import InteractiveMarkerUpdate
 from roboy_middleware_msgs.msg import MotorCommand
 import numpy as np
 
-from cv_bridge import CvBridge, CvBridgeError
 import cv2
 
 from pyquaternion import Quaternion
@@ -102,12 +101,20 @@ markerVisualId["hand_right"] = p.addUserDebugText("hand_right", [0,0,0])
 markerVisualId["head"] = p.addUserDebugText("head", [0,0,0])
 
 
-global freeJoints, numJoints, init_orn,  head_initialized, right_initialized, right_orn_offset
+global freeJoints, numJoints, init_orn,  head_initialized, right_initialized, left_initialized, right_orn_offset
 numJoints = p.getNumJoints(ob)
 rospy.logwarn("Using hardcoded orientation correction quterions for controllers!")
-right_initialized = True
-left_initialized = True
-head_initialized = False
+
+def get_param(name, default_vale):
+    if rospy.has_param(name):
+        return rospy.get_param(name)
+    rospy.logwarn(f"Didn't find param {name} on the server, setting it to {default_value}")
+    return default_value
+
+right_initialized = get_param("initialized/shoulder_right", False) 
+left_initialized = get_param("initialized/shoulder_left", False)
+head_initialized = get_param("initialized/head", False)
+
 orn_offset = {}
 orn_offset["hand_right"] = [-0.5839645865280022, -0.6905731440685547, 0.2882076733510812, 0.3146909727401144] #[0,0,0,1]
 orn_offset["hand_left"] = orn_offset["hand_right"]
@@ -147,6 +154,15 @@ def idFromName(joint_name):
 
 arm_joint_names = [f"{joint_type}_{side}_axis{axis}" for side in ["left", "right"] for joint_type in ["shoulder", "elbow"] for axis in (range(3) if joint_type == "shoulder" else range(2))]
 arm_joint_ids = [idFromName(f"{joint_type}_{side}_axis{axis}") for side in ["left", "right"] for joint_type in ["shoulder", "elbow"] for axis in (range(3) if joint_type == "shoulder" else range(2))]
+left_arm_joint_names = [f"{joint_type}_{side}_axis{axis}" for side in ["left"] for joint_type in ["shoulder", "elbow"] for axis in (range(3) if joint_type == "shoulder" else range(2))]
+right_arm_joint_names = [f"{joint_type}_{side}_axis{axis}" for side in ["right"] for joint_type in ["shoulder", "elbow"] for axis in (range(3) if joint_type == "shoulder" else range(2))]
+head_joint_names = [f"head_axis{idx}" for idx in [0,1,2]]
+
+print(left_arm_joint_names)
+print(right_arm_joint_names)
+print(head_joint_names)
+
+
 
 height = 240 #720# 1080 #720 #240#*2
 width = 320 #1280 #1920 #1280 #320#*2
@@ -327,17 +343,31 @@ def joint_targets_cb(msg):
     if "index_right" in msg.name:
         right_trigger = msg.position[msg.name.index("index_right")]
         send_hand_cmd([right_trigger]*4, False)
-
+    
+    right_initialized = get_param("initialized/shoulder_right", False)
+    left_initialized = get_param("initialized/shoulder_left", False)
+    head_initialized = get_param("initialized/head", False)
+    
     for i in range(len(msg.name)):
+        setpoint = msg.position[i]
+        # do not move simulation if hardware is not initialized
+        if (msg.name[i] in head_joint_names) and not head_initialized:
+            setpoint=0
+        elif  (msg.name[i] in right_arm_joint_names) and not right_initialized:
+            setpoint=0
+        elif (msg.name[i] in left_arm_joint_names) and not left_initialized:
+            setpoint=0
+
+
         if (orchestrated_arms_active and msg.name[i] not in arm_joint_names) or \
         not orchestrated_arms_active:
-            maxVelocity = 30.0 if "head" in msg.name else 10.0
+            maxVelocity = 30.0 if "head" in msg.name else 2.0
             id = idFromName(msg.name[i])
             if id is not None:
                 p.setJointMotorControl2(bodyIndex=ob,
                                             jointIndex=id,
                                             controlMode=p.POSITION_CONTROL,
-                                            targetPosition=msg.position[i],
+                                            targetPosition=setpoint,
                                             maxVelocity=maxVelocity)
         else:
             print("orchestrated movements")
@@ -441,8 +471,10 @@ while not rospy.is_shutdown():
     msg.velocity = []
     msg.effort = []
     msg.name = []
+
+
     for i in freeJoints:
-    #     if "head" not in joint_names[i]:
+
         js = p.getJointState(0, i)
         msg.position.append(js[0])
         msg.velocity.append(0)
